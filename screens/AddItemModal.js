@@ -108,7 +108,6 @@ export default function AddItemModal({ visible, onClose, onSave }) {
           onChangeText={setName}
           autoFocus
           returnKeyType="done"
-          onSubmitEditing={handleSave}
         />
 
         <TouchableOpacity
