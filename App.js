@@ -117,7 +117,9 @@ export default function App() {
         renderItem={({ item }) => (
           <View style={styles.card}>
             {item.image_url && (
-              <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+              <View style={styles.cardImageContainer}>
+                <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+              </View>
             )}
             <Text style={styles.cardName}>{item.name}</Text>
           </View>
@@ -185,9 +187,14 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  cardImage: {
+  cardImageContainer: {
     width: '100%',
     aspectRatio: 1,
+    backgroundColor: '#E8E3DD',
+  },
+  cardImage: {
+    width: '100%',
+    height: '100%',
   },
   cardName: {
     fontSize: 14,

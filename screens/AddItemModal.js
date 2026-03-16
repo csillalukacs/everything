@@ -1,6 +1,8 @@
 import * as ImagePicker from 'expo-image-picker';
+import { removeBackground } from 'react-native-background-remover';
 import { useEffect, useState } from 'react';
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -13,10 +15,12 @@ import {
   View,
 } from 'react-native';
 
+
 export default function AddItemModal({ visible, onClose, onSave }) {
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
     if (visible) openCamera();
@@ -38,7 +42,20 @@ export default function AddItemModal({ visible, onClose, onSave }) {
     if (result.canceled) {
       onClose();
     } else {
-      setPhoto(result.assets[0].uri);
+      setProcessing(true);
+      stickerify(result.assets[0].uri);
+    }
+  }
+
+  async function stickerify(originalUri) {
+    try {
+      const outputUri = await removeBackground(originalUri);
+      setPhoto(outputUri);
+    } catch (e) {
+      console.warn('Stickerify failed, using original:', e);
+      setPhoto(originalUri);
+    } finally {
+      setProcessing(false);
     }
   }
 
@@ -57,7 +74,18 @@ export default function AddItemModal({ visible, onClose, onSave }) {
     onClose();
   }
 
-  if (!photo) return null;
+  if (!photo && !processing) return null;
+
+  if (processing) {
+    return (
+      <Modal visible={visible} animationType="slide">
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#2D2D2D" />
+          <Text style={styles.loadingText}>stickerifying...</Text>
+        </View>
+      </Modal>
+    );
+  }
 
   return (
     <Modal visible={visible} animationType="slide">
@@ -69,7 +97,9 @@ export default function AddItemModal({ visible, onClose, onSave }) {
           <Text style={styles.cancelText}>cancel</Text>
         </TouchableOpacity>
 
-        <Image source={{ uri: photo }} style={styles.photo} />
+        <View style={styles.stickerContainer}>
+          <Image source={{ uri: photo }} style={styles.photo} />
+        </View>
 
         <TextInput
           style={styles.input}
@@ -95,6 +125,18 @@ export default function AddItemModal({ visible, onClose, onSave }) {
 }
 
 const styles = StyleSheet.create({
+  loadingContainer: {
+    flex: 1,
+    backgroundColor: '#F5F0EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#999',
+    letterSpacing: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F0EB',
@@ -108,11 +150,17 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
   },
-  photo: {
+  stickerContainer: {
     width: '100%',
     aspectRatio: 1,
     borderRadius: 16,
     marginBottom: 24,
+    backgroundColor: '#E8E3DD',
+    overflow: 'hidden',
+  },
+  photo: {
+    width: '100%',
+    height: '100%',
   },
   input: {
     backgroundColor: '#fff',
