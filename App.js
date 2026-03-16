@@ -10,15 +10,32 @@ import {
   View,
 } from 'react-native';
 import { supabase } from './lib/supabase';
+import AuthScreen from './screens/AuthScreen';
 
 export default function App() {
+  const [session, setSession] = useState(null);
+  const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [name, setName] = useState('');
-  const [loading, setLoading] = useState(true);
 
+  // Handle auth state changes
   useEffect(() => {
-    fetchItems();
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setSession(session);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  // Fetch items when session is available
+  useEffect(() => {
+    if (session) fetchItems();
+  }, [session]);
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -26,7 +43,6 @@ export default function App() {
       .select('*')
       .order('created_at', { ascending: false });
     if (!error) setItems(data);
-    setLoading(false);
   }
 
   async function addItem() {
@@ -40,6 +56,18 @@ export default function App() {
       setItems([data, ...items]);
       setName('');
     }
+  }
+
+  if (loading) {
+    return (
+      <View style={styles.centered}>
+        <ActivityIndicator color="#999" />
+      </View>
+    );
+  }
+
+  if (!session) {
+    return <AuthScreen />;
   }
 
   return (
@@ -62,18 +90,14 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
-      {loading ? (
-        <ActivityIndicator color="#999" style={{ marginTop: 40 }} />
-      ) : (
-        <FlatList
-          data={items}
-          keyExtractor={(item) => item.id}
-          renderItem={({ item }) => (
-            <Text style={styles.item}>{item.name}</Text>
-          )}
-          style={styles.list}
-        />
-      )}
+      <FlatList
+        data={items}
+        keyExtractor={(item) => item.id}
+        renderItem={({ item }) => (
+          <Text style={styles.item}>{item.name}</Text>
+        )}
+        style={styles.list}
+      />
 
       <StatusBar style="dark" />
     </View>
@@ -81,6 +105,12 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
+  centered: {
+    flex: 1,
+    backgroundColor: '#F5F0EB',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   container: {
     flex: 1,
     backgroundColor: '#F5F0EB',
