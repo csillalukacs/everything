@@ -13,7 +13,11 @@
       "backgroundColor": "#ffffff"
     },
     "ios": {
-      "supportsTablet": true
+      "supportsTablet": true,
+      "bundleIdentifier": "com.csillalukacs.everything",
+      "infoPlist": {
+        "NSCameraUsageDescription": "Used to take photos of your items."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -27,7 +31,8 @@
       "favicon": "./assets/favicon.png"
     },
     "plugins": [
-      "expo-asset"
+      "expo-asset",
+      "expo-web-browser"
     ]
   }
 }
