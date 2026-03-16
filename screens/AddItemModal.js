@@ -1,5 +1,5 @@
 import * as ImagePicker from 'expo-image-picker';
-import { removeBackground } from 'react-native-background-remover';
+// import { removeBackground } from 'react-native-background-remover';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -42,22 +42,21 @@ export default function AddItemModal({ visible, onClose, onSave }) {
     if (result.canceled) {
       onClose();
     } else {
-      setProcessing(true);
-      stickerify(result.assets[0].uri);
+      setPhoto(result.assets[0].uri);
     }
   }
 
-  async function stickerify(originalUri) {
-    try {
-      const outputUri = await removeBackground(originalUri);
-      setPhoto(outputUri);
-    } catch (e) {
-      console.warn('Stickerify failed, using original:', e);
-      setPhoto(originalUri);
-    } finally {
-      setProcessing(false);
-    }
-  }
+  // async function stickerify(originalUri) {
+  //   try {
+  //     const outputUri = await removeBackground(originalUri);
+  //     setPhoto(outputUri);
+  //   } catch (e) {
+  //     console.warn('Stickerify failed, using original:', e);
+  //     setPhoto(originalUri);
+  //   } finally {
+  //     setProcessing(false);
+  //   }
+  // }
 
   async function handleSave() {
     if (!name.trim() || !photo) return;
