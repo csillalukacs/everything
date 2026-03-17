@@ -1,6 +1,8 @@
+import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
+import * as MediaLibrary from 'expo-media-library';
 import { CameraView, useCameraPermissions } from 'expo-camera';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Image,
   Keyboard,
@@ -19,7 +21,21 @@ export default function AddItemModal({ visible, onClose, onSave }) {
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
+  const [lastPhoto, setLastPhoto] = useState(null);
   const cameraRef = useRef(null);
+
+  useEffect(() => {
+    if (!visible) return;
+    (async () => {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') return;
+      const { assets } = await MediaLibrary.getAssetsAsync({ first: 1, sortBy: MediaLibrary.SortBy.creationTime });
+      if (assets.length > 0) {
+        const info = await MediaLibrary.getAssetInfoAsync(assets[0]);
+        setLastPhoto(info.localUri ?? assets[0].uri);
+      }
+    })();
+  }, [visible]);
 
   async function takePhoto() {
     if (!cameraRef.current) return;
@@ -82,7 +98,11 @@ export default function AddItemModal({ visible, onClose, onSave }) {
         <View style={styles.cameraControls}>
           {/* camera roll bottom left */}
           <TouchableOpacity style={styles.libraryButton} onPress={openLibrary}>
-            <Text style={styles.libraryButtonText}>roll</Text>
+            {lastPhoto ? (
+              <Image source={{ uri: lastPhoto }} style={styles.libraryThumbnail} />
+            ) : (
+              <Ionicons name="image-outline" size={24} color="#fff" />
+            )}
           </TouchableOpacity>
 
           {/* shutter center */}
@@ -186,9 +206,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  libraryButtonText: {
-    color: '#fff',
-    fontSize: 12,
+  libraryThumbnail: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 10,
   },
   shutter: {
     width: 72,
