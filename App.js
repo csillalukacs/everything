@@ -21,6 +21,7 @@ import AddItemModal from './screens/AddItemModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_SIZE = SCREEN_WIDTH * 0.72;
+const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2; // 48 = horizontal padding, 12 = gap
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -271,7 +272,7 @@ const styles = StyleSheet.create({
     marginBottom: 12,
   },
   card: {
-    flex: 1,
+    width: GRID_CARD_SIZE,
     backgroundColor: '#fff',
     borderRadius: 12,
     overflow: 'hidden',
