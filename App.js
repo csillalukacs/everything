@@ -229,7 +229,7 @@ export default function App() {
               onPress={() => setSelectedItem(item)}
             >
               {item.image_url && (
-                <View style={styles.cardImageContainer}>
+                <View style={[styles.cardImageContainer, cat && { backgroundColor: cat.color }]}>
                   <Image source={{ uri: item.image_url }} style={styles.cardImage} />
                 </View>
               )}

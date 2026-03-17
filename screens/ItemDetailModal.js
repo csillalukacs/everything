@@ -125,7 +125,7 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
         </View>
 
         {/* Photo */}
-        <View style={[styles.imageContainer, displayCategory && { borderColor: displayCategory.color, borderWidth: 3 }]}>
+        <View style={[styles.imageContainer, displayCategory && { borderColor: displayCategory.color, borderWidth: 3, backgroundColor: displayCategory.color }]}>
           {displayPhoto ? (
             <Image source={{ uri: displayPhoto }} style={styles.image} />
           ) : (
