@@ -1,28 +1,25 @@
 import { StatusBar } from 'expo-status-bar';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Animated,
   ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { supabase } from './lib/supabase';
 import { CATEGORY_COLORS } from './constants/categories';
 import AuthScreen from './screens/AuthScreen';
 import AddItemModal from './screens/AddItemModal';
+import ItemDetailModal from './screens/ItemDetailModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const CARD_SIZE = SCREEN_WIDTH * 0.72;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
 
 export default function App() {
@@ -34,9 +31,6 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [editingItem, setEditingItem] = useState(null);
-
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-  const cardAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -60,27 +54,6 @@ export default function App() {
       setCategories([]);
     }
   }, [session]);
-
-  useEffect(() => {
-    if (selectedItem) {
-      Animated.parallel([
-        Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.spring(cardAnim, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [selectedItem]);
-
-  function dismiss(onComplete) {
-    Animated.parallel([
-      Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(cardAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-    ]).start(() => {
-      setSelectedItem(null);
-      backdropAnim.setValue(0);
-      cardAnim.setValue(0);
-      onComplete?.();
-    });
-  }
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -177,7 +150,7 @@ export default function App() {
 
   async function handleDelete() {
     const itemToDelete = selectedItem;
-    dismiss();
+    setSelectedItem(null);
     const { error } = await supabase
       .from('items')
       .delete()
@@ -254,9 +227,8 @@ export default function App() {
           const cat = item.category_id ? categoryMap.get(item.category_id) : null;
           return (
             <TouchableOpacity
-              style={[styles.card, cat && { borderColor: cat.color, borderWidth: 10 }]}
-              onLongPress={() => setSelectedItem(item)}
-              delayLongPress={400}
+              style={[styles.card, cat && { borderColor: cat.color, borderWidth: 3 }]}
+              onPress={() => setSelectedItem(item)}
             >
               {item.image_url && (
                 <View style={styles.cardImageContainer}>
@@ -282,57 +254,14 @@ export default function App() {
         editingItem={editingItem}
       />
 
-      <Modal
+      <ItemDetailModal
         visible={!!selectedItem}
-        transparent
-        animationType="none"
-        onRequestClose={() => dismiss()}
-      >
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-        </Animated.View>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={() => dismiss()}
-        />
-
-        <View style={styles.floatingContainer} pointerEvents="box-none">
-          <Animated.View style={[styles.floatingCard, {
-            opacity: cardAnim,
-            transform: [{
-              scale: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }),
-            }],
-          }]}>
-            {selectedItem?.image_url && (
-              <Image source={{ uri: selectedItem.image_url }} style={styles.floatingImage} />
-            )}
-            {(() => {
-              const cat = selectedItem?.category_id ? categoryMap.get(selectedItem.category_id) : null;
-              return (
-                <Text style={[styles.floatingName, cat && { backgroundColor: cat.color }]}>
-                  {selectedItem?.name}
-                </Text>
-              );
-            })()}
-          </Animated.View>
-
-          <Animated.View style={[styles.actions, {
-            opacity: cardAnim,
-            transform: [{
-              translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
-            }],
-          }]}>
-            <TouchableOpacity style={styles.actionRow} onPress={() => dismiss(() => { setEditingItem(selectedItem); setModalVisible(true); })}>
-              <Text style={styles.actionText}>edit</Text>
-            </TouchableOpacity>
-            <View style={styles.actionDivider} />
-            <TouchableOpacity style={styles.actionRow} onPress={handleDelete}>
-              <Text style={[styles.actionText, styles.actionDelete]}>delete</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      </Modal>
+        item={selectedItem}
+        category={selectedItem?.category_id ? categoryMap.get(selectedItem.category_id) : null}
+        onClose={() => setSelectedItem(null)}
+        onEdit={() => { setEditingItem(selectedItem); setSelectedItem(null); setModalVisible(true); }}
+        onDelete={handleDelete}
+      />
 
       <StatusBar style="dark" />
     </View>
@@ -464,54 +393,5 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     lineHeight: 32,
-  },
-  // --- detail modal ---
-  floatingContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  floatingCard: {
-    width: CARD_SIZE,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
-  },
-  floatingImage: {
-    width: CARD_SIZE,
-    height: CARD_SIZE,
-  },
-  floatingName: {
-    fontSize: 16,
-    color: '#2D2D2D',
-    padding: 14,
-  },
-  actions: {
-    width: CARD_SIZE,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
-  },
-  actionRow: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  actionText: {
-    fontSize: 16,
-    color: '#2D2D2D',
-  },
-  actionDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E5E5E5',
-    marginHorizontal: 16,
-  },
-  actionDelete: {
-    color: '#E74C3C',
   },
 });
