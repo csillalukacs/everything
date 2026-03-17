@@ -208,7 +208,7 @@ export default function App() {
       <View style={styles.header}>
         <View>
           <Text style={styles.title}>everything</Text>
-          <Text style={styles.subtitle}>your personal inventory</Text>
+          <Text style={styles.subtitle}>a home for your stuff</Text>
         </View>
         <TouchableOpacity onPress={() => supabase.auth.signOut()}>
           <Text style={styles.logout}>log out</Text>
@@ -254,17 +254,16 @@ export default function App() {
           const cat = item.category_id ? categoryMap.get(item.category_id) : null;
           return (
             <TouchableOpacity
-              style={styles.card}
+              style={[styles.card, cat && { borderColor: cat.color, borderWidth: 10 }]}
               onLongPress={() => setSelectedItem(item)}
               delayLongPress={400}
             >
-              {cat && <View style={[styles.cardColorStrip, { backgroundColor: cat.color }]} />}
               {item.image_url && (
                 <View style={styles.cardImageContainer}>
                   <Image source={{ uri: item.image_url }} style={styles.cardImage} />
                 </View>
               )}
-              <Text style={styles.cardName}>{item.name}</Text>
+              <Text style={[styles.cardName, cat && { backgroundColor: cat.color }]}>{item.name}</Text>
             </TouchableOpacity>
           );
         }}
@@ -305,13 +304,17 @@ export default function App() {
               scale: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }),
             }],
           }]}>
-            {selectedItem?.category_id && categoryMap.get(selectedItem.category_id) && (
-              <View style={[styles.floatingColorStrip, { backgroundColor: categoryMap.get(selectedItem.category_id).color }]} />
-            )}
             {selectedItem?.image_url && (
               <Image source={{ uri: selectedItem.image_url }} style={styles.floatingImage} />
             )}
-            <Text style={styles.floatingName}>{selectedItem?.name}</Text>
+            {(() => {
+              const cat = selectedItem?.category_id ? categoryMap.get(selectedItem.category_id) : null;
+              return (
+                <Text style={[styles.floatingName, cat && { backgroundColor: cat.color }]}>
+                  {selectedItem?.name}
+                </Text>
+              );
+            })()}
           </Animated.View>
 
           <Animated.View style={[styles.actions, {
@@ -428,10 +431,6 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
-  cardColorStrip: {
-    height: 4,
-    width: '100%',
-  },
   cardImageContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -483,10 +482,6 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.3,
     shadowRadius: 24,
-  },
-  floatingColorStrip: {
-    height: 5,
-    width: '100%',
   },
   floatingImage: {
     width: CARD_SIZE,

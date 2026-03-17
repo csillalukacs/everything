@@ -37,7 +37,7 @@ export default function AuthScreen() {
   return (
     <View style={styles.container}>
       <Text style={styles.title}>everything</Text>
-      <Text style={styles.subtitle}>your personal inventory</Text>
+      <Text style={styles.subtitle}>a home for your stuff</Text>
 
       <TouchableOpacity style={styles.button} onPress={signInWithGoogle}>
         <Text style={styles.buttonText}>continue with google</Text>
