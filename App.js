@@ -30,7 +30,6 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [editingItem, setEditingItem] = useState(null);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -106,14 +105,13 @@ export default function App() {
     const { data, error } = await supabase
       .from('items')
       .update({ name, image_url, category_id: categoryId })
-      .eq('id', editingItem.id)
+      .eq('id', selectedItem.id)
       .select()
       .single();
 
     if (!error) {
       setItems(prev => prev.map(i => i.id === data.id ? data : i));
-      setEditingItem(null);
-      setModalVisible(false);
+      setSelectedItem(data);
     }
   }
 
@@ -247,11 +245,10 @@ export default function App() {
 
       <AddItemModal
         visible={modalVisible}
-        onClose={() => { setModalVisible(false); setEditingItem(null); }}
-        onSave={editingItem ? handleUpdate : handleSave}
+        onClose={() => setModalVisible(false)}
+        onSave={handleSave}
         categories={categories}
         onAddCategory={handleAddCategory}
-        editingItem={editingItem}
       />
 
       <ItemDetailModal
@@ -259,8 +256,10 @@ export default function App() {
         item={selectedItem}
         category={selectedItem?.category_id ? categoryMap.get(selectedItem.category_id) : null}
         onClose={() => setSelectedItem(null)}
-        onEdit={() => { setEditingItem(selectedItem); setSelectedItem(null); setModalVisible(true); }}
         onDelete={handleDelete}
+        onSave={handleUpdate}
+        categories={categories}
+        onAddCategory={handleAddCategory}
       />
 
       <StatusBar style="dark" />

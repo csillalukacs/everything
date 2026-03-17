@@ -17,34 +17,19 @@ import {
   View,
 } from 'react-native';
 
-export default function AddItemModal({ visible, onClose, onSave, categories = [], onAddCategory, editingItem }) {
+export default function AddItemModal({ visible, onClose, onSave, categories = [], onAddCategory }) {
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
-  const [nameEditable, setNameEditable] = useState(false);
   const [permission, requestPermission] = useCameraPermissions();
   const [lastPhoto, setLastPhoto] = useState(null);
   const cameraRef = useRef(null);
-  const nameInputRef = useRef(null);
-
-  useEffect(() => {
-    if (nameEditable) nameInputRef.current?.focus();
-  }, [nameEditable]);
 
   useEffect(() => {
     if (!visible) return;
-
-    if (editingItem) {
-      setPhoto(editingItem.image_url);
-      setName(editingItem.name);
-      setSelectedCategory(categories.find(c => c.id === editingItem.category_id) ?? null);
-      setNameEditable(false);
-    } else {
-      setNameEditable(true);
-    }
 
     (async () => {
       const { status } = await MediaLibrary.requestPermissionsAsync();
@@ -104,7 +89,6 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
     setSelectedCategory(null);
     setAddingCategory(false);
     setNewCategoryName('');
-    setNameEditable(false);
     onClose();
   }
 
@@ -213,31 +197,23 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
             )}
           </ScrollView>
 
-          <TouchableOpacity
-            activeOpacity={1}
-            onPress={() => setNameEditable(true)}
-          >
-            <TextInput
-              ref={nameInputRef}
-              style={styles.input}
-              placeholder="what is this?"
-              placeholderTextColor="#bbb"
-              value={name}
-              onChangeText={setName}
-              editable={nameEditable}
-              pointerEvents={nameEditable ? 'auto' : 'none'}
-              autoFocus={!editingItem}
-              returnKeyType="done"
-              onSubmitEditing={Keyboard.dismiss}
-            />
-          </TouchableOpacity>
+          <TextInput
+            style={styles.input}
+            placeholder="what is this?"
+            placeholderTextColor="#bbb"
+            value={name}
+            onChangeText={setName}
+            autoFocus
+            returnKeyType="done"
+            onSubmitEditing={Keyboard.dismiss}
+          />
 
           <TouchableOpacity
             style={[styles.button, saving && styles.buttonDisabled]}
             onPress={handleSave}
             disabled={saving}
           >
-            <Text style={styles.buttonText}>{saving ? 'saving...' : editingItem ? 'update' : 'save'}</Text>
+            <Text style={styles.buttonText}>{saving ? 'saving...' : 'save'}</Text>
           </TouchableOpacity>
         </KeyboardAvoidingView>
       ) : (
