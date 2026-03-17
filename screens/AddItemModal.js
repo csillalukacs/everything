@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Modal,
   Platform,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -16,10 +17,13 @@ import {
   View,
 } from 'react-native';
 
-export default function AddItemModal({ visible, onClose, onSave }) {
+export default function AddItemModal({ visible, onClose, onSave, categories = [], onAddCategory }) {
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [addingCategory, setAddingCategory] = useState(false);
+  const [newCategoryName, setNewCategoryName] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const [lastPhoto, setLastPhoto] = useState(null);
   const cameraRef = useRef(null);
@@ -57,18 +61,33 @@ export default function AddItemModal({ visible, onClose, onSave }) {
     if (!result.canceled) setPhoto(result.assets[0].uri);
   }
 
+  async function handleConfirmNewCategory() {
+    const trimmed = newCategoryName.trim();
+    if (!trimmed) return;
+    const category = await onAddCategory(trimmed);
+    if (category) {
+      setSelectedCategory(category);
+    }
+    setAddingCategory(false);
+    setNewCategoryName('');
+  }
+
   async function handleSave() {
     if (!name.trim() || !photo) return;
     setSaving(true);
-    await onSave(name.trim(), photo);
+    await onSave(name.trim(), photo, selectedCategory?.id ?? null);
     setName('');
     setPhoto(null);
+    setSelectedCategory(null);
     setSaving(false);
   }
 
   function handleClose() {
     setPhoto(null);
     setName('');
+    setSelectedCategory(null);
+    setAddingCategory(false);
+    setNewCategoryName('');
     onClose();
   }
 
@@ -89,14 +108,11 @@ export default function AddItemModal({ visible, onClose, onSave }) {
       <View style={styles.cameraContainer}>
         <CameraView ref={cameraRef} style={styles.camera} facing="back" />
 
-        {/* cancel top left */}
         <TouchableOpacity style={styles.cancelOverlay} onPress={handleClose}>
           <Text style={styles.cancelText}>cancel</Text>
         </TouchableOpacity>
 
-        {/* bottom bar */}
         <View style={styles.cameraControls}>
-          {/* camera roll bottom left */}
           <TouchableOpacity style={styles.libraryButton} onPress={openLibrary}>
             {lastPhoto ? (
               <Image source={{ uri: lastPhoto }} style={styles.libraryThumbnail} />
@@ -105,10 +121,8 @@ export default function AddItemModal({ visible, onClose, onSave }) {
             )}
           </TouchableOpacity>
 
-          {/* shutter center */}
           <TouchableOpacity style={styles.shutter} onPress={takePhoto} />
 
-          {/* spacer to balance layout */}
           <View style={styles.shutterSpacer} />
         </View>
       </View>
@@ -132,6 +146,55 @@ export default function AddItemModal({ visible, onClose, onSave }) {
               <Text style={styles.retakeText}>retake</Text>
             </View>
           </TouchableOpacity>
+
+          {/* Category picker */}
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.categoryScroll}
+            contentContainerStyle={styles.categoryScrollContent}
+          >
+            {categories.map(cat => {
+              const selected = selectedCategory?.id === cat.id;
+              return (
+                <TouchableOpacity
+                  key={cat.id}
+                  style={[styles.categoryChip, selected && styles.categoryChipSelected, { borderColor: cat.color }]}
+                  onPress={() => setSelectedCategory(selected ? null : cat)}
+                >
+                  <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
+                  <Text style={[styles.categoryChipText, selected && styles.categoryChipTextSelected]}>
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+
+            {addingCategory ? (
+              <View style={styles.newCategoryRow}>
+                <TextInput
+                  style={styles.newCategoryInput}
+                  placeholder="category name"
+                  placeholderTextColor="#bbb"
+                  value={newCategoryName}
+                  onChangeText={setNewCategoryName}
+                  autoFocus
+                  returnKeyType="done"
+                  onSubmitEditing={handleConfirmNewCategory}
+                />
+                <TouchableOpacity onPress={handleConfirmNewCategory} style={styles.newCategoryConfirm}>
+                  <Ionicons name="checkmark" size={18} color="#2D2D2D" />
+                </TouchableOpacity>
+              </View>
+            ) : (
+              <TouchableOpacity
+                style={[styles.categoryChip, styles.categoryChipAdd]}
+                onPress={() => setAddingCategory(true)}
+              >
+                <Ionicons name="add" size={16} color="#999" />
+              </TouchableOpacity>
+            )}
+          </ScrollView>
 
           <TextInput
             style={styles.input}
@@ -205,6 +268,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(255,255,255,0.4)',
     alignItems: 'center',
     justifyContent: 'center',
+    overflow: 'hidden',
   },
   libraryThumbnail: {
     width: '100%',
@@ -239,7 +303,7 @@ const styles = StyleSheet.create({
     width: '100%',
     aspectRatio: 1,
     borderRadius: 16,
-    marginBottom: 24,
+    marginBottom: 16,
     backgroundColor: '#E8E3DD',
     overflow: 'hidden',
   },
@@ -260,6 +324,66 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
   },
+  // --- category picker ---
+  categoryScroll: {
+    flexGrow: 0,
+    marginBottom: 12,
+  },
+  categoryScrollContent: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  categoryChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 34,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+  },
+  categoryChipSelected: {
+    backgroundColor: '#F5F0EB',
+  },
+  categoryChipAdd: {
+    borderColor: '#E0E0E0',
+    borderStyle: 'dashed',
+  },
+  categoryDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+  },
+  categoryChipText: {
+    fontSize: 13,
+    color: '#999',
+  },
+  categoryChipTextSelected: {
+    color: '#2D2D2D',
+    fontWeight: '500',
+  },
+  newCategoryRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 20,
+    paddingHorizontal: 12,
+    height: 34,
+    backgroundColor: '#fff',
+    gap: 6,
+  },
+  newCategoryInput: {
+    fontSize: 13,
+    color: '#2D2D2D',
+    minWidth: 100,
+  },
+  newCategoryConfirm: {
+    padding: 2,
+  },
+  // --- name + save ---
   input: {
     backgroundColor: '#fff',
     borderRadius: 10,

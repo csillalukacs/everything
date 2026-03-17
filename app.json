@@ -32,7 +32,8 @@
     },
     "plugins": [
       "expo-asset",
-      "expo-web-browser"
+      "expo-web-browser",
+      "expo-media-library"
     ]
   }
 }

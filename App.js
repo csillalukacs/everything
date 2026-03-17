@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   Modal,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -16,17 +17,20 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { supabase } from './lib/supabase';
+import { CATEGORY_COLORS } from './constants/categories';
 import AuthScreen from './screens/AuthScreen';
 import AddItemModal from './screens/AddItemModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const CARD_SIZE = SCREEN_WIDTH * 0.72;
-const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2; // 48 = horizontal padding, 12 = gap
+const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
+  const [categories, setCategories] = useState([]);
+  const [activeCategory, setActiveCategory] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
 
@@ -47,8 +51,13 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (session) fetchItems();
-    else setItems([]);
+    if (session) {
+      fetchItems();
+      fetchCategories();
+    } else {
+      setItems([]);
+      setCategories([]);
+    }
   }, [session]);
 
   useEffect(() => {
@@ -80,13 +89,36 @@ export default function App() {
     if (!error) setItems(data);
   }
 
-  async function handleSave(name, photoUri) {
+  async function fetchCategories() {
+    const { data, error } = await supabase
+      .from('categories')
+      .select('*')
+      .order('created_at', { ascending: true });
+    if (!error) setCategories(data);
+  }
+
+  async function handleAddCategory(name) {
+    const usedColors = new Set(categories.map(c => c.color));
+    const color = CATEGORY_COLORS.find(c => !usedColors.has(c)) ?? CATEGORY_COLORS[0];
+
+    const { data, error } = await supabase
+      .from('categories')
+      .insert({ name, color, user_id: session.user.id })
+      .select()
+      .single();
+
+    if (!error) {
+      setCategories(prev => [...prev, data]);
+      return data;
+    }
+    return null;
+  }
+
+  async function handleSave(name, photoUri, categoryId) {
     const ext = photoUri.split('.').pop();
     const path = `${session.user.id}/${Date.now()}.${ext}`;
 
-    const base64 = await readAsStringAsync(photoUri, {
-      encoding: EncodingType.Base64,
-    });
+    const base64 = await readAsStringAsync(photoUri, { encoding: EncodingType.Base64 });
 
     const { error: uploadError } = await supabase.storage
       .from('item-images')
@@ -103,7 +135,7 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('items')
-      .insert({ name, image_url: publicUrl })
+      .insert({ name, image_url: publicUrl, category_id: categoryId })
       .select()
       .single();
 
@@ -122,6 +154,12 @@ export default function App() {
       .eq('id', itemToDelete.id);
     if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id));
   }
+
+  const filteredItems = activeCategory
+    ? items.filter(i => i.category_id === activeCategory.id)
+    : items;
+
+  const categoryMap = new Map(categories.map(c => [c.id, c]));
 
   if (loading) {
     return (
@@ -147,25 +185,59 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
+      {/* Category filter bar */}
+      <ScrollView
+        horizontal
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterScroll}
+        contentContainerStyle={styles.filterScrollContent}
+      >
+        <TouchableOpacity
+          style={[styles.filterChip, !activeCategory && styles.filterChipActive]}
+          onPress={() => setActiveCategory(null)}
+        >
+          <Text style={[styles.filterChipText, !activeCategory && styles.filterChipTextActive]}>all</Text>
+        </TouchableOpacity>
+        {categories.map(cat => {
+          const active = activeCategory?.id === cat.id;
+          return (
+            <TouchableOpacity
+              key={cat.id}
+              style={[styles.filterChip, active && styles.filterChipActive, { borderColor: cat.color }]}
+              onPress={() => setActiveCategory(active ? null : cat)}
+            >
+              <View style={[styles.filterDot, { backgroundColor: cat.color }]} />
+              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{cat.name}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </ScrollView>
+
       <FlatList
-        data={items}
+        data={filteredItems}
         keyExtractor={(item) => item.id}
         numColumns={2}
         columnWrapperStyle={styles.row}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onLongPress={() => setSelectedItem(item)}
-            delayLongPress={400}
-          >
-            {item.image_url && (
-              <View style={styles.cardImageContainer}>
-                <Image source={{ uri: item.image_url }} style={styles.cardImage} />
-              </View>
-            )}
-            <Text style={styles.cardName}>{item.name}</Text>
-          </TouchableOpacity>
-        )}
+        contentContainerStyle={styles.listContent}
+        style={styles.list}
+        renderItem={({ item }) => {
+          const cat = item.category_id ? categoryMap.get(item.category_id) : null;
+          return (
+            <TouchableOpacity
+              style={styles.card}
+              onLongPress={() => setSelectedItem(item)}
+              delayLongPress={400}
+            >
+              {cat && <View style={[styles.cardColorStrip, { backgroundColor: cat.color }]} />}
+              {item.image_url && (
+                <View style={styles.cardImageContainer}>
+                  <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+                </View>
+              )}
+              <Text style={styles.cardName}>{item.name}</Text>
+            </TouchableOpacity>
+          );
+        }}
       />
 
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
@@ -176,6 +248,8 @@ export default function App() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
+        categories={categories}
+        onAddCategory={handleAddCategory}
       />
 
       <Modal
@@ -184,7 +258,6 @@ export default function App() {
         animationType="none"
         onRequestClose={() => dismiss()}
       >
-        {/* Blurred backdrop — tap to dismiss */}
         <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
           <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
         </Animated.View>
@@ -194,7 +267,6 @@ export default function App() {
           onPress={() => dismiss()}
         />
 
-        {/* Floating card */}
         <View style={styles.floatingContainer} pointerEvents="box-none">
           <Animated.View style={[styles.floatingCard, {
             opacity: cardAnim,
@@ -202,13 +274,15 @@ export default function App() {
               scale: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }),
             }],
           }]}>
+            {selectedItem?.category_id && categoryMap.get(selectedItem.category_id) && (
+              <View style={[styles.floatingColorStrip, { backgroundColor: categoryMap.get(selectedItem.category_id).color }]} />
+            )}
             {selectedItem?.image_url && (
               <Image source={{ uri: selectedItem.image_url }} style={styles.floatingImage} />
             )}
             <Text style={styles.floatingName}>{selectedItem?.name}</Text>
           </Animated.View>
 
-          {/* Actions */}
           <Animated.View style={[styles.actions, {
             opacity: cardAnim,
             transform: [{
@@ -248,7 +322,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 32,
+    marginBottom: 20,
   },
   title: {
     fontSize: 40,
@@ -267,15 +341,65 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
   },
+  // --- filter bar ---
+  filterScroll: {
+    flexGrow: 0,
+    flexShrink: 0,
+    marginBottom: 20,
+  },
+  filterScrollContent: {
+    gap: 8,
+    paddingVertical: 2,
+  },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    height: 34,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+  },
+  filterChipActive: {
+    backgroundColor: '#2D2D2D',
+    borderColor: '#2D2D2D',
+  },
+  filterDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  filterChipText: {
+    fontSize: 13,
+    color: '#999',
+  },
+  filterChipTextActive: {
+    color: '#fff',
+  },
+  // --- grid ---
+  list: {
+    flex: 1,
+  },
+  listContent: {
+    justifyContent: 'flex-start',
+  },
   row: {
     gap: 12,
     marginBottom: 12,
+    justifyContent: 'flex-start',
+    alignItems: 'flex-start',
   },
   card: {
     width: GRID_CARD_SIZE,
     backgroundColor: '#fff',
     borderRadius: 12,
     overflow: 'hidden',
+  },
+  cardColorStrip: {
+    height: 4,
+    width: '100%',
   },
   cardImageContainer: {
     width: '100%',
@@ -311,6 +435,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 32,
   },
+  // --- detail modal ---
   floatingContainer: {
     flex: 1,
     alignItems: 'center',
@@ -327,6 +452,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 12 },
     shadowOpacity: 0.3,
     shadowRadius: 24,
+  },
+  floatingColorStrip: {
+    height: 5,
+    width: '100%',
   },
   floatingImage: {
     width: CARD_SIZE,
