@@ -33,6 +33,7 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [editingItem, setEditingItem] = useState(null);
 
   const backdropAnim = useRef(new Animated.Value(0)).current;
   const cardAnim = useRef(new Animated.Value(0)).current;
@@ -112,6 +113,35 @@ export default function App() {
       return data;
     }
     return null;
+  }
+
+  async function handleUpdate(name, photoUri, categoryId) {
+    let image_url = photoUri;
+
+    if (!photoUri.startsWith('http')) {
+      const ext = photoUri.split('.').pop();
+      const path = `${session.user.id}/${Date.now()}.${ext}`;
+      const base64 = await readAsStringAsync(photoUri, { encoding: EncodingType.Base64 });
+      const { error: uploadError } = await supabase.storage
+        .from('item-images')
+        .upload(path, decode(base64), { contentType: `image/${ext}` });
+      if (uploadError) { console.error('Upload error:', uploadError); return; }
+      const { data: { publicUrl } } = supabase.storage.from('item-images').getPublicUrl(path);
+      image_url = publicUrl;
+    }
+
+    const { data, error } = await supabase
+      .from('items')
+      .update({ name, image_url, category_id: categoryId })
+      .eq('id', editingItem.id)
+      .select()
+      .single();
+
+    if (!error) {
+      setItems(prev => prev.map(i => i.id === data.id ? data : i));
+      setEditingItem(null);
+      setModalVisible(false);
+    }
   }
 
   async function handleSave(name, photoUri, categoryId) {
@@ -246,10 +276,11 @@ export default function App() {
 
       <AddItemModal
         visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleSave}
+        onClose={() => { setModalVisible(false); setEditingItem(null); }}
+        onSave={editingItem ? handleUpdate : handleSave}
         categories={categories}
         onAddCategory={handleAddCategory}
+        editingItem={editingItem}
       />
 
       <Modal
@@ -289,7 +320,7 @@ export default function App() {
               translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
             }],
           }]}>
-            <TouchableOpacity style={styles.actionRow} onPress={() => dismiss()}>
+            <TouchableOpacity style={styles.actionRow} onPress={() => dismiss(() => { setEditingItem(selectedItem); setModalVisible(true); })}>
               <Text style={styles.actionText}>edit</Text>
             </TouchableOpacity>
             <View style={styles.actionDivider} />
