@@ -1,25 +1,36 @@
 import { StatusBar } from 'expo-status-bar';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   ActivityIndicator,
+  Dimensions,
   FlatList,
   Image,
+  Modal,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { supabase } from './lib/supabase';
 import AuthScreen from './screens/AuthScreen';
 import AddItemModal from './screens/AddItemModal';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
+const CARD_SIZE = SCREEN_WIDTH * 0.72;
 
 export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
   const [modalVisible, setModalVisible] = useState(false);
+  const [selectedItem, setSelectedItem] = useState(null);
+
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const cardAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,6 +50,27 @@ export default function App() {
     else setItems([]);
   }, [session]);
 
+  useEffect(() => {
+    if (selectedItem) {
+      Animated.parallel([
+        Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.spring(cardAnim, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [selectedItem]);
+
+  function dismiss(onComplete) {
+    Animated.parallel([
+      Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(cardAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+    ]).start(() => {
+      setSelectedItem(null);
+      backdropAnim.setValue(0);
+      cardAnim.setValue(0);
+      onComplete?.();
+    });
+  }
+
   async function fetchItems() {
     const { data, error } = await supabase
       .from('items')
@@ -48,20 +80,16 @@ export default function App() {
   }
 
   async function handleSave(name, photoUri) {
-    // Upload image to Supabase Storage
     const ext = photoUri.split('.').pop();
     const path = `${session.user.id}/${Date.now()}.${ext}`;
 
-    console.log('Reading file...');
     const base64 = await readAsStringAsync(photoUri, {
       encoding: EncodingType.Base64,
     });
-    console.log('File read, size:', base64.length);
 
     const { error: uploadError } = await supabase.storage
       .from('item-images')
       .upload(path, decode(base64), { contentType: `image/${ext}` });
-    console.log('Upload done, error:', uploadError);
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
@@ -72,7 +100,6 @@ export default function App() {
       .from('item-images')
       .getPublicUrl(path);
 
-    // Insert item
     const { data, error } = await supabase
       .from('items')
       .insert({ name, image_url: publicUrl })
@@ -83,6 +110,16 @@ export default function App() {
       setItems([data, ...items]);
       setModalVisible(false);
     }
+  }
+
+  async function handleDelete() {
+    const itemToDelete = selectedItem;
+    dismiss();
+    const { error } = await supabase
+      .from('items')
+      .delete()
+      .eq('id', itemToDelete.id);
+    if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id));
   }
 
   if (loading) {
@@ -115,14 +152,18 @@ export default function App() {
         numColumns={2}
         columnWrapperStyle={styles.row}
         renderItem={({ item }) => (
-          <View style={styles.card}>
+          <TouchableOpacity
+            style={styles.card}
+            onLongPress={() => setSelectedItem(item)}
+            delayLongPress={400}
+          >
             {item.image_url && (
               <View style={styles.cardImageContainer}>
                 <Image source={{ uri: item.image_url }} style={styles.cardImage} />
               </View>
             )}
             <Text style={styles.cardName}>{item.name}</Text>
-          </View>
+          </TouchableOpacity>
         )}
       />
 
@@ -135,6 +176,54 @@ export default function App() {
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
       />
+
+      <Modal
+        visible={!!selectedItem}
+        transparent
+        animationType="none"
+        onRequestClose={() => dismiss()}
+      >
+        {/* Blurred backdrop — tap to dismiss */}
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+        </Animated.View>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={() => dismiss()}
+        />
+
+        {/* Floating card */}
+        <View style={styles.floatingContainer} pointerEvents="box-none">
+          <Animated.View style={[styles.floatingCard, {
+            opacity: cardAnim,
+            transform: [{
+              scale: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }),
+            }],
+          }]}>
+            {selectedItem?.image_url && (
+              <Image source={{ uri: selectedItem.image_url }} style={styles.floatingImage} />
+            )}
+            <Text style={styles.floatingName}>{selectedItem?.name}</Text>
+          </Animated.View>
+
+          {/* Actions */}
+          <Animated.View style={[styles.actions, {
+            opacity: cardAnim,
+            transform: [{
+              translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
+            }],
+          }]}>
+            <TouchableOpacity style={styles.actionRow} onPress={() => dismiss()}>
+              <Text style={styles.actionText}>edit</Text>
+            </TouchableOpacity>
+            <View style={styles.actionDivider} />
+            <TouchableOpacity style={styles.actionRow} onPress={handleDelete}>
+              <Text style={[styles.actionText, styles.actionDelete]}>delete</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
 
       <StatusBar style="dark" />
     </View>
@@ -220,5 +309,53 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     lineHeight: 32,
+  },
+  floatingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  floatingCard: {
+    width: CARD_SIZE,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+  },
+  floatingImage: {
+    width: CARD_SIZE,
+    height: CARD_SIZE,
+  },
+  floatingName: {
+    fontSize: 16,
+    color: '#2D2D2D',
+    padding: 14,
+  },
+  actions: {
+    width: CARD_SIZE,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  actionRow: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  actionText: {
+    fontSize: 16,
+    color: '#2D2D2D',
+  },
+  actionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E5E5E5',
+    marginHorizontal: 16,
+  },
+  actionDelete: {
+    color: '#E74C3C',
   },
 });
