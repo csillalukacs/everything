@@ -3,7 +3,9 @@ import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { CameraView, useCameraPermissions } from 'expo-camera';
 import { useEffect, useRef, useState } from 'react';
+import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -26,6 +28,7 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
   const [newCategoryName, setNewCategoryName] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const [lastPhoto, setLastPhoto] = useState(null);
+  const [removingBg, setRemovingBg] = useState(false);
   const cameraRef = useRef(null);
 
   useEffect(() => {
@@ -46,6 +49,13 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
     if (!cameraRef.current) return;
     const result = await cameraRef.current.takePictureAsync({ quality: 0.7 });
     setPhoto(result.uri);
+    setRemovingBg(true);
+    try {
+      const cleaned = await removeBackground(result.uri);
+      setPhoto(cleaned);
+    } finally {
+      setRemovingBg(false);
+    }
   }
 
   async function openLibrary() {
@@ -59,7 +69,17 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
       quality: 0.7,
     });
 
-    if (!result.canceled) setPhoto(result.assets[0].uri);
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setPhoto(uri);
+      setRemovingBg(true);
+      try {
+        const cleaned = await removeBackground(uri);
+        setPhoto(cleaned);
+      } finally {
+        setRemovingBg(false);
+      }
+    }
   }
 
   async function handleConfirmNewCategory() {
@@ -141,11 +161,18 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
             <Text style={styles.cancelText}>cancel</Text>
           </TouchableOpacity>
 
-          <TouchableOpacity style={styles.imageContainer} onPress={() => setPhoto(null)}>
+          <TouchableOpacity style={styles.imageContainer} onPress={() => setPhoto(null)} disabled={removingBg}>
             <Image source={{ uri: photo }} style={styles.photo} />
-            <View style={styles.retakeOverlay}>
-              <Text style={styles.retakeText}>retake</Text>
-            </View>
+            {removingBg ? (
+              <View style={styles.retakeOverlay}>
+                <ActivityIndicator color="#fff" />
+                <Text style={styles.retakeText}>removing background...</Text>
+              </View>
+            ) : (
+              <View style={styles.retakeOverlay}>
+                <Text style={styles.retakeText}>retake</Text>
+              </View>
+            )}
           </TouchableOpacity>
 
           {/* Category picker */}

@@ -10,6 +10,7 @@
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.3",
+    "@jacobjmc/react-native-background-remover": "^1.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@supabase/supabase-js": "^2.99.1",
     "base64-arraybuffer": "^1.0.2",
@@ -25,8 +26,7 @@
     "expo-status-bar": "~3.0.9",
     "expo-web-browser": "~15.0.10",
     "react": "19.1.0",
-    "react-native": "0.81.5",
-    "react-native-background-remover": "^0.3.2"
+    "react-native": "0.81.5"
   },
   "private": true
 }

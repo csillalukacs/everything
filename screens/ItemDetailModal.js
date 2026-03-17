@@ -1,7 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
 import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
+import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
+  ActivityIndicator,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -21,6 +23,7 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
   const [editPhoto, setEditPhoto] = useState(null);
   const [editCategory, setEditCategory] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [removingBg, setRemovingBg] = useState(false);
   const [nameEditable, setNameEditable] = useState(false);
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
@@ -48,14 +51,34 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
     const { status } = await ImagePicker.requestCameraPermissionsAsync();
     if (status !== 'granted') return;
     const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.7 });
-    if (!result.canceled) setEditPhoto(result.assets[0].uri);
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setEditPhoto(uri);
+      setRemovingBg(true);
+      try {
+        const cleaned = await removeBackground(uri);
+        setEditPhoto(cleaned);
+      } finally {
+        setRemovingBg(false);
+      }
+    }
   }
 
   async function pickFromLibrary() {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
     if (status !== 'granted') return;
     const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
-    if (!result.canceled) setEditPhoto(result.assets[0].uri);
+    if (!result.canceled) {
+      const uri = result.assets[0].uri;
+      setEditPhoto(uri);
+      setRemovingBg(true);
+      try {
+        const cleaned = await removeBackground(uri);
+        setEditPhoto(cleaned);
+      } finally {
+        setRemovingBg(false);
+      }
+    }
   }
 
   async function handleConfirmNewCategory() {
@@ -110,17 +133,24 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
           )}
 
           {editing && (
-            <View style={styles.photoOverlay}>
-              <TouchableOpacity style={styles.photoAction} onPress={pickFromCamera}>
-                <Ionicons name="camera-outline" size={22} color="#fff" />
-                <Text style={styles.photoActionText}>camera</Text>
-              </TouchableOpacity>
-              <View style={styles.photoActionDivider} />
-              <TouchableOpacity style={styles.photoAction} onPress={pickFromLibrary}>
-                <Ionicons name="image-outline" size={22} color="#fff" />
-                <Text style={styles.photoActionText}>library</Text>
-              </TouchableOpacity>
-            </View>
+            removingBg ? (
+              <View style={styles.photoOverlay}>
+                <ActivityIndicator color="#fff" />
+                <Text style={styles.photoActionText}>removing background...</Text>
+              </View>
+            ) : (
+              <View style={styles.photoOverlay}>
+                <TouchableOpacity style={styles.photoAction} onPress={pickFromCamera}>
+                  <Ionicons name="camera-outline" size={22} color="#fff" />
+                  <Text style={styles.photoActionText}>camera</Text>
+                </TouchableOpacity>
+                <View style={styles.photoActionDivider} />
+                <TouchableOpacity style={styles.photoAction} onPress={pickFromLibrary}>
+                  <Ionicons name="image-outline" size={22} color="#fff" />
+                  <Text style={styles.photoActionText}>library</Text>
+                </TouchableOpacity>
+              </View>
+            )
           )}
         </View>
 
