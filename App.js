@@ -21,6 +21,7 @@ import { CATEGORY_COLORS } from './constants/categories';
 import AuthScreen from './screens/AuthScreen';
 import AddItemModal from './screens/AddItemModal';
 import ItemDetailModal from './screens/ItemDetailModal';
+import CanvasScreen from './screens/CanvasScreen';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -32,6 +33,7 @@ export default function App() {
   const [categories, setCategories] = useState([]);
   const [activeCategory, setActiveCategory] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
+  const [canvasVisible, setCanvasVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [overlayItem, setOverlayItem] = useState(null);
   const [autoEdit, setAutoEdit] = useState(false);
@@ -211,9 +213,14 @@ export default function App() {
           <Text style={styles.title}>everything</Text>
           <Text style={styles.subtitle}>a home for your stuff</Text>
         </View>
-        <TouchableOpacity onPress={() => supabase.auth.signOut()}>
-          <Text style={styles.logout}>log out</Text>
-        </TouchableOpacity>
+        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
+          <TouchableOpacity onPress={() => setCanvasVisible(true)}>
+            <Text style={styles.logout}>canvas</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => supabase.auth.signOut()}>
+            <Text style={styles.logout}>log out</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Category filter bar */}
@@ -281,6 +288,12 @@ export default function App() {
         onSave={handleSave}
         categories={categories}
         onAddCategory={handleAddCategory}
+      />
+
+      <CanvasScreen
+        visible={canvasVisible}
+        onClose={() => setCanvasVisible(false)}
+        items={items}
       />
 
       <ItemDetailModal
