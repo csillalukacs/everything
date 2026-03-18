@@ -17,7 +17,7 @@ import {
   View,
 } from 'react-native';
 
-export default function ItemDetailModal({ item, category, visible, onClose, onDelete, onSave, categories = [], onAddCategory, autoEdit = false }) {
+export default function ItemDetailModal({ item, category, visible, onClose, onDelete, onSave, categories = [], onAddCategory, autoEdit = false, onPrev, onNext }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPhoto, setEditPhoto] = useState(null);
@@ -121,6 +121,16 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
               : <Ionicons name="chevron-down" size={28} color="#2D2D2D" />
             }
           </TouchableOpacity>
+          {!editing && (
+            <View style={styles.navButtons}>
+              <TouchableOpacity onPress={onPrev} disabled={!onPrev} style={styles.navButton}>
+                <Ionicons name="chevron-back" size={24} color={onPrev ? '#2D2D2D' : '#CCC'} />
+              </TouchableOpacity>
+              <TouchableOpacity onPress={onNext} disabled={!onNext} style={styles.navButton}>
+                <Ionicons name="chevron-forward" size={24} color={onNext ? '#2D2D2D' : '#CCC'} />
+              </TouchableOpacity>
+            </View>
+          )}
           <TouchableOpacity onPress={editing ? handleSave : enterEdit} style={styles.headerButton} disabled={saving}>
             <Text style={[styles.headerButtonText, editing && styles.saveText]}>
               {editing ? (saving ? 'saving...' : 'save') : 'edit'}
@@ -258,6 +268,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
+  },
+  navButtons: {
+    flexDirection: 'row',
+    gap: 4,
+  },
+  navButton: {
+    padding: 4,
   },
   headerButton: {
     padding: 4,

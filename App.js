@@ -306,6 +306,8 @@ export default function App() {
         categories={categories}
         onAddCategory={handleAddCategory}
         autoEdit={autoEdit}
+        onPrev={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null; })()}
+        onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
       />
 
       <Modal
