@@ -1,4 +1,4 @@
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useRef, useState } from 'react';
 import {
@@ -167,18 +167,29 @@ export default function CanvasScreen({ visible, onClose, items }) {
   );
 
   async function handleExport() {
-    if (!canvasRef.current) return;
-    const { status } = await MediaLibrary.requestPermissionsAsync();
-    if (status !== 'granted') {
-      Alert.alert('Permission needed', 'Allow photo library access to save the canvas.');
-      return;
+    try {
+      if (!canvasRef.current) {
+        Alert.alert('Error', 'Canvas not ready');
+        return;
+      }
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert('Permission needed', 'Allow photo library access to save the canvas.');
+        return;
+      }
+      const snapshot = canvasRef.current.makeImageSnapshot();
+      if (!snapshot) {
+        Alert.alert('Error', 'Failed to snapshot canvas');
+        return;
+      }
+      const base64 = snapshot.encodeToBase64(ImageFormat.PNG, 100);
+      const uri = FileSystem.cacheDirectory + `canvas_${Date.now()}.png`;
+      await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert('Saved', 'Canvas saved to your photo library.');
+    } catch (e) {
+      Alert.alert('Export failed', e.message);
     }
-    const snapshot = canvasRef.current.makeImageSnapshot();
-    const base64 = snapshot.encodeToBase64(ImageFormat.PNG, 100);
-    const uri = FileSystem.cacheDirectory + `canvas_${Date.now()}.png`;
-    await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
-    await MediaLibrary.saveToLibraryAsync(uri);
-    Alert.alert('Saved', 'Canvas saved to your photo library.');
   }
 
   const canvasReady = canvasSize.width > 0 && canvasSize.height > 0;
