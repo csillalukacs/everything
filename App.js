@@ -1,18 +1,21 @@
 import { StatusBar } from 'expo-status-bar';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
   ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { BlurView } from 'expo-blur';
 import { supabase } from './lib/supabase';
 import { CATEGORY_COLORS } from './constants/categories';
 import AuthScreen from './screens/AuthScreen';
@@ -30,6 +33,11 @@ export default function App() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [overlayItem, setOverlayItem] = useState(null);
+  const [autoEdit, setAutoEdit] = useState(false);
+
+  const backdropAnim = useRef(new Animated.Value(0)).current;
+  const cardAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -53,6 +61,27 @@ export default function App() {
       setCategories([]);
     }
   }, [session]);
+
+  useEffect(() => {
+    if (overlayItem) {
+      Animated.parallel([
+        Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
+        Animated.spring(cardAnim, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true }),
+      ]).start();
+    }
+  }, [overlayItem]);
+
+  function dismissOverlay(onComplete) {
+    Animated.parallel([
+      Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
+      Animated.timing(cardAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
+    ]).start(() => {
+      setOverlayItem(null);
+      backdropAnim.setValue(0);
+      cardAnim.setValue(0);
+      onComplete?.();
+    });
+  }
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -147,7 +176,8 @@ export default function App() {
   }
 
   async function handleDelete() {
-    const itemToDelete = selectedItem;
+    const itemToDelete = selectedItem ?? overlayItem;
+    dismissOverlay();
     setSelectedItem(null);
     const { error } = await supabase
       .from('items')
@@ -227,6 +257,8 @@ export default function App() {
             <TouchableOpacity
               style={[styles.card, cat && { borderColor: cat.color, borderWidth: 3 }]}
               onPress={() => setSelectedItem(item)}
+              onLongPress={() => setOverlayItem(item)}
+              delayLongPress={400}
             >
               {item.image_url && (
                 <View style={[styles.cardImageContainer, cat && { backgroundColor: cat.color }]}>
@@ -255,12 +287,61 @@ export default function App() {
         visible={!!selectedItem}
         item={selectedItem}
         category={selectedItem?.category_id ? categoryMap.get(selectedItem.category_id) : null}
-        onClose={() => setSelectedItem(null)}
+        onClose={() => { setSelectedItem(null); setAutoEdit(false); }}
         onDelete={handleDelete}
         onSave={handleUpdate}
         categories={categories}
         onAddCategory={handleAddCategory}
+        autoEdit={autoEdit}
       />
+
+      <Modal
+        visible={!!overlayItem}
+        transparent
+        animationType="none"
+        onRequestClose={() => dismissOverlay()}
+      >
+        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
+          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
+        </Animated.View>
+        <TouchableOpacity
+          style={StyleSheet.absoluteFill}
+          activeOpacity={1}
+          onPress={() => dismissOverlay()}
+        />
+
+        <View style={styles.overlayContainer} pointerEvents="box-none">
+          <Animated.View style={[styles.overlayCard, {
+            opacity: cardAnim,
+            transform: [{
+              scale: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }),
+            }],
+          }]}>
+            {overlayItem?.image_url && (
+              <Image source={{ uri: overlayItem.image_url }} style={styles.overlayImage} />
+            )}
+            <Text style={styles.overlayName}>{overlayItem?.name}</Text>
+          </Animated.View>
+
+          <Animated.View style={[styles.overlayActions, {
+            opacity: cardAnim,
+            transform: [{
+              translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
+            }],
+          }]}>
+            <TouchableOpacity
+              style={styles.overlayActionRow}
+              onPress={() => dismissOverlay(() => { setAutoEdit(true); setSelectedItem(overlayItem); })}
+            >
+              <Text style={styles.overlayActionText}>edit</Text>
+            </TouchableOpacity>
+            <View style={styles.overlayActionDivider} />
+            <TouchableOpacity style={styles.overlayActionRow} onPress={handleDelete}>
+              <Text style={[styles.overlayActionText, styles.overlayActionDelete]}>delete</Text>
+            </TouchableOpacity>
+          </Animated.View>
+        </View>
+      </Modal>
 
       <StatusBar style="dark" />
     </View>
@@ -392,5 +473,53 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 28,
     lineHeight: 32,
+  },
+  overlayContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 32,
+    gap: 12,
+  },
+  overlayCard: {
+    width: SCREEN_WIDTH * 0.72,
+    backgroundColor: '#fff',
+    borderRadius: 20,
+    overflow: 'hidden',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.3,
+    shadowRadius: 24,
+  },
+  overlayImage: {
+    width: SCREEN_WIDTH * 0.72,
+    height: SCREEN_WIDTH * 0.72,
+  },
+  overlayName: {
+    fontSize: 16,
+    color: '#2D2D2D',
+    padding: 14,
+  },
+  overlayActions: {
+    width: SCREEN_WIDTH * 0.72,
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    overflow: 'hidden',
+  },
+  overlayActionRow: {
+    paddingVertical: 16,
+    alignItems: 'center',
+  },
+  overlayActionText: {
+    fontSize: 16,
+    color: '#2D2D2D',
+  },
+  overlayActionDivider: {
+    height: StyleSheet.hairlineWidth,
+    backgroundColor: '#E5E5E5',
+    marginHorizontal: 16,
+  },
+  overlayActionDelete: {
+    color: '#E74C3C',
   },
 });

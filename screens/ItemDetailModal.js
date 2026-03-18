@@ -17,7 +17,7 @@ import {
   View,
 } from 'react-native';
 
-export default function ItemDetailModal({ item, category, visible, onClose, onDelete, onSave, categories = [], onAddCategory }) {
+export default function ItemDetailModal({ item, category, visible, onClose, onDelete, onSave, categories = [], onAddCategory, autoEdit = false }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPhoto, setEditPhoto] = useState(null);
@@ -28,6 +28,10 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
   const [addingCategory, setAddingCategory] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const nameInputRef = useRef(null);
+
+  useEffect(() => {
+    if (visible && autoEdit) enterEdit();
+  }, [visible]);
 
   useEffect(() => {
     if (nameEditable) nameInputRef.current?.focus();
