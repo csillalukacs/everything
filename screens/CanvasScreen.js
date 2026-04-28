@@ -3,7 +3,6 @@ import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Dimensions,
   Image,
   Modal,
   ScrollView,
@@ -13,7 +12,9 @@ import {
   View,
 } from 'react-native';
 import {
+  AlphaType,
   Canvas,
+  ColorType,
   Group,
   Image as SkiaImage,
   ImageFormat,
@@ -28,6 +29,41 @@ import {
 } from 'react-native-gesture-handler';
 
 const INITIAL_SIZE = 120;
+const SCAN_SIZE = 64;
+
+function computeTightBounds(skImg, itemWidth, itemHeight) {
+  const surface = Skia.Surface.Make(SCAN_SIZE, SCAN_SIZE);
+  if (!surface) return null;
+  const canvas = surface.getCanvas();
+  const src = Skia.XYWHRect(0, 0, skImg.width(), skImg.height());
+  const dst = Skia.XYWHRect(0, 0, SCAN_SIZE, SCAN_SIZE);
+  canvas.drawImageRect(skImg, src, dst, Skia.Paint());
+  surface.flush();
+  const pixels = surface.makeImageSnapshot().readPixels(0, 0, {
+    width: SCAN_SIZE, height: SCAN_SIZE,
+    colorType: ColorType.Alpha_8,
+    alphaType: AlphaType.Unpremul,
+  });
+  if (!pixels) return null;
+  let minX = SCAN_SIZE, minY = SCAN_SIZE, maxX = -1, maxY = -1;
+  for (let y = 0; y < SCAN_SIZE; y++) {
+    for (let x = 0; x < SCAN_SIZE; x++) {
+      if (pixels[y * SCAN_SIZE + x] > 10) {
+        if (x < minX) minX = x;
+        if (x > maxX) maxX = x;
+        if (y < minY) minY = y;
+        if (y > maxY) maxY = y;
+      }
+    }
+  }
+  if (maxX === -1) return null;
+  return {
+    minX: (minX / SCAN_SIZE - 0.5) * itemWidth,
+    minY: (minY / SCAN_SIZE - 0.5) * itemHeight,
+    maxX: ((maxX + 1) / SCAN_SIZE - 0.5) * itemWidth,
+    maxY: ((maxY + 1) / SCAN_SIZE - 0.5) * itemHeight,
+  };
+}
 
 export default function CanvasScreen({ visible, onClose, items }) {
   const [placedItems, setPlacedItems] = useState([]);
@@ -54,9 +90,12 @@ export default function CanvasScreen({ visible, onClose, items }) {
           if (skImg) {
             const maxDim = Math.max(skImg.width(), skImg.height());
             const scale = INITIAL_SIZE / maxDim;
+            const w = skImg.width() * scale;
+            const h = skImg.height() * scale;
+            const tightBounds = computeTightBounds(skImg, w, h);
             setPlacedItems(prev => prev.map(p =>
               p.id === item.id
-                ? { ...p, skImage: skImg, width: skImg.width() * scale, height: skImg.height() * scale }
+                ? { ...p, skImage: skImg, width: w, height: h, tightBounds }
                 : p
             ));
           }
@@ -93,15 +132,17 @@ export default function CanvasScreen({ visible, onClose, items }) {
     const items = placedItemsRef.current;
     for (let i = items.length - 1; i >= 0; i--) {
       const item = items[i];
+      if (!item.skImage) continue;
+
       const dx = touchX - item.x;
       const dy = touchY - item.y;
       const cos = Math.cos(-item.rotation);
       const sin = Math.sin(-item.rotation);
       const localX = (cos * dx - sin * dy) / item.scale;
       const localY = (sin * dx + cos * dy) / item.scale;
-      if (Math.abs(localX) <= item.width / 2 && Math.abs(localY) <= item.height / 2) {
-        return item.id;
-      }
+
+      const b = item.tightBounds ?? { minX: -item.width / 2, minY: -item.height / 2, maxX: item.width / 2, maxY: item.height / 2 };
+      if (localX >= b.minX && localX <= b.maxX && localY >= b.minY && localY <= b.maxY) return item.id;
     }
     return null;
   }
@@ -256,9 +297,11 @@ export default function CanvasScreen({ visible, onClose, items }) {
                           height={item.height}
                           fit="contain"
                         />
-                        {isSelected && (
-                          <Rect x={-hw - 3} y={-hh - 3} width={item.width + 6} height={item.height + 6} color="#2D2D2D" style="stroke" strokeWidth={1.5 / item.scale} />
-                        )}
+                        {isSelected && (() => {
+                          const b = item.tightBounds ?? { minX: -hw, minY: -hh, maxX: hw, maxY: hh };
+                          const pad = 3 / item.scale;
+                          return <Rect x={b.minX - pad} y={b.minY - pad} width={b.maxX - b.minX + pad * 2} height={b.maxY - b.minY + pad * 2} color="#2D2D2D" style="stroke" strokeWidth={1.5 / item.scale} />;
+                        })()}
                       </Group>
                     );
                   })}
