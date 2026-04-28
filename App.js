@@ -1,26 +1,24 @@
 import { StatusBar } from 'expo-status-bar';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import {
-  Animated,
   ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
-import { BlurView } from 'expo-blur';
 import { supabase } from './lib/supabase';
 import AuthScreen from './screens/AuthScreen';
 import AddItemModal from './screens/AddItemModal';
 import ItemDetailModal from './screens/ItemDetailModal';
 import CanvasScreen from './screens/CanvasScreen';
+import BatchTagSheet from './screens/BatchTagSheet';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -34,11 +32,10 @@ export default function App() {
   const [modalVisible, setModalVisible] = useState(false);
   const [canvasVisible, setCanvasVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
-  const [overlayItem, setOverlayItem] = useState(null);
-  const [autoEdit, setAutoEdit] = useState(false);
+  const [selectedIds, setSelectedIds] = useState(new Set());
+  const [batchTagVisible, setBatchTagVisible] = useState(false);
 
-  const backdropAnim = useRef(new Animated.Value(0)).current;
-  const cardAnim = useRef(new Animated.Value(0)).current;
+  const batchMode = selectedIds.size > 0;
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -62,27 +59,6 @@ export default function App() {
       setTags([]);
     }
   }, [session]);
-
-  useEffect(() => {
-    if (overlayItem) {
-      Animated.parallel([
-        Animated.timing(backdropAnim, { toValue: 1, duration: 200, useNativeDriver: true }),
-        Animated.spring(cardAnim, { toValue: 1, tension: 120, friction: 8, useNativeDriver: true }),
-      ]).start();
-    }
-  }, [overlayItem]);
-
-  function dismissOverlay(onComplete) {
-    Animated.parallel([
-      Animated.timing(backdropAnim, { toValue: 0, duration: 180, useNativeDriver: true }),
-      Animated.timing(cardAnim, { toValue: 0, duration: 150, useNativeDriver: true }),
-    ]).start(() => {
-      setOverlayItem(null);
-      backdropAnim.setValue(0);
-      cardAnim.setValue(0);
-      onComplete?.();
-    });
-  }
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -197,14 +173,40 @@ export default function App() {
   }
 
   async function handleDelete() {
-    const itemToDelete = selectedItem ?? overlayItem;
-    dismissOverlay();
+    const itemToDelete = selectedItem;
     setSelectedItem(null);
     const { error } = await supabase
       .from('items')
       .delete()
       .eq('id', itemToDelete.id);
     if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id));
+  }
+
+  function toggleBatchSelect(itemId) {
+    setSelectedIds(prev => {
+      const next = new Set(prev);
+      if (next.has(itemId)) next.delete(itemId);
+      else next.add(itemId);
+      return next;
+    });
+  }
+
+  async function handleBatchTag(tagNames) {
+    if (tagNames.length === 0) {
+      setBatchTagVisible(false);
+      return;
+    }
+    const resolved = await ensureTags(tagNames);
+    if (!resolved) return;
+    const newTagIds = resolved.map(t => t.id);
+    for (const itemId of selectedIds) {
+      const item = items.find(i => i.id === itemId);
+      const existingIds = (item?.tags ?? []).map(t => t.id);
+      await setItemTags(itemId, [...new Set([...existingIds, ...newTagIds])]);
+    }
+    await fetchItems();
+    setBatchTagVisible(false);
+    setSelectedIds(new Set());
   }
 
   const allTagNames = tags.map(t => t.name);
@@ -277,25 +279,51 @@ export default function App() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         style={styles.list}
-        renderItem={({ item }) => (
-          <TouchableOpacity
-            style={styles.card}
-            onPress={() => setSelectedItem(item)}
-            onLongPress={() => setOverlayItem(item)}
-            delayLongPress={400}
-          >
-            {item.image_url && (
-              <View style={styles.cardImageContainer}>
-                <Image source={{ uri: item.image_url }} style={styles.cardImage} />
-              </View>
-            )}
-          </TouchableOpacity>
-        )}
+        renderItem={({ item }) => {
+          const isSelected = selectedIds.has(item.id);
+          return (
+            <TouchableOpacity
+              style={[styles.card, isSelected && styles.cardSelected]}
+              onPress={() => {
+                if (batchMode) {
+                  toggleBatchSelect(item.id);
+                } else {
+                  setSelectedItem(item);
+                }
+              }}
+              onLongPress={() => toggleBatchSelect(item.id)}
+              delayLongPress={400}
+            >
+              {item.image_url && (
+                <View style={styles.cardImageContainer}>
+                  <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+                </View>
+              )}
+              {batchMode && (
+                <View style={styles.selectionBadge}>
+                  <View style={[styles.selectionCircle, isSelected && styles.selectionCircleActive]} />
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        }}
       />
 
-      <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-        <Text style={styles.fabText}>+</Text>
-      </TouchableOpacity>
+      {batchMode ? (
+        <View style={styles.batchBar}>
+          <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.batchBarBtn}>
+            <Text style={styles.batchBarCancelText}>cancel</Text>
+          </TouchableOpacity>
+          <Text style={styles.batchBarCount}>{selectedIds.size} selected</Text>
+          <TouchableOpacity onPress={() => setBatchTagVisible(true)} style={styles.batchBarBtn}>
+            <Text style={styles.batchBarTagText}>tag</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
+          <Text style={styles.fabText}>+</Text>
+        </TouchableOpacity>
+      )}
 
       <AddItemModal
         visible={modalVisible}
@@ -313,61 +341,21 @@ export default function App() {
       <ItemDetailModal
         visible={!!selectedItem}
         item={selectedItem}
-        onClose={() => { setSelectedItem(null); setAutoEdit(false); }}
+        onClose={() => setSelectedItem(null)}
         onDelete={handleDelete}
         onSave={handleUpdate}
         allTags={allTagNames}
-        autoEdit={autoEdit}
         onPrev={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null; })()}
         onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
       />
 
-      <Modal
-        visible={!!overlayItem}
-        transparent
-        animationType="none"
-        onRequestClose={() => dismissOverlay()}
-      >
-        <Animated.View style={[StyleSheet.absoluteFill, { opacity: backdropAnim }]}>
-          <BlurView intensity={40} tint="dark" style={StyleSheet.absoluteFill} />
-        </Animated.View>
-        <TouchableOpacity
-          style={StyleSheet.absoluteFill}
-          activeOpacity={1}
-          onPress={() => dismissOverlay()}
-        />
-
-        <View style={styles.overlayContainer} pointerEvents="box-none">
-          <Animated.View style={[styles.overlayCard, {
-            opacity: cardAnim,
-            transform: [{
-              scale: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }),
-            }],
-          }]}>
-            {overlayItem?.image_url && (
-              <Image source={{ uri: overlayItem.image_url }} style={styles.overlayImage} />
-            )}
-          </Animated.View>
-
-          <Animated.View style={[styles.overlayActions, {
-            opacity: cardAnim,
-            transform: [{
-              translateY: cardAnim.interpolate({ inputRange: [0, 1], outputRange: [10, 0] }),
-            }],
-          }]}>
-            <TouchableOpacity
-              style={styles.overlayActionRow}
-              onPress={() => dismissOverlay(() => { setAutoEdit(true); setSelectedItem(overlayItem); })}
-            >
-              <Text style={styles.overlayActionText}>edit</Text>
-            </TouchableOpacity>
-            <View style={styles.overlayActionDivider} />
-            <TouchableOpacity style={styles.overlayActionRow} onPress={handleDelete}>
-              <Text style={[styles.overlayActionText, styles.overlayActionDelete]}>delete</Text>
-            </TouchableOpacity>
-          </Animated.View>
-        </View>
-      </Modal>
+      <BatchTagSheet
+        visible={batchTagVisible}
+        onClose={() => setBatchTagVisible(false)}
+        onApply={handleBatchTag}
+        allTags={allTagNames}
+        selectedCount={selectedIds.size}
+      />
 
       <StatusBar style="dark" />
     </View>
@@ -459,6 +447,10 @@ const styles = StyleSheet.create({
     borderRadius: 12,
     overflow: 'hidden',
   },
+  cardSelected: {
+    borderWidth: 2.5,
+    borderColor: '#2D2D2D',
+  },
   cardImageContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -467,6 +459,23 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: '100%',
+  },
+  selectionBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+  },
+  selectionCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 2,
+    borderColor: '#fff',
+    backgroundColor: 'rgba(0,0,0,0.25)',
+  },
+  selectionCircleActive: {
+    backgroundColor: '#2D2D2D',
+    borderColor: '#2D2D2D',
   },
   fab: {
     position: 'absolute',
@@ -488,47 +497,39 @@ const styles = StyleSheet.create({
     fontSize: 28,
     lineHeight: 32,
   },
-  overlayContainer: {
-    flex: 1,
+  batchBar: {
+    position: 'absolute',
+    bottom: 40,
+    left: 24,
+    right: 24,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#2D2D2D',
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 32,
-    gap: 12,
-  },
-  overlayCard: {
-    width: SCREEN_WIDTH * 0.72,
-    backgroundColor: '#fff',
-    borderRadius: 20,
-    overflow: 'hidden',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 12 },
-    shadowOpacity: 0.3,
-    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
-  overlayImage: {
-    width: SCREEN_WIDTH * 0.72,
-    height: SCREEN_WIDTH * 0.72,
+  batchBarBtn: {
+    padding: 8,
+    minWidth: 56,
   },
-  overlayActions: {
-    width: SCREEN_WIDTH * 0.72,
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    overflow: 'hidden',
+  batchBarCancelText: {
+    color: '#aaa',
+    fontSize: 15,
   },
-  overlayActionRow: {
-    paddingVertical: 16,
-    alignItems: 'center',
+  batchBarCount: {
+    color: '#fff',
+    fontSize: 14,
   },
-  overlayActionText: {
-    fontSize: 16,
-    color: '#2D2D2D',
-  },
-  overlayActionDivider: {
-    height: StyleSheet.hairlineWidth,
-    backgroundColor: '#E5E5E5',
-    marginHorizontal: 16,
-  },
-  overlayActionDelete: {
-    color: '#E74C3C',
+  batchBarTagText: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '500',
+    textAlign: 'right',
   },
 });
