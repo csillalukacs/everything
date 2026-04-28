@@ -342,7 +342,6 @@ export default function CanvasScreen({ visible, onClose, items }) {
                     {item.image_url && (
                       <Image source={{ uri: item.image_url }} style={styles.trayImage} />
                     )}
-                    <Text style={styles.trayName} numberOfLines={1}>{item.name}</Text>
                   </TouchableOpacity>
                 ))}
               </ScrollView>
@@ -434,11 +433,5 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 8,
     backgroundColor: '#E8E3DD',
-  },
-  trayName: {
-    fontSize: 10,
-    color: '#999',
-    marginTop: 3,
-    textAlign: 'center',
   },
 });

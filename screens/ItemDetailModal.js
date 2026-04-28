@@ -17,17 +17,18 @@ import {
   View,
 } from 'react-native';
 
-export default function ItemDetailModal({ item, category, visible, onClose, onDelete, onSave, categories = [], onAddCategory, autoEdit = false, onPrev, onNext }) {
+export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editPhoto, setEditPhoto] = useState(null);
-  const [editCategory, setEditCategory] = useState(null);
+  const [editTags, setEditTags] = useState([]);
   const [saving, setSaving] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
   const [nameEditable, setNameEditable] = useState(false);
-  const [addingCategory, setAddingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [addingTag, setAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
   const nameInputRef = useRef(null);
+  const scrollRef = useRef(null);
 
   useEffect(() => {
     if (visible && autoEdit) enterEdit();
@@ -37,18 +38,24 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
     if (nameEditable) nameInputRef.current?.focus();
   }, [nameEditable]);
 
+  useEffect(() => {
+    if (addingTag) {
+      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+    }
+  }, [addingTag]);
+
   function enterEdit() {
-    setEditName(item.name);
+    setEditName(item.name ?? '');
     setEditPhoto(item.image_url);
-    setEditCategory(category ?? null);
+    setEditTags((item.tags ?? []).map(t => t.name));
     setNameEditable(false);
     setEditing(true);
   }
 
   function cancelEdit() {
     setEditing(false);
-    setAddingCategory(false);
-    setNewCategoryName('');
+    setAddingTag(false);
+    setNewTagName('');
   }
 
   async function pickFromCamera() {
@@ -85,27 +92,34 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
     }
   }
 
-  async function handleConfirmNewCategory() {
-    const trimmed = newCategoryName.trim();
-    if (!trimmed) return;
-    const cat = await onAddCategory(trimmed);
-    if (cat) setEditCategory(cat);
-    setAddingCategory(false);
-    setNewCategoryName('');
+  function toggleTag(tag) {
+    setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }
+
+  function handleConfirmNewTag() {
+    const trimmed = newTagName.trim().toLowerCase();
+    if (!trimmed) {
+      setAddingTag(false);
+      setNewTagName('');
+      return;
+    }
+    if (!editTags.includes(trimmed)) setEditTags(prev => [...prev, trimmed]);
+    setAddingTag(false);
+    setNewTagName('');
   }
 
   async function handleSave() {
-    if (!editName.trim()) return;
     setSaving(true);
-    await onSave(editName.trim(), editPhoto, editCategory?.id ?? null);
+    await onSave(editName.trim(), editPhoto, editTags);
     setSaving(false);
     setEditing(false);
   }
 
   if (!item) return null;
 
-  const displayCategory = editing ? editCategory : category;
   const displayPhoto = editing ? editPhoto : item.image_url;
+  const itemTags = item.tags ?? [];
+  const tagOptions = [...new Set([...allTags, ...editTags])].sort();
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={editing ? cancelEdit : onClose}>
@@ -113,7 +127,6 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        {/* Header */}
         <View style={styles.header}>
           <TouchableOpacity onPress={editing ? cancelEdit : onClose} style={styles.headerButton}>
             {editing
@@ -138,117 +151,127 @@ export default function ItemDetailModal({ item, category, visible, onClose, onDe
           </TouchableOpacity>
         </View>
 
-        {/* Photo */}
-        <View style={[styles.imageContainer, displayCategory && { borderColor: displayCategory.color, borderWidth: 3, backgroundColor: displayCategory.color }]}>
-          {displayPhoto ? (
-            <Image source={{ uri: displayPhoto }} style={styles.image} />
-          ) : (
-            <View style={styles.imagePlaceholder} />
-          )}
-
-          {editing && (
-            removingBg ? (
-              <View style={styles.photoOverlay}>
-                <ActivityIndicator color="#fff" />
-                <Text style={styles.photoActionText}>removing background...</Text>
-              </View>
-            ) : (
-              <View style={styles.photoOverlay}>
-                <TouchableOpacity style={styles.photoAction} onPress={pickFromCamera}>
-                  <Ionicons name="camera-outline" size={22} color="#fff" />
-                  <Text style={styles.photoActionText}>camera</Text>
-                </TouchableOpacity>
-                <View style={styles.photoActionDivider} />
-                <TouchableOpacity style={styles.photoAction} onPress={pickFromLibrary}>
-                  <Ionicons name="image-outline" size={22} color="#fff" />
-                  <Text style={styles.photoActionText}>library</Text>
-                </TouchableOpacity>
-              </View>
-            )
-          )}
-        </View>
-
-        {/* Info / Edit fields */}
         {editing ? (
-          <View style={styles.editFields}>
-            {/* Category picker */}
-            <ScrollView
-              horizontal
-              showsHorizontalScrollIndicator={false}
-              style={styles.categoryScroll}
-              contentContainerStyle={styles.categoryScrollContent}
-            >
-              {categories.map(cat => {
-                const selected = editCategory?.id === cat.id;
-                return (
-                  <TouchableOpacity
-                    key={cat.id}
-                    style={[styles.categoryChip, selected && styles.categoryChipSelected, { borderColor: cat.color }]}
-                    onPress={() => setEditCategory(selected ? null : cat)}
-                  >
-                    <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
-                    <Text style={[styles.categoryChipText, selected && styles.categoryChipTextSelected]}>{cat.name}</Text>
-                  </TouchableOpacity>
-                );
-              })}
-              {addingCategory ? (
-                <View style={styles.newCategoryRow}>
-                  <TextInput
-                    style={styles.newCategoryInput}
-                    placeholder="category name"
-                    placeholderTextColor="#bbb"
-                    value={newCategoryName}
-                    onChangeText={setNewCategoryName}
-                    autoFocus
-                    returnKeyType="done"
-                    onSubmitEditing={handleConfirmNewCategory}
-                  />
-                  <TouchableOpacity onPress={handleConfirmNewCategory} style={styles.newCategoryConfirm}>
-                    <Ionicons name="checkmark" size={18} color="#2D2D2D" />
-                  </TouchableOpacity>
+          <ScrollView
+            ref={scrollRef}
+            style={{ flex: 1 }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
+            <View style={styles.imageContainer}>
+              {displayPhoto
+                ? <Image source={{ uri: displayPhoto }} style={styles.image} />
+                : <View style={styles.imagePlaceholder} />
+              }
+              {removingBg ? (
+                <View style={styles.photoOverlay}>
+                  <ActivityIndicator color="#fff" />
+                  <Text style={styles.photoActionText}>removing background...</Text>
                 </View>
               ) : (
-                <TouchableOpacity
-                  style={[styles.categoryChip, styles.categoryChipAdd]}
-                  onPress={() => setAddingCategory(true)}
-                >
-                  <Ionicons name="add" size={16} color="#999" />
-                </TouchableOpacity>
+                <View style={styles.photoOverlay}>
+                  <TouchableOpacity style={styles.photoAction} onPress={pickFromCamera}>
+                    <Ionicons name="camera-outline" size={22} color="#fff" />
+                    <Text style={styles.photoActionText}>camera</Text>
+                  </TouchableOpacity>
+                  <View style={styles.photoActionDivider} />
+                  <TouchableOpacity style={styles.photoAction} onPress={pickFromLibrary}>
+                    <Ionicons name="image-outline" size={22} color="#fff" />
+                    <Text style={styles.photoActionText}>library</Text>
+                  </TouchableOpacity>
+                </View>
               )}
-            </ScrollView>
+            </View>
 
-            {/* Name input */}
-            <TouchableOpacity activeOpacity={1} onPress={() => setNameEditable(true)}>
-              <TextInput
-                ref={nameInputRef}
-                style={styles.nameInput}
-                value={editName}
-                onChangeText={setEditName}
-                editable={nameEditable}
-                pointerEvents={nameEditable ? 'auto' : 'none'}
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-              />
-            </TouchableOpacity>
-          </View>
+            <View style={styles.editFields}>
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                style={styles.tagScroll}
+                contentContainerStyle={styles.tagScrollContent}
+              >
+                {tagOptions.map(tag => {
+                  const selected = editTags.includes(tag);
+                  return (
+                    <TouchableOpacity
+                      key={tag}
+                      style={[styles.tagChip, selected && styles.tagChipSelected]}
+                      onPress={() => toggleTag(tag)}
+                    >
+                      <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>{tag}</Text>
+                    </TouchableOpacity>
+                  );
+                })}
+                {addingTag ? (
+                  <View style={styles.newTagRow}>
+                    <TextInput
+                      style={styles.newTagInput}
+                      placeholder="tag"
+                      placeholderTextColor="#bbb"
+                      value={newTagName}
+                      onChangeText={setNewTagName}
+                      autoFocus
+                      returnKeyType="done"
+                      onSubmitEditing={handleConfirmNewTag}
+                      onBlur={handleConfirmNewTag}
+                    />
+                    <TouchableOpacity onPress={handleConfirmNewTag} style={styles.newTagConfirm}>
+                      <Ionicons name="checkmark" size={18} color="#2D2D2D" />
+                    </TouchableOpacity>
+                  </View>
+                ) : (
+                  <TouchableOpacity
+                    style={[styles.tagChip, styles.tagChipAdd]}
+                    onPress={() => setAddingTag(true)}
+                  >
+                    <Ionicons name="add" size={16} color="#999" />
+                  </TouchableOpacity>
+                )}
+              </ScrollView>
+
+              <TouchableOpacity activeOpacity={1} onPress={() => setNameEditable(true)}>
+                <TextInput
+                  ref={nameInputRef}
+                  style={styles.nameInput}
+                  value={editName}
+                  onChangeText={setEditName}
+                  placeholder="name (optional)"
+                  placeholderTextColor="#bbb"
+                  editable={nameEditable}
+                  pointerEvents={nameEditable ? 'auto' : 'none'}
+                  returnKeyType="done"
+                  onSubmitEditing={Keyboard.dismiss}
+                />
+              </TouchableOpacity>
+            </View>
+          </ScrollView>
         ) : (
-          <View style={styles.info}>
-            <Text style={styles.name}>{item.name}</Text>
-            {category && (
-              <View style={[styles.categoryBadge, { backgroundColor: category.color }]}>
-                <Text style={styles.categoryBadgeText}>{category.name}</Text>
-              </View>
-            )}
-            <Text style={styles.date}>
-              added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
-            </Text>
-          </View>
-        )}
-
-        {!editing && (
-          <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-            <Text style={styles.deleteText}>delete item</Text>
-          </TouchableOpacity>
+          <>
+            <View style={styles.imageContainer}>
+              {displayPhoto
+                ? <Image source={{ uri: displayPhoto }} style={styles.image} />
+                : <View style={styles.imagePlaceholder} />
+              }
+            </View>
+            <View style={styles.info}>
+              {item.name ? <Text style={styles.name}>{item.name}</Text> : null}
+              {itemTags.length > 0 && (
+                <View style={styles.tagRow}>
+                  {itemTags.map(tag => (
+                    <View key={tag.id} style={styles.tagBadge}>
+                      <Text style={styles.tagBadgeText}>{tag.name}</Text>
+                    </View>
+                  ))}
+                </View>
+              )}
+              <Text style={styles.date}>
+                added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+              </Text>
+            </View>
+            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+              <Text style={styles.deleteText}>delete item</Text>
+            </TouchableOpacity>
+          </>
         )}
       </KeyboardAvoidingView>
     </Modal>
@@ -286,7 +309,6 @@ const styles = StyleSheet.create({
   saveText: {
     fontWeight: '500',
   },
-  // --- photo ---
   imageContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -326,7 +348,6 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
   },
-  // --- view mode ---
   info: {
     gap: 12,
     flex: 1,
@@ -337,13 +358,20 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
     letterSpacing: 0.5,
   },
-  categoryBadge: {
-    alignSelf: 'flex-start',
-    paddingHorizontal: 14,
+  tagRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+  },
+  tagBadge: {
+    paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
-  categoryBadgeText: {
+  tagBadgeText: {
     fontSize: 13,
     color: '#2D2D2D',
   },
@@ -359,50 +387,43 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#E74C3C',
   },
-  // --- edit mode ---
   editFields: {
-    flex: 1,
     gap: 12,
+    paddingBottom: 40,
   },
-  categoryScroll: {
+  tagScroll: {
     flexGrow: 0,
   },
-  categoryScrollContent: {
+  tagScrollContent: {
     gap: 8,
     paddingVertical: 4,
   },
-  categoryChip: {
+  tagChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     height: 34,
     borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
     backgroundColor: '#fff',
   },
-  categoryChipSelected: {
-    backgroundColor: '#F5F0EB',
+  tagChipSelected: {
+    backgroundColor: '#2D2D2D',
+    borderColor: '#2D2D2D',
   },
-  categoryChipAdd: {
+  tagChipAdd: {
     borderStyle: 'dashed',
-    borderColor: '#E0E0E0',
   },
-  categoryDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  categoryChipText: {
+  tagChipText: {
     fontSize: 13,
     color: '#999',
   },
-  categoryChipTextSelected: {
-    color: '#2D2D2D',
-    fontWeight: '500',
+  tagChipTextSelected: {
+    color: '#fff',
   },
-  newCategoryRow: {
+  newTagRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -413,12 +434,12 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     gap: 6,
   },
-  newCategoryInput: {
+  newTagInput: {
     fontSize: 13,
     color: '#2D2D2D',
-    minWidth: 100,
+    minWidth: 80,
   },
-  newCategoryConfirm: {
+  newTagConfirm: {
     padding: 2,
   },
   nameInput: {

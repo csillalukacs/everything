@@ -17,7 +17,6 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { supabase } from './lib/supabase';
-import { CATEGORY_COLORS } from './constants/categories';
 import AuthScreen from './screens/AuthScreen';
 import AddItemModal from './screens/AddItemModal';
 import ItemDetailModal from './screens/ItemDetailModal';
@@ -30,8 +29,8 @@ export default function App() {
   const [session, setSession] = useState(null);
   const [loading, setLoading] = useState(true);
   const [items, setItems] = useState([]);
-  const [categories, setCategories] = useState([]);
-  const [activeCategory, setActiveCategory] = useState(null);
+  const [tags, setTags] = useState([]);
+  const [activeTag, setActiveTag] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
   const [canvasVisible, setCanvasVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -57,10 +56,10 @@ export default function App() {
   useEffect(() => {
     if (session) {
       fetchItems();
-      fetchCategories();
+      fetchTags();
     } else {
       setItems([]);
-      setCategories([]);
+      setTags([]);
     }
   }, [session]);
 
@@ -88,37 +87,48 @@ export default function App() {
   async function fetchItems() {
     const { data, error } = await supabase
       .from('items')
-      .select('*')
+      .select('*, tags(id, name)')
       .order('created_at', { ascending: false });
     if (!error) setItems(data);
   }
 
-  async function fetchCategories() {
+  async function fetchTags() {
     const { data, error } = await supabase
-      .from('categories')
+      .from('tags')
       .select('*')
-      .order('created_at', { ascending: true });
-    if (!error) setCategories(data);
+      .order('name');
+    if (!error) setTags(data);
   }
 
-  async function handleAddCategory(name) {
-    const usedColors = new Set(categories.map(c => c.color));
-    const color = CATEGORY_COLORS.find(c => !usedColors.has(c)) ?? CATEGORY_COLORS[0];
+  async function ensureTags(tagNames) {
+    const lowered = [...new Set(tagNames.map(n => n.trim().toLowerCase()).filter(Boolean))];
+    if (lowered.length === 0) return [];
 
-    const { data, error } = await supabase
-      .from('categories')
-      .insert({ name, color, user_id: session.user.id })
-      .select()
-      .single();
+    const byName = new Map(tags.map(t => [t.name, t]));
+    const newNames = lowered.filter(n => !byName.has(n));
 
-    if (!error) {
-      setCategories(prev => [...prev, data]);
-      return data;
+    let created = [];
+    if (newNames.length > 0) {
+      const { data, error } = await supabase
+        .from('tags')
+        .insert(newNames.map(name => ({ name, user_id: session.user.id })))
+        .select();
+      if (error) { console.error('Tag insert error:', error); return null; }
+      created = data;
+      setTags(prev => [...prev, ...created]);
+      created.forEach(t => byName.set(t.name, t));
     }
-    return null;
+
+    return lowered.map(n => byName.get(n));
   }
 
-  async function handleUpdate(name, photoUri, categoryId) {
+  async function setItemTags(itemId, tagIds) {
+    await supabase.from('item_tags').delete().eq('item_id', itemId);
+    if (tagIds.length === 0) return;
+    await supabase.from('item_tags').insert(tagIds.map(tag_id => ({ item_id: itemId, tag_id })));
+  }
+
+  async function handleUpdate(name, photoUri, tagNames) {
     let image_url = photoUri;
 
     if (!photoUri.startsWith('http')) {
@@ -135,18 +145,23 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('items')
-      .update({ name, image_url, category_id: categoryId })
+      .update({ name: name || null, image_url })
       .eq('id', selectedItem.id)
       .select()
       .single();
 
-    if (!error) {
-      setItems(prev => prev.map(i => i.id === data.id ? data : i));
-      setSelectedItem(data);
-    }
+    if (error) return;
+
+    const resolved = await ensureTags(tagNames);
+    if (!resolved) return;
+    await setItemTags(data.id, resolved.map(t => t.id));
+
+    const updated = { ...data, tags: resolved };
+    setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
+    setSelectedItem(updated);
   }
 
-  async function handleSave(name, photoUri, categoryId) {
+  async function handleSave(name, photoUri, tagNames) {
     const ext = photoUri.split('.').pop();
     const path = `${session.user.id}/${Date.now()}.${ext}`;
 
@@ -167,14 +182,18 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('items')
-      .insert({ name, image_url: publicUrl, category_id: categoryId })
+      .insert({ name: name || null, image_url: publicUrl })
       .select()
       .single();
 
-    if (!error) {
-      setItems([data, ...items]);
-      setModalVisible(false);
-    }
+    if (error) return;
+
+    const resolved = await ensureTags(tagNames);
+    if (!resolved) return;
+    await setItemTags(data.id, resolved.map(t => t.id));
+
+    setItems([{ ...data, tags: resolved }, ...items]);
+    setModalVisible(false);
   }
 
   async function handleDelete() {
@@ -188,11 +207,11 @@ export default function App() {
     if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id));
   }
 
-  const filteredItems = activeCategory
-    ? items.filter(i => i.category_id === activeCategory.id)
-    : items;
+  const allTagNames = tags.map(t => t.name);
 
-  const categoryMap = new Map(categories.map(c => [c.id, c]));
+  const filteredItems = activeTag
+    ? items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+    : items;
 
   if (loading) {
     return (
@@ -223,33 +242,33 @@ export default function App() {
         </View>
       </View>
 
-      {/* Category filter bar */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.filterScroll}
-        contentContainerStyle={styles.filterScrollContent}
-      >
-        <TouchableOpacity
-          style={[styles.filterChip, !activeCategory && styles.filterChipActive]}
-          onPress={() => setActiveCategory(null)}
+      {tags.length > 0 && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.filterScroll}
+          contentContainerStyle={styles.filterScrollContent}
         >
-          <Text style={[styles.filterChipText, !activeCategory && styles.filterChipTextActive]}>all</Text>
-        </TouchableOpacity>
-        {categories.map(cat => {
-          const active = activeCategory?.id === cat.id;
-          return (
-            <TouchableOpacity
-              key={cat.id}
-              style={[styles.filterChip, active && styles.filterChipActive, { borderColor: cat.color }]}
-              onPress={() => setActiveCategory(active ? null : cat)}
-            >
-              <View style={[styles.filterDot, { backgroundColor: cat.color }]} />
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{cat.name}</Text>
-            </TouchableOpacity>
-          );
-        })}
-      </ScrollView>
+          <TouchableOpacity
+            style={[styles.filterChip, !activeTag && styles.filterChipActive]}
+            onPress={() => setActiveTag(null)}
+          >
+            <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>all</Text>
+          </TouchableOpacity>
+          {tags.map(tag => {
+            const active = activeTag?.id === tag.id;
+            return (
+              <TouchableOpacity
+                key={tag.id}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setActiveTag(active ? null : tag)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       <FlatList
         data={filteredItems}
@@ -258,24 +277,20 @@ export default function App() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
         style={styles.list}
-        renderItem={({ item }) => {
-          const cat = item.category_id ? categoryMap.get(item.category_id) : null;
-          return (
-            <TouchableOpacity
-              style={[styles.card, cat && { borderColor: cat.color, borderWidth: 3 }]}
-              onPress={() => setSelectedItem(item)}
-              onLongPress={() => setOverlayItem(item)}
-              delayLongPress={400}
-            >
-              {item.image_url && (
-                <View style={[styles.cardImageContainer, cat && { backgroundColor: cat.color }]}>
-                  <Image source={{ uri: item.image_url }} style={styles.cardImage} />
-                </View>
-              )}
-              <Text style={[styles.cardName, cat && { backgroundColor: cat.color }]}>{item.name}</Text>
-            </TouchableOpacity>
-          );
-        }}
+        renderItem={({ item }) => (
+          <TouchableOpacity
+            style={styles.card}
+            onPress={() => setSelectedItem(item)}
+            onLongPress={() => setOverlayItem(item)}
+            delayLongPress={400}
+          >
+            {item.image_url && (
+              <View style={styles.cardImageContainer}>
+                <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+              </View>
+            )}
+          </TouchableOpacity>
+        )}
       />
 
       <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
@@ -286,8 +301,7 @@ export default function App() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
-        categories={categories}
-        onAddCategory={handleAddCategory}
+        allTags={allTagNames}
       />
 
       <CanvasScreen
@@ -299,12 +313,10 @@ export default function App() {
       <ItemDetailModal
         visible={!!selectedItem}
         item={selectedItem}
-        category={selectedItem?.category_id ? categoryMap.get(selectedItem.category_id) : null}
         onClose={() => { setSelectedItem(null); setAutoEdit(false); }}
         onDelete={handleDelete}
         onSave={handleUpdate}
-        categories={categories}
-        onAddCategory={handleAddCategory}
+        allTags={allTagNames}
         autoEdit={autoEdit}
         onPrev={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null; })()}
         onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
@@ -335,7 +347,6 @@ export default function App() {
             {overlayItem?.image_url && (
               <Image source={{ uri: overlayItem.image_url }} style={styles.overlayImage} />
             )}
-            <Text style={styles.overlayName}>{overlayItem?.name}</Text>
           </Animated.View>
 
           <Animated.View style={[styles.overlayActions, {
@@ -399,7 +410,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
   },
-  // --- filter bar ---
   filterScroll: {
     flexGrow: 0,
     flexShrink: 0,
@@ -424,11 +434,6 @@ const styles = StyleSheet.create({
     backgroundColor: '#2D2D2D',
     borderColor: '#2D2D2D',
   },
-  filterDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
   filterChipText: {
     fontSize: 13,
     color: '#999',
@@ -436,7 +441,6 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: '#fff',
   },
-  // --- grid ---
   list: {
     flex: 1,
   },
@@ -463,11 +467,6 @@ const styles = StyleSheet.create({
   cardImage: {
     width: '100%',
     height: '100%',
-  },
-  cardName: {
-    fontSize: 14,
-    color: '#2D2D2D',
-    padding: 10,
   },
   fab: {
     position: 'absolute',
@@ -509,11 +508,6 @@ const styles = StyleSheet.create({
   overlayImage: {
     width: SCREEN_WIDTH * 0.72,
     height: SCREEN_WIDTH * 0.72,
-  },
-  overlayName: {
-    fontSize: 16,
-    color: '#2D2D2D',
-    padding: 14,
   },
   overlayActions: {
     width: SCREEN_WIDTH * 0.72,

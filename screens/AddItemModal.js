@@ -19,13 +19,13 @@ import {
   View,
 } from 'react-native';
 
-export default function AddItemModal({ visible, onClose, onSave, categories = [], onAddCategory }) {
+export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState(null);
-  const [addingCategory, setAddingCategory] = useState(false);
-  const [newCategoryName, setNewCategoryName] = useState('');
+  const [tags, setTags] = useState([]);
+  const [addingTag, setAddingTag] = useState(false);
+  const [newTagName, setNewTagName] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
   const [lastPhoto, setLastPhoto] = useState(null);
   const [removingBg, setRemovingBg] = useState(false);
@@ -82,35 +82,42 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
     }
   }
 
-  async function handleConfirmNewCategory() {
-    const trimmed = newCategoryName.trim();
-    if (!trimmed) return;
-    const category = await onAddCategory(trimmed);
-    if (category) {
-      setSelectedCategory(category);
+  function toggleTag(tag) {
+    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
+  }
+
+  function handleConfirmNewTag() {
+    const trimmed = newTagName.trim().toLowerCase();
+    if (!trimmed) {
+      setAddingTag(false);
+      setNewTagName('');
+      return;
     }
-    setAddingCategory(false);
-    setNewCategoryName('');
+    if (!tags.includes(trimmed)) setTags(prev => [...prev, trimmed]);
+    setAddingTag(false);
+    setNewTagName('');
   }
 
   async function handleSave() {
-    if (!name.trim() || !photo) return;
+    if (!photo) return;
     setSaving(true);
-    await onSave(name.trim(), photo, selectedCategory?.id ?? null);
+    await onSave(name.trim(), photo, tags);
     setName('');
     setPhoto(null);
-    setSelectedCategory(null);
+    setTags([]);
     setSaving(false);
   }
 
   function handleClose() {
     setPhoto(null);
     setName('');
-    setSelectedCategory(null);
-    setAddingCategory(false);
-    setNewCategoryName('');
+    setTags([]);
+    setAddingTag(false);
+    setNewTagName('');
     onClose();
   }
+
+  const tagOptions = [...new Set([...allTags, ...tags])].sort();
 
   function renderCamera() {
     if (!permission) return null;
@@ -175,49 +182,48 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
             )}
           </TouchableOpacity>
 
-          {/* Category picker */}
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
-            style={styles.categoryScroll}
-            contentContainerStyle={styles.categoryScrollContent}
+            style={styles.tagScroll}
+            contentContainerStyle={styles.tagScrollContent}
           >
-            {categories.map(cat => {
-              const selected = selectedCategory?.id === cat.id;
+            {tagOptions.map(tag => {
+              const selected = tags.includes(tag);
               return (
                 <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.categoryChip, selected && styles.categoryChipSelected, { borderColor: cat.color }]}
-                  onPress={() => setSelectedCategory(selected ? null : cat)}
+                  key={tag}
+                  style={[styles.tagChip, selected && styles.tagChipSelected]}
+                  onPress={() => toggleTag(tag)}
                 >
-                  <View style={[styles.categoryDot, { backgroundColor: cat.color }]} />
-                  <Text style={[styles.categoryChipText, selected && styles.categoryChipTextSelected]}>
-                    {cat.name}
+                  <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>
+                    {tag}
                   </Text>
                 </TouchableOpacity>
               );
             })}
 
-            {addingCategory ? (
-              <View style={styles.newCategoryRow}>
+            {addingTag ? (
+              <View style={styles.newTagRow}>
                 <TextInput
-                  style={styles.newCategoryInput}
-                  placeholder="category name"
+                  style={styles.newTagInput}
+                  placeholder="tag"
                   placeholderTextColor="#bbb"
-                  value={newCategoryName}
-                  onChangeText={setNewCategoryName}
+                  value={newTagName}
+                  onChangeText={setNewTagName}
                   autoFocus
                   returnKeyType="done"
-                  onSubmitEditing={handleConfirmNewCategory}
+                  onSubmitEditing={handleConfirmNewTag}
+                  onBlur={handleConfirmNewTag}
                 />
-                <TouchableOpacity onPress={handleConfirmNewCategory} style={styles.newCategoryConfirm}>
+                <TouchableOpacity onPress={handleConfirmNewTag} style={styles.newTagConfirm}>
                   <Ionicons name="checkmark" size={18} color="#2D2D2D" />
                 </TouchableOpacity>
               </View>
             ) : (
               <TouchableOpacity
-                style={[styles.categoryChip, styles.categoryChipAdd]}
-                onPress={() => setAddingCategory(true)}
+                style={[styles.tagChip, styles.tagChipAdd]}
+                onPress={() => setAddingTag(true)}
               >
                 <Ionicons name="add" size={16} color="#999" />
               </TouchableOpacity>
@@ -226,11 +232,10 @@ export default function AddItemModal({ visible, onClose, onSave, categories = []
 
           <TextInput
             style={styles.input}
-            placeholder="what is this?"
+            placeholder="name (optional)"
             placeholderTextColor="#bbb"
             value={name}
             onChangeText={setName}
-            autoFocus
             returnKeyType="done"
             onSubmitEditing={Keyboard.dismiss}
           />
@@ -264,7 +269,6 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 16,
   },
-  // --- camera ---
   cameraContainer: {
     flex: 1,
     backgroundColor: '#000',
@@ -326,7 +330,6 @@ const styles = StyleSheet.create({
     fontSize: 18,
     color: '#2D2D2D',
   },
-  // --- post-capture ---
   imageContainer: {
     width: '100%',
     aspectRatio: 1,
@@ -352,47 +355,40 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 14,
   },
-  // --- category picker ---
-  categoryScroll: {
+  tagScroll: {
     flexGrow: 0,
     marginBottom: 12,
   },
-  categoryScrollContent: {
+  tagScrollContent: {
     gap: 8,
     paddingVertical: 4,
   },
-  categoryChip: {
+  tagChip: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     height: 34,
     borderRadius: 20,
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
     backgroundColor: '#fff',
   },
-  categoryChipSelected: {
-    backgroundColor: '#F5F0EB',
+  tagChipSelected: {
+    backgroundColor: '#2D2D2D',
+    borderColor: '#2D2D2D',
   },
-  categoryChipAdd: {
-    borderColor: '#E0E0E0',
+  tagChipAdd: {
     borderStyle: 'dashed',
   },
-  categoryDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  categoryChipText: {
+  tagChipText: {
     fontSize: 13,
     color: '#999',
   },
-  categoryChipTextSelected: {
-    color: '#2D2D2D',
-    fontWeight: '500',
+  tagChipTextSelected: {
+    color: '#fff',
   },
-  newCategoryRow: {
+  newTagRow: {
     flexDirection: 'row',
     alignItems: 'center',
     borderWidth: 1.5,
@@ -403,15 +399,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     gap: 6,
   },
-  newCategoryInput: {
+  newTagInput: {
     fontSize: 13,
     color: '#2D2D2D',
-    minWidth: 100,
+    minWidth: 80,
   },
-  newCategoryConfirm: {
+  newTagConfirm: {
     padding: 2,
   },
-  // --- name + save ---
   input: {
     backgroundColor: '#fff',
     borderRadius: 10,
