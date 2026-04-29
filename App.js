@@ -34,6 +34,7 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchTagVisible, setBatchTagVisible] = useState(false);
+  const [batchTagging, setBatchTagging] = useState(false);
 
   const batchMode = selectedIds.size > 0;
 
@@ -196,8 +197,9 @@ export default function App() {
       setBatchTagVisible(false);
       return;
     }
+    setBatchTagging(true);
     const resolved = await ensureTags(tagNames);
-    if (!resolved) return;
+    if (!resolved) { setBatchTagging(false); return; }
     const newTagIds = resolved.map(t => t.id);
     for (const itemId of selectedIds) {
       const item = items.find(i => i.id === itemId);
@@ -205,6 +207,7 @@ export default function App() {
       await setItemTags(itemId, [...new Set([...existingIds, ...newTagIds])]);
     }
     await fetchItems();
+    setBatchTagging(false);
     setBatchTagVisible(false);
     setSelectedIds(new Set());
   }
@@ -300,8 +303,8 @@ export default function App() {
                 </View>
               )}
               {batchMode && (
-                <View style={styles.selectionBadge}>
-                  <View style={[styles.selectionCircle, isSelected && styles.selectionCircleActive]} />
+                <View style={[styles.selectionCircle, isSelected && styles.selectionCircleActive]}>
+                  {isSelected && <Text style={styles.selectionCheck}>✓</Text>}
                 </View>
               )}
             </TouchableOpacity>
@@ -355,6 +358,7 @@ export default function App() {
         onApply={handleBatchTag}
         allTags={allTagNames}
         selectedCount={selectedIds.size}
+        loading={batchTagging}
       />
 
       <StatusBar style="dark" />
@@ -460,22 +464,28 @@ const styles = StyleSheet.create({
     width: '100%',
     height: '100%',
   },
-  selectionBadge: {
+  selectionCircle: {
     position: 'absolute',
     top: 8,
     right: 8,
-  },
-  selectionCircle: {
     width: 22,
     height: 22,
     borderRadius: 11,
     borderWidth: 2,
     borderColor: '#fff',
     backgroundColor: 'rgba(0,0,0,0.25)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   selectionCircleActive: {
     backgroundColor: '#2D2D2D',
     borderColor: '#2D2D2D',
+  },
+  selectionCheck: {
+    color: '#fff',
+    fontSize: 14,
+    lineHeight: 16,
+    fontWeight: 'bold',
   },
   fab: {
     position: 'absolute',

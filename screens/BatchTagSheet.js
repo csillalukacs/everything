@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -12,7 +13,7 @@ import {
   View,
 } from 'react-native';
 
-export default function BatchTagSheet({ visible, onClose, onApply, allTags = [], selectedCount }) {
+export default function BatchTagSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
   const [pendingTags, setPendingTags] = useState([]);
   const [addingTag, setAddingTag] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
@@ -38,6 +39,7 @@ export default function BatchTagSheet({ visible, onClose, onApply, allTags = [],
   }
 
   function handleClose() {
+    if (loading) return;
     setPendingTags([]);
     setAddingTag(false);
     setNewTagInput('');
@@ -99,11 +101,14 @@ export default function BatchTagSheet({ visible, onClose, onApply, allTags = [],
             )}
           </ScrollView>
           <TouchableOpacity
-            style={[styles.applyBtn, pendingTags.length === 0 && styles.applyBtnDisabled]}
+            style={[styles.applyBtn, (pendingTags.length === 0 || loading) && styles.applyBtnDisabled]}
             onPress={handleApply}
-            disabled={pendingTags.length === 0}
+            disabled={pendingTags.length === 0 || loading}
           >
-            <Text style={styles.applyBtnText}>apply</Text>
+            {loading
+              ? <ActivityIndicator color="#fff" />
+              : <Text style={styles.applyBtnText}>apply</Text>
+            }
           </TouchableOpacity>
         </View>
       </KeyboardAvoidingView>
