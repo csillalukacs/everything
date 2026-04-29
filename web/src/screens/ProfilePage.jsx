@@ -10,13 +10,17 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [activeTag, setActiveTag] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [isOwner, setIsOwner] = useState(false)
+  const [editingName, setEditingName] = useState(false)
+  const [nameInput, setNameInput] = useState('')
 
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
       if (session) {
         const displayName = session.user.user_metadata?.full_name || session.user.email
-        supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName })
+        await supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName })
+        if (session.user.id === userId) setIsOwner(true)
       }
 
       const [{ data: profile }, { data: fetchedItems }] = await Promise.all([
@@ -32,7 +36,10 @@ export default function ProfilePage() {
           .eq('is_private', false)
           .order('created_at', { ascending: false }),
       ])
-      if (profile) setProfileName(profile.display_name)
+      if (profile) {
+        setProfileName(profile.display_name)
+        setNameInput(profile.display_name ?? '')
+      }
       if (fetchedItems) setItems(fetchedItems)
       setLoading(false)
     }
@@ -63,7 +70,30 @@ export default function ProfilePage() {
     <div className="app">
       <header className="header">
         <div>
-          <h1 className="profile-name">{profileName ?? userId.split('-')[0]}</h1>
+          {isOwner && editingName ? (
+            <input
+              className="profile-name-input"
+              value={nameInput}
+              onChange={e => setNameInput(e.target.value)}
+              onBlur={async () => {
+                const trimmed = nameInput.trim()
+                if (trimmed && trimmed !== profileName) {
+                  await supabase.from('profiles').upsert({ user_id: userId, display_name: trimmed })
+                  setProfileName(trimmed)
+                } else {
+                  setNameInput(profileName ?? '')
+                }
+                setEditingName(false)
+              }}
+              onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
+              autoFocus
+            />
+          ) : (
+            <h1
+              className={`profile-name${isOwner ? ' profile-name-editable' : ''}`}
+              onClick={() => isOwner && setEditingName(true)}
+            >{profileName ?? userId.split('-')[0]}</h1>
+          )}
           <p className="subtitle">
             {items.length} {items.length === 1 ? 'object' : 'objects'}
           </p>

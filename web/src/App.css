@@ -100,6 +100,29 @@ input {
   font-family: Georgia, 'Times New Roman', serif;
 }
 
+.profile-name-editable {
+  cursor: text;
+}
+
+.profile-name-editable:hover {
+  opacity: 0.6;
+}
+
+.profile-name-input {
+  font-size: 48px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  color: #2D2D2D;
+  font-family: Georgia, 'Times New Roman', serif;
+  background: transparent;
+  border-bottom: 1.5px solid #ccc;
+  border-radius: 0;
+  padding: 0;
+  width: auto;
+  min-width: 2ch;
+  max-width: 600px;
+}
+
 .header-meta {
   font-size: 14px;
   color: #999;
