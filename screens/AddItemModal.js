@@ -98,6 +98,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [name, setName] = useState('');
   const [saving, setSaving] = useState(false);
   const [tags, setTags] = useState([]);
+  const [isPrivate, setIsPrivate] = useState(false);
   const [addingTag, setAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [permission, requestPermission] = useCameraPermissions();
@@ -175,10 +176,11 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   async function handleSave() {
     if (!photo) return;
     setSaving(true);
-    await onSave(name.trim(), photo, tags);
+    await onSave(name.trim(), photo, tags, isPrivate);
     setName('');
     setPhoto(null);
     setTags([]);
+    setIsPrivate(false);
     setSaving(false);
   }
 
@@ -186,12 +188,15 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setPhoto(null);
     setName('');
     setTags([]);
+    setIsPrivate(false);
     setAddingTag(false);
     setNewTagName('');
     onClose();
   }
 
-  const tagOptions = [...new Set([...allTags, ...tags])].sort();
+  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name));
+  const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]));
+  const tagOptions = [...new Set([...allTagNames, ...tags])].sort();
 
   function renderCamera() {
     if (!permission) return null;
@@ -264,12 +269,14 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           >
             {tagOptions.map(tag => {
               const selected = tags.includes(tag);
+              const isTagPrivate = tagPrivacyMap[tag];
               return (
                 <TouchableOpacity
                   key={tag}
                   style={[styles.tagChip, selected && styles.tagChipSelected]}
                   onPress={() => toggleTag(tag)}
                 >
+                  {isTagPrivate && <Ionicons name="lock-closed" size={10} color={selected ? '#fff' : '#ccc'} />}
                   <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>
                     {tag}
                   </Text>
@@ -313,6 +320,13 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
             returnKeyType="done"
             onSubmitEditing={Keyboard.dismiss}
           />
+
+          <TouchableOpacity style={styles.privacyToggle} onPress={() => setIsPrivate(prev => !prev)}>
+            <Ionicons name={isPrivate ? 'lock-closed' : 'lock-open-outline'} size={16} color={isPrivate ? '#2D2D2D' : '#bbb'} />
+            <Text style={[styles.privacyToggleText, isPrivate && styles.privacyToggleTextOn]}>
+              {isPrivate ? 'private' : 'public'}
+            </Text>
+          </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.button, saving && styles.buttonDisabled]}
@@ -502,5 +516,19 @@ const styles = StyleSheet.create({
   buttonText: {
     color: '#fff',
     fontSize: 16,
+  },
+  privacyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+    marginBottom: 4,
+  },
+  privacyToggleText: {
+    fontSize: 14,
+    color: '#bbb',
+  },
+  privacyToggleTextOn: {
+    color: '#2D2D2D',
   },
 });

@@ -161,6 +161,59 @@ input {
   border-style: dashed;
 }
 
+.manage-tags-empty {
+  font-size: 14px;
+  color: #999;
+}
+
+.manage-tag-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #E8E3DD;
+}
+
+.manage-tag-row:last-child {
+  border-bottom: none;
+}
+
+.manage-tag-name {
+  font-size: 15px;
+  color: #2D2D2D;
+}
+
+.manage-tag-actions {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.manage-tag-lock {
+  display: flex;
+  align-items: center;
+  padding: 2px;
+  opacity: 0.5;
+  transition: opacity 0.1s;
+}
+
+.manage-tag-lock:hover {
+  opacity: 1;
+}
+
+.manage-tag-lock-on {
+  opacity: 1;
+}
+
+.manage-tag-delete {
+  font-size: 13px;
+  color: #E74C3C;
+}
+
+.manage-tag-delete:hover {
+  color: #c0392b;
+}
+
 /* ---- Grid ---- */
 
 .grid {
@@ -195,6 +248,19 @@ input {
 
 .card-selected {
   outline: 2.5px solid #2D2D2D;
+}
+
+.card-private-badge {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: rgba(0,0,0,0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .selection-circle {
@@ -372,6 +438,12 @@ input {
   gap: 16px;
 }
 
+.detail-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
 .detail-name {
   font-size: 28px;
   font-weight: 300;
@@ -386,12 +458,37 @@ input {
 }
 
 .tag-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 5px 12px;
   border-radius: 20px;
   background: #fff;
   border: 1px solid #E0E0E0;
   font-size: 13px;
   color: #2D2D2D;
+}
+
+.privacy-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #bbb;
+  padding: 6px 0;
+  transition: color 0.1s;
+}
+
+.privacy-toggle:hover {
+  color: #999;
+}
+
+.privacy-toggle-on {
+  color: #2D2D2D;
+}
+
+.chip svg {
+  flex-shrink: 0;
 }
 
 .detail-date {

@@ -33,7 +33,8 @@ export default function BatchTagSheet({ visible, onClose, onApply, allTags = [],
     onClose()
   }
 
-  const tagOptions = [...new Set([...allTags, ...pendingTags])].sort()
+  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name))
+  const tagOptions = [...new Set([...allTagNames, ...pendingTags])].sort()
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>

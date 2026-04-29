@@ -1,4 +1,11 @@
 import { useEffect, useState } from 'react'
+
+function LockIcon({ size = 10, color = 'currentColor', open = false }) {
+  const d = open
+    ? 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-1-7V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H9z'
+    : 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
+}
 import { supabase } from './lib/supabase'
 import AuthScreen from './screens/AuthScreen'
 import AddItemModal from './screens/AddItemModal'
@@ -16,6 +23,7 @@ export default function App() {
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [batchTagVisible, setBatchTagVisible] = useState(false)
   const [batchTagging, setBatchTagging] = useState(false)
+  const [manageTagsVisible, setManageTagsVisible] = useState(false)
 
   const batchMode = selectedIds.size > 0
 
@@ -43,7 +51,7 @@ export default function App() {
   async function fetchItems() {
     const { data, error } = await supabase
       .from('items')
-      .select('*, tags(id, name)')
+      .select('*, tags(id, name, is_private)')
       .order('created_at', { ascending: false })
     if (!error) setItems(data)
   }
@@ -94,13 +102,13 @@ export default function App() {
     return supabase.storage.from('item-images').getPublicUrl(path).data.publicUrl
   }
 
-  async function handleSave(name, file, tagNames) {
+  async function handleSave(name, file, tagNames, isPrivate) {
     const publicUrl = await uploadImage(file)
     if (!publicUrl) return
 
     const { data, error } = await supabase
       .from('items')
-      .insert({ name: name || null, image_url: publicUrl })
+      .insert({ name: name || null, image_url: publicUrl, is_private: isPrivate ?? false })
       .select()
       .single()
     if (error) return
@@ -113,7 +121,7 @@ export default function App() {
     setAddModalVisible(false)
   }
 
-  async function handleUpdate(name, photoOrFile, tagNames) {
+  async function handleUpdate(name, photoOrFile, tagNames, isPrivate) {
     let image_url = typeof photoOrFile === 'string' ? photoOrFile : null
     if (photoOrFile instanceof File) {
       image_url = await uploadImage(photoOrFile)
@@ -122,7 +130,7 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('items')
-      .update({ name: name || null, image_url })
+      .update({ name: name || null, image_url, is_private: isPrivate ?? false })
       .eq('id', selectedItem.id)
       .select()
       .single()
@@ -153,6 +161,22 @@ export default function App() {
     })
   }
 
+  async function handleDeleteTag(tag) {
+    await supabase.from('item_tags').delete().eq('tag_id', tag.id)
+    const { error } = await supabase.from('tags').delete().eq('id', tag.id)
+    if (!error) {
+      setTags(prev => prev.filter(t => t.id !== tag.id))
+      setItems(prev => prev.map(i => ({ ...i, tags: (i.tags ?? []).filter(t => t.id !== tag.id) })))
+      if (activeTag?.id === tag.id) setActiveTag(null)
+    }
+  }
+
+  async function handleToggleTagPrivacy(tag) {
+    const newPrivate = !tag.is_private
+    const { error } = await supabase.from('tags').update({ is_private: newPrivate }).eq('id', tag.id)
+    if (!error) setTags(prev => prev.map(t => t.id === tag.id ? { ...t, is_private: newPrivate } : t))
+  }
+
   async function handleBatchTag(tagNames) {
     if (tagNames.length === 0) {
       setBatchTagVisible(false)
@@ -173,9 +197,11 @@ export default function App() {
     setSelectedIds(new Set())
   }
 
-  const allTagNames = tags.map(t => t.name)
+  const allTagObjects = tags
   const filteredItems = activeTag
-    ? items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+    ? activeTag.id === '__untagged__'
+      ? items.filter(i => (i.tags ?? []).length === 0)
+      : items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
     : items
 
   if (loading) {
@@ -211,13 +237,18 @@ export default function App() {
             className={`chip${!activeTag ? ' chip-active' : ''}`}
             onClick={() => setActiveTag(null)}
           >all</button>
+          <button
+            className={`chip${activeTag?.id === '__untagged__' ? ' chip-active' : ''}`}
+            onClick={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
+          >untagged</button>
           {tags.map(tag => (
             <button
               key={tag.id}
               className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
               onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
-            >{tag.name}</button>
+            >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}</button>
           ))}
+          <button className="chip chip-dashed" onClick={() => setManageTagsVisible(true)}>manage</button>
         </div>
       )}
 
@@ -232,6 +263,9 @@ export default function App() {
               onContextMenu={e => { e.preventDefault(); toggleBatchSelect(item.id) }}
             >
               {item.image_url && <img src={item.image_url} alt={item.name || ''} />}
+              {item.is_private && !batchMode && (
+                <div className="card-private-badge"><LockIcon size={10} color="#fff" /></div>
+              )}
               {batchMode && (
                 <div className={`selection-circle${isSelected ? ' selection-circle-active' : ''}`}>
                   {isSelected && <span>✓</span>}
@@ -256,7 +290,7 @@ export default function App() {
         visible={addModalVisible}
         onClose={() => setAddModalVisible(false)}
         onSave={handleSave}
-        allTags={allTagNames}
+        allTags={allTagObjects}
       />
 
       <ItemDetailModal
@@ -265,7 +299,7 @@ export default function App() {
         onClose={() => setSelectedItem(null)}
         onDelete={handleDelete}
         onSave={handleUpdate}
-        allTags={allTagNames}
+        allTags={allTagObjects}
         onPrev={(() => {
           const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
           return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null
@@ -280,10 +314,39 @@ export default function App() {
         visible={batchTagVisible}
         onClose={() => setBatchTagVisible(false)}
         onApply={handleBatchTag}
-        allTags={allTagNames}
+        allTags={allTagObjects}
         selectedCount={selectedIds.size}
         loading={batchTagging}
       />
+
+      {manageTagsVisible && (
+        <div className="sheet-overlay" onClick={() => setManageTagsVisible(false)}>
+          <div className="sheet" onClick={e => e.stopPropagation()}>
+            <div className="modal-header">
+              <span className="sheet-title">manage tags</span>
+              <button className="link-btn" onClick={() => setManageTagsVisible(false)}>done</button>
+            </div>
+            {tags.length === 0
+              ? <p className="manage-tags-empty">no tags yet</p>
+              : tags.map(tag => (
+                <div key={tag.id} className="manage-tag-row">
+                  <span className="manage-tag-name">{tag.name}</span>
+                  <div className="manage-tag-actions">
+                    <button
+                      className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
+                      onClick={() => handleToggleTagPrivacy(tag)}
+                      title={tag.is_private ? 'make public' : 'make private'}
+                    >
+                      <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
+                    </button>
+                    <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>delete</button>
+                  </div>
+                </div>
+              ))
+            }
+          </div>
+        </div>
+      )}
     </div>
   )
 }

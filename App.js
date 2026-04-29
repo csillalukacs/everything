@@ -1,12 +1,14 @@
 import { StatusBar } from 'expo-status-bar';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
   Image,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -35,6 +37,7 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchTagVisible, setBatchTagVisible] = useState(false);
   const [batchTagging, setBatchTagging] = useState(false);
+  const [manageTagsVisible, setManageTagsVisible] = useState(false);
 
   const batchMode = selectedIds.size > 0;
 
@@ -64,7 +67,7 @@ export default function App() {
   async function fetchItems() {
     const { data, error } = await supabase
       .from('items')
-      .select('*, tags(id, name)')
+      .select('*, tags(id, name, is_private)')
       .order('created_at', { ascending: false });
     if (!error) setItems(data);
   }
@@ -105,7 +108,7 @@ export default function App() {
     await supabase.from('item_tags').insert(tagIds.map(tag_id => ({ item_id: itemId, tag_id })));
   }
 
-  async function handleUpdate(name, photoUri, tagNames) {
+  async function handleUpdate(name, photoUri, tagNames, isPrivate) {
     let image_url = photoUri;
 
     if (!photoUri.startsWith('http')) {
@@ -122,7 +125,7 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('items')
-      .update({ name: name || null, image_url })
+      .update({ name: name || null, image_url, is_private: isPrivate ?? false })
       .eq('id', selectedItem.id)
       .select()
       .single();
@@ -138,7 +141,7 @@ export default function App() {
     setSelectedItem(updated);
   }
 
-  async function handleSave(name, photoUri, tagNames) {
+  async function handleSave(name, photoUri, tagNames, isPrivate) {
     const ext = photoUri.split('.').pop();
     const path = `${session.user.id}/${Date.now()}.${ext}`;
 
@@ -159,7 +162,7 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('items')
-      .insert({ name: name || null, image_url: publicUrl })
+      .insert({ name: name || null, image_url: publicUrl, is_private: isPrivate ?? false })
       .select()
       .single();
 
@@ -192,6 +195,22 @@ export default function App() {
     });
   }
 
+  async function handleDeleteTag(tag) {
+    await supabase.from('item_tags').delete().eq('tag_id', tag.id);
+    const { error } = await supabase.from('tags').delete().eq('id', tag.id);
+    if (!error) {
+      setTags(prev => prev.filter(t => t.id !== tag.id));
+      setItems(prev => prev.map(i => ({ ...i, tags: (i.tags ?? []).filter(t => t.id !== tag.id) })));
+      if (activeTag?.id === tag.id) setActiveTag(null);
+    }
+  }
+
+  async function handleToggleTagPrivacy(tag) {
+    const newPrivate = !tag.is_private;
+    const { error } = await supabase.from('tags').update({ is_private: newPrivate }).eq('id', tag.id);
+    if (!error) setTags(prev => prev.map(t => t.id === tag.id ? { ...t, is_private: newPrivate } : t));
+  }
+
   async function handleBatchTag(tagNames) {
     if (tagNames.length === 0) {
       setBatchTagVisible(false);
@@ -212,10 +231,12 @@ export default function App() {
     setSelectedIds(new Set());
   }
 
-  const allTagNames = tags.map(t => t.name);
+  const allTagObjects = tags;
 
   const filteredItems = activeTag
-    ? items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+    ? activeTag.id === '__untagged__'
+      ? items.filter(i => (i.tags ?? []).length === 0)
+      : items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
     : items;
 
   if (loading) {
@@ -260,6 +281,12 @@ export default function App() {
           >
             <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>all</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.filterChip, activeTag?.id === '__untagged__' && styles.filterChipActive]}
+            onPress={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
+          >
+            <Text style={[styles.filterChipText, activeTag?.id === '__untagged__' && styles.filterChipTextActive]}>untagged</Text>
+          </TouchableOpacity>
           {tags.map(tag => {
             const active = activeTag?.id === tag.id;
             return (
@@ -268,10 +295,17 @@ export default function App() {
                 style={[styles.filterChip, active && styles.filterChipActive]}
                 onPress={() => setActiveTag(active ? null : tag)}
               >
+                {tag.is_private && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
               </TouchableOpacity>
             );
           })}
+          <TouchableOpacity
+            style={[styles.filterChip, styles.filterChipDashed]}
+            onPress={() => setManageTagsVisible(true)}
+          >
+            <Text style={styles.filterChipText}>manage</Text>
+          </TouchableOpacity>
         </ScrollView>
       )}
 
@@ -300,6 +334,11 @@ export default function App() {
               {item.image_url && (
                 <View style={styles.cardImageContainer}>
                   <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+                </View>
+              )}
+              {item.is_private && !batchMode && (
+                <View style={styles.privateBadge}>
+                  <Ionicons name="lock-closed" size={10} color="#fff" />
                 </View>
               )}
               {batchMode && (
@@ -332,7 +371,7 @@ export default function App() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
-        allTags={allTagNames}
+        allTags={allTagObjects}
       />
 
       <CanvasScreen
@@ -347,7 +386,7 @@ export default function App() {
         onClose={() => setSelectedItem(null)}
         onDelete={handleDelete}
         onSave={handleUpdate}
-        allTags={allTagNames}
+        allTags={allTagObjects}
         onPrev={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null; })()}
         onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
       />
@@ -356,10 +395,47 @@ export default function App() {
         visible={batchTagVisible}
         onClose={() => setBatchTagVisible(false)}
         onApply={handleBatchTag}
-        allTags={allTagNames}
+        allTags={allTagObjects}
         selectedCount={selectedIds.size}
         loading={batchTagging}
       />
+
+      <Modal
+        visible={manageTagsVisible}
+        animationType="slide"
+        transparent
+        onRequestClose={() => setManageTagsVisible(false)}
+      >
+        <TouchableOpacity style={styles.manageOverlay} activeOpacity={1} onPress={() => setManageTagsVisible(false)}>
+          <TouchableOpacity style={styles.manageSheet} activeOpacity={1} onPress={() => {}}>
+            <View style={styles.manageHeader}>
+              <Text style={styles.manageTitle}>manage tags</Text>
+              <TouchableOpacity onPress={() => setManageTagsVisible(false)}>
+                <Text style={styles.manageDone}>done</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {tags.map((tag, i) => (
+                <View key={tag.id} style={[styles.manageRow, i < tags.length - 1 && styles.manageRowBorder]}>
+                  <Text style={styles.manageTagName}>{tag.name}</Text>
+                  <View style={styles.manageActions}>
+                    <TouchableOpacity onPress={() => handleToggleTagPrivacy(tag)} style={styles.manageLockBtn}>
+                      <Ionicons
+                        name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
+                        size={16}
+                        color={tag.is_private ? '#2D2D2D' : '#ccc'}
+                      />
+                    </TouchableOpacity>
+                    <TouchableOpacity onPress={() => handleDeleteTag(tag)}>
+                      <Text style={styles.manageDeleteBtn}>delete</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              ))}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       <StatusBar style="dark" />
     </View>
@@ -432,6 +508,73 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#fff',
+  },
+  filterChipDashed: {
+    borderStyle: 'dashed',
+  },
+  manageOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+    justifyContent: 'flex-end',
+  },
+  manageSheet: {
+    backgroundColor: '#F5F0EB',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    padding: 24,
+    maxHeight: '70%',
+  },
+  manageHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  manageTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2D2D2D',
+  },
+  manageDone: {
+    fontSize: 15,
+    color: '#999',
+  },
+  manageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 14,
+  },
+  manageRowBorder: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E3DD',
+  },
+  manageTagName: {
+    fontSize: 15,
+    color: '#2D2D2D',
+  },
+  manageActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  manageLockBtn: {
+    padding: 2,
+  },
+  manageDeleteBtn: {
+    fontSize: 13,
+    color: '#E74C3C',
+  },
+  privateBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   list: {
     flex: 1,

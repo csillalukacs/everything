@@ -1,11 +1,19 @@
 import { useRef, useState } from 'react'
 
+function LockIcon({ size = 10, color = 'currentColor', open = false }) {
+  const d = open
+    ? 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-1-7V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H9z'
+    : 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
+}
+
 export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], onPrev, onNext }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editPhoto, setEditPhoto] = useState(null)
   const [editPreview, setEditPreview] = useState(null)
   const [editTags, setEditTags] = useState([])
+  const [editPrivate, setEditPrivate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [addingTag, setAddingTag] = useState(false)
   const [newTagName, setNewTagName] = useState('')
@@ -18,6 +26,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setEditPhoto(item.image_url)
     setEditPreview(item.image_url)
     setEditTags((item.tags ?? []).map(t => t.name))
+    setEditPrivate(item.is_private ?? false)
     setEditing(true)
   }
 
@@ -48,7 +57,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
 
   async function handleSave() {
     setSaving(true)
-    await onSave(editName.trim(), editPhoto, editTags)
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate)
     setSaving(false)
     setEditing(false)
     setEditPhoto(null)
@@ -56,7 +65,9 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   }
 
   const itemTags = item.tags ?? []
-  const tagOptions = [...new Set([...allTags, ...editTags])].sort()
+  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name))
+  const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]))
+  const tagOptions = [...new Set([...allTagNames, ...editTags])].sort()
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && (editing ? cancelEdit() : onClose())}>
@@ -105,12 +116,13 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 <div className="tag-scroll">
                   {tagOptions.map(tag => {
                     const selected = editTags.includes(tag)
+                    const isTagPrivate = tagPrivacyMap[tag]
                     return (
                       <button
                         key={tag}
                         className={`chip${selected ? ' chip-active' : ''}`}
                         onClick={() => toggleTag(tag)}
-                      >{tag}</button>
+                      >{isTagPrivate && <LockIcon size={10} color="currentColor" />}{tag}</button>
                     )
                   })}
                   {addingTag ? (
@@ -136,14 +148,26 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                 />
+                <button
+                  className={`privacy-toggle${editPrivate ? ' privacy-toggle-on' : ''}`}
+                  onClick={() => setEditPrivate(prev => !prev)}
+                >
+                  <LockIcon size={12} color={editPrivate ? '#2D2D2D' : '#bbb'} open={!editPrivate} />
+                  {editPrivate ? 'private' : 'public'}
+                </button>
               </>
             ) : (
               <>
-                {item.name && <h2 className="detail-name">{item.name}</h2>}
+                <div className="detail-name-row">
+                  {item.name && <h2 className="detail-name">{item.name}</h2>}
+                  {item.is_private && <LockIcon size={14} color="#999" />}
+                </div>
                 {itemTags.length > 0 && (
                   <div className="tag-row">
                     {itemTags.map(tag => (
-                      <span key={tag.id} className="tag-badge">{tag.name}</span>
+                      <span key={tag.id} className="tag-badge">
+                        {tag.is_private && <LockIcon size={9} color="#bbb" />}{tag.name}
+                      </span>
                     ))}
                   </div>
                 )}

@@ -22,6 +22,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [editName, setEditName] = useState('');
   const [editPhoto, setEditPhoto] = useState(null);
   const [editTags, setEditTags] = useState([]);
+  const [editPrivate, setEditPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
   const [nameEditable, setNameEditable] = useState(false);
@@ -48,6 +49,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditName(item.name ?? '');
     setEditPhoto(item.image_url);
     setEditTags((item.tags ?? []).map(t => t.name));
+    setEditPrivate(item.is_private ?? false);
     setNameEditable(false);
     setEditing(true);
   }
@@ -110,7 +112,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   async function handleSave() {
     setSaving(true);
-    await onSave(editName.trim(), editPhoto, editTags);
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate);
     setSaving(false);
     setEditing(false);
   }
@@ -119,7 +121,9 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   const displayPhoto = editing ? editPhoto : item.image_url;
   const itemTags = item.tags ?? [];
-  const tagOptions = [...new Set([...allTags, ...editTags])].sort();
+  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name));
+  const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]));
+  const tagOptions = [...new Set([...allTagNames, ...editTags])].sort();
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={editing ? cancelEdit : onClose}>
@@ -192,12 +196,14 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               >
                 {tagOptions.map(tag => {
                   const selected = editTags.includes(tag);
+                  const isTagPrivate = tagPrivacyMap[tag];
                   return (
                     <TouchableOpacity
                       key={tag}
                       style={[styles.tagChip, selected && styles.tagChipSelected]}
                       onPress={() => toggleTag(tag)}
                     >
+                      {isTagPrivate && <Ionicons name="lock-closed" size={10} color={selected ? '#fff' : '#ccc'} />}
                       <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>{tag}</Text>
                     </TouchableOpacity>
                   );
@@ -243,6 +249,13 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   onSubmitEditing={Keyboard.dismiss}
                 />
               </TouchableOpacity>
+
+              <TouchableOpacity style={styles.privacyToggle} onPress={() => setEditPrivate(prev => !prev)}>
+                <Ionicons name={editPrivate ? 'lock-closed' : 'lock-open-outline'} size={16} color={editPrivate ? '#2D2D2D' : '#bbb'} />
+                <Text style={[styles.privacyToggleText, editPrivate && styles.privacyToggleTextOn]}>
+                  {editPrivate ? 'private' : 'public'}
+                </Text>
+              </TouchableOpacity>
             </View>
           </ScrollView>
         ) : (
@@ -254,11 +267,15 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               }
             </View>
             <View style={styles.info}>
-              {item.name ? <Text style={styles.name}>{item.name}</Text> : null}
+              <View style={styles.nameRow}>
+                {item.name ? <Text style={styles.name}>{item.name}</Text> : null}
+                {item.is_private && <Ionicons name="lock-closed" size={16} color="#999" style={styles.privateLockIcon} />}
+              </View>
               {itemTags.length > 0 && (
                 <View style={styles.tagRow}>
                   {itemTags.map(tag => (
                     <View key={tag.id} style={styles.tagBadge}>
+                      {tag.is_private && <Ionicons name="lock-closed" size={9} color="#bbb" />}
                       <Text style={styles.tagBadgeText}>{tag.name}</Text>
                     </View>
                   ))}
@@ -363,7 +380,18 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 6,
   },
+  nameRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  privateLockIcon: {
+    marginTop: 4,
+  },
   tagBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 20,
@@ -373,6 +401,19 @@ const styles = StyleSheet.create({
   },
   tagBadgeText: {
     fontSize: 13,
+    color: '#2D2D2D',
+  },
+  privacyToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 10,
+  },
+  privacyToggleText: {
+    fontSize: 14,
+    color: '#bbb',
+  },
+  privacyToggleTextOn: {
     color: '#2D2D2D',
   },
   date: {

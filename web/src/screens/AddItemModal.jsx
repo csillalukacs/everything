@@ -1,10 +1,18 @@
 import { useRef, useState } from 'react'
 
+function LockIcon({ size = 10, color = 'currentColor', open = false }) {
+  const d = open
+    ? 'M12 1C9.24 1 7 3.24 7 6v1H5c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2h-2V6c0-2.76-2.24-5-5-5zm-1 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-7H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2zM17 7h-2V6c0-2.76-2.24-5-5-5S5 3.24 5 6v1'
+    : 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
+}
+
 export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [name, setName] = useState('')
   const [tags, setTags] = useState([])
+  const [isPrivate, setIsPrivate] = useState(false)
   const [saving, setSaving] = useState(false)
   const [addingTag, setAddingTag] = useState(false)
   const [newTagName, setNewTagName] = useState('')
@@ -38,11 +46,12 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   async function handleSave() {
     if (!file) return
     setSaving(true)
-    await onSave(name.trim(), file, tags)
+    await onSave(name.trim(), file, tags, isPrivate)
     setFile(null)
     setPreview(null)
     setName('')
     setTags([])
+    setIsPrivate(false)
     setSaving(false)
   }
 
@@ -51,12 +60,15 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setPreview(null)
     setName('')
     setTags([])
+    setIsPrivate(false)
     setAddingTag(false)
     setNewTagName('')
     onClose()
   }
 
-  const tagOptions = [...new Set([...allTags, ...tags])].sort()
+  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name))
+  const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]))
+  const tagOptions = [...new Set([...allTagNames, ...tags])].sort()
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>
@@ -98,12 +110,13 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         <div className="tag-scroll">
           {tagOptions.map(tag => {
             const selected = tags.includes(tag)
+            const isTagPrivate = tagPrivacyMap[tag]
             return (
               <button
                 key={tag}
                 className={`chip${selected ? ' chip-active' : ''}`}
                 onClick={() => toggleTag(tag)}
-              >{tag}</button>
+              >{isTagPrivate && <LockIcon size={10} color="currentColor" />}{tag}</button>
             )
           })}
           {addingTag ? (
@@ -130,6 +143,13 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           value={name}
           onChange={e => setName(e.target.value)}
         />
+        <button
+          className={`privacy-toggle${isPrivate ? ' privacy-toggle-on' : ''}`}
+          onClick={() => setIsPrivate(prev => !prev)}
+        >
+          <LockIcon size={12} color={isPrivate ? '#2D2D2D' : '#bbb'} open={!isPrivate} />
+          {isPrivate ? 'private' : 'public'}
+        </button>
       </div>
     </div>
   )
