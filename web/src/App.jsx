@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
 
 function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   const d = open
@@ -60,6 +61,8 @@ export default function App() {
 
   useEffect(() => {
     if (session) {
+      const displayName = session.user.user_metadata?.full_name || session.user.email
+      supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName })
       fetchItems()
       fetchTags()
     } else {
@@ -263,7 +266,10 @@ export default function App() {
             {' · '}
             {items.length} {items.length === 1 ? 'item' : 'items'}
           </span>
-          <button className="link-btn" onClick={() => supabase.auth.signOut()}>log out</button>
+          <div className="header-links">
+            <Link to={`/u/${session.user.id}`} className="link-btn">my profile</Link>
+            <button className="link-btn" onClick={() => supabase.auth.signOut()}>log out</button>
+          </div>
         </div>
       </header>
 

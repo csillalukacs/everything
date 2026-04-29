@@ -87,6 +87,19 @@ input {
   margin-top: 8px;
 }
 
+.header-links {
+  display: flex;
+  gap: 12px;
+}
+
+.profile-name {
+  font-size: 48px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  color: #2D2D2D;
+  font-family: Georgia, 'Times New Roman', serif;
+}
+
 .header-meta {
   font-size: 14px;
   color: #999;

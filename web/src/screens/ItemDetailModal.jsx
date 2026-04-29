@@ -82,11 +82,13 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               <button onClick={onNext} disabled={!onNext} className="nav-btn">›</button>
             </div>
           )}
-          <button
-            className="link-btn link-btn-dark"
-            onClick={editing ? handleSave : enterEdit}
-            disabled={saving}
-          >{editing ? (saving ? 'saving...' : 'save') : 'edit'}</button>
+          {onSave && (
+            <button
+              className="link-btn link-btn-dark"
+              onClick={editing ? handleSave : enterEdit}
+              disabled={saving}
+            >{editing ? (saving ? 'saving...' : 'save') : 'edit'}</button>
+          )}
         </div>
 
         <div className="detail-layout">
@@ -174,7 +176,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 <p className="detail-date">
                   added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>
-                <button className="delete-btn" onClick={onDelete}>delete item</button>
+                {onDelete && <button className="delete-btn" onClick={onDelete}>delete item</button>}
               </>
             )}
           </div>
