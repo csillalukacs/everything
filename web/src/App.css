@@ -36,6 +36,49 @@ input {
   height: 100vh;
 }
 
+.daily-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 40px 24px 80px;
+  gap: 16px;
+}
+
+.daily-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #999;
+}
+
+.daily-image-wrap {
+  width: 100%;
+  max-width: 420px;
+}
+
+.daily-image {
+  width: 100%;
+  border-radius: 16px;
+  object-fit: contain;
+  max-height: 60vh;
+}
+
+.daily-name {
+  font-size: 22px;
+  font-weight: 500;
+  color: #2D2D2D;
+  text-align: center;
+}
+
+.daily-description {
+  font-size: 15px;
+  color: #555;
+  line-height: 1.6;
+  text-align: center;
+  max-width: 420px;
+  white-space: pre-wrap;
+}
+
 .spinner {
   width: 24px;
   height: 24px;

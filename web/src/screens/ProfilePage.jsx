@@ -2,6 +2,35 @@ import { useEffect, useState } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import ItemDetailModal from './ItemDetailModal'
+import AddItemModal from './AddItemModal'
+import BatchTagSheet from './BatchTagSheet'
+
+function LockIcon({ size = 10, color = 'currentColor', open = false }) {
+  const d = open
+    ? 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-1-7V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H9z'
+    : 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
+  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
+}
+
+function BatchLockIcon({ size = 18, color = '#fff', open = false }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d={open ? 'M7 11V7a5 5 0 0 1 9.9-1' : 'M7 11V7a5 5 0 0 1 10 0v4'} />
+    </svg>
+  )
+}
+
+function TrashIcon({ size = 18, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
 
 export default function ProfilePage() {
   const { userId } = useParams()
@@ -15,14 +44,23 @@ export default function ProfilePage() {
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
   const [sessionUserId, setSessionUserId] = useState(null)
+  const [selectedIds, setSelectedIds] = useState(new Set())
+  const [addModalVisible, setAddModalVisible] = useState(false)
+  const [batchTagVisible, setBatchTagVisible] = useState(false)
+  const [batchTagging, setBatchTagging] = useState(false)
+  const [manageTagsVisible, setManageTagsVisible] = useState(false)
+
+  const batchMode = selectedIds.size > 0
 
   useEffect(() => {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
+      let ownerSession = false
       if (session) {
         const displayName = session.user.user_metadata?.full_name || session.user.email
         await supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName }, { ignoreDuplicates: true })
         if (session.user.id === userId) {
+          ownerSession = true
           setIsOwner(true)
           setSessionUserId(session.user.id)
           const { data: tagsData } = await supabase.from('tags').select('*').order('name')
@@ -30,18 +68,16 @@ export default function ProfilePage() {
         }
       }
 
+      let itemsQuery = supabase
+        .from('items')
+        .select('*, tags(id, name, is_private)')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false })
+      if (!ownerSession) itemsQuery = itemsQuery.eq('is_private', false)
+
       const [{ data: profile }, { data: fetchedItems }] = await Promise.all([
-        supabase
-          .from('profiles')
-          .select('display_name')
-          .eq('user_id', userId)
-          .maybeSingle(),
-        supabase
-          .from('items')
-          .select('*, tags(id, name, is_private)')
-          .eq('user_id', userId)
-          .eq('is_private', false)
-          .order('created_at', { ascending: false }),
+        supabase.from('profiles').select('display_name').eq('user_id', userId).maybeSingle(),
+        itemsQuery,
       ])
       if (profile) {
         setProfileName(profile.display_name)
@@ -84,6 +120,22 @@ export default function ProfilePage() {
       await supabase.from('item_tags').insert(tagIds.map(tag_id => ({ item_id: itemId, tag_id })))
   }
 
+  async function handleSave(name, file, tagNames, isPrivate, description) {
+    const image_url = await uploadImage(file)
+    if (!image_url) return
+    const { data, error } = await supabase
+      .from('items')
+      .insert({ name: name || null, description: description || null, image_url, is_private: isPrivate ?? false })
+      .select()
+      .single()
+    if (error) return
+    const resolved = await ensureTags(tagNames)
+    if (!resolved) return
+    await setItemTags(data.id, resolved.map(t => t.id))
+    setItems(prev => [{ ...data, tags: resolved }, ...prev])
+    setAddModalVisible(false)
+  }
+
   async function handleUpdate(name, photoOrFile, tagNames, isPrivate, description) {
     let image_url = typeof photoOrFile === 'string' ? photoOrFile : null
     if (photoOrFile instanceof File) {
@@ -101,13 +153,8 @@ export default function ProfilePage() {
     if (!resolved) return
     await setItemTags(data.id, resolved.map(t => t.id))
     const updated = { ...data, tags: resolved }
-    if (isPrivate) {
-      setItems(prev => prev.filter(i => i.id !== updated.id))
-      setSelectedItem(null)
-    } else {
-      setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
-      setSelectedItem(updated)
-    }
+    setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
+    setSelectedItem(updated)
   }
 
   async function handleDelete() {
@@ -115,6 +162,69 @@ export default function ProfilePage() {
     setSelectedItem(null)
     const { error } = await supabase.from('items').delete().eq('id', itemToDelete.id)
     if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
+  }
+
+  function toggleBatchSelect(itemId) {
+    setSelectedIds(prev => {
+      const next = new Set(prev)
+      if (next.has(itemId)) next.delete(itemId)
+      else next.add(itemId)
+      return next
+    })
+  }
+
+  async function handleDeleteTag(tag) {
+    await supabase.from('item_tags').delete().eq('tag_id', tag.id)
+    const { error } = await supabase.from('tags').delete().eq('id', tag.id)
+    if (!error) {
+      setAllTags(prev => prev.filter(t => t.id !== tag.id))
+      setItems(prev => prev.map(i => ({ ...i, tags: (i.tags ?? []).filter(t => t.id !== tag.id) })))
+      if (activeTag?.id === tag.id) setActiveTag(null)
+    }
+  }
+
+  async function handleToggleTagPrivacy(tag) {
+    const newPrivate = !tag.is_private
+    const { error } = await supabase.from('tags').update({ is_private: newPrivate }).eq('id', tag.id)
+    if (!error) setAllTags(prev => prev.map(t => t.id === tag.id ? { ...t, is_private: newPrivate } : t))
+  }
+
+  async function handleBatchTag(tagNames) {
+    if (tagNames.length === 0) { setBatchTagVisible(false); return }
+    setBatchTagging(true)
+    const resolved = await ensureTags(tagNames)
+    if (!resolved) { setBatchTagging(false); return }
+    const newTagIds = resolved.map(t => t.id)
+    for (const itemId of selectedIds) {
+      const item = items.find(i => i.id === itemId)
+      const existingIds = (item?.tags ?? []).map(t => t.id)
+      await setItemTags(itemId, [...new Set([...existingIds, ...newTagIds])])
+    }
+    const { data } = await supabase
+      .from('items')
+      .select('*, tags(id, name, is_private)')
+      .eq('user_id', sessionUserId)
+      .order('created_at', { ascending: false })
+    if (data) setItems(data)
+    setBatchTagging(false)
+    setBatchTagVisible(false)
+    setSelectedIds(new Set())
+  }
+
+  async function handleBatchDelete() {
+    const ids = [...selectedIds]
+    setSelectedIds(new Set())
+    await supabase.from('item_tags').delete().in('item_id', ids)
+    const { error } = await supabase.from('items').delete().in('id', ids)
+    if (!error) setItems(prev => prev.filter(i => !ids.includes(i.id)))
+  }
+
+  async function handleBatchTogglePrivacy() {
+    const ids = [...selectedIds]
+    const allPrivate = ids.every(id => items.find(i => i.id === id)?.is_private)
+    const newPrivate = !allPrivate
+    await supabase.from('items').update({ is_private: newPrivate }).in('id', ids)
+    setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, is_private: newPrivate } : i))
   }
 
   const tagMap = new Map()
@@ -126,7 +236,9 @@ export default function ProfilePage() {
   const visibleTags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name))
 
   const filteredItems = activeTag
-    ? items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+    ? activeTag.id === '__untagged__'
+      ? items.filter(i => (i.tags ?? []).length === 0)
+      : items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
     : items
 
   if (loading) {
@@ -169,33 +281,82 @@ export default function ProfilePage() {
         <Link to="/" className="link-btn" style={{ marginTop: 8 }}>everything</Link>
       </header>
 
-      {visibleTags.length > 0 && (
-        <div className="filter-scroll">
-          <button
-            className={`chip${!activeTag ? ' chip-active' : ''}`}
-            onClick={() => setActiveTag(null)}
-          >all</button>
-          {visibleTags.map(tag => (
+      {isOwner ? (
+        allTags.length > 0 && (
+          <div className="filter-scroll">
+            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all</button>
             <button
-              key={tag.id}
-              className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
-              onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
-            >{tag.name}</button>
-          ))}
-        </div>
+              className={`chip${activeTag?.id === '__untagged__' ? ' chip-active' : ''}`}
+              onClick={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
+            >untagged</button>
+            {allTags.map(tag => (
+              <button
+                key={tag.id}
+                className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
+                onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
+              >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}</button>
+            ))}
+            <button className="chip chip-dashed" onClick={() => setManageTagsVisible(true)}>manage</button>
+          </div>
+        )
+      ) : (
+        visibleTags.length > 0 && (
+          <div className="filter-scroll">
+            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all</button>
+            {visibleTags.map(tag => (
+              <button
+                key={tag.id}
+                className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
+                onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
+              >{tag.name}</button>
+            ))}
+          </div>
+        )
       )}
 
       <div className="grid">
-        {filteredItems.map(item => (
-          <div
-            key={item.id}
-            className="card"
-            onClick={() => setSelectedItem(item)}
-          >
-            {item.image_url && <img src={item.image_url} alt={item.name || ''} />}
-          </div>
-        ))}
+        {filteredItems.map(item => {
+          const isSelected = selectedIds.has(item.id)
+          return (
+            <div
+              key={item.id}
+              className={`card${isSelected ? ' card-selected' : ''}`}
+              onClick={() => isOwner && batchMode ? toggleBatchSelect(item.id) : setSelectedItem(item)}
+              onContextMenu={isOwner ? e => { e.preventDefault(); toggleBatchSelect(item.id) } : undefined}
+            >
+              {item.image_url && <img src={item.image_url} alt={item.name || ''} />}
+              {item.is_private && !batchMode && (
+                <div className="card-private-badge"><LockIcon size={10} color="#fff" /></div>
+              )}
+              {batchMode && (
+                <div className={`selection-circle${isSelected ? ' selection-circle-active' : ''}`}>
+                  {isSelected && <span>✓</span>}
+                </div>
+              )}
+            </div>
+          )
+        })}
       </div>
+
+      {isOwner && (
+        batchMode ? (
+          <div className="batch-bar">
+            <button className="batch-cancel" onClick={() => setSelectedIds(new Set())}>cancel</button>
+            <span className="batch-count">{selectedIds.size} selected</span>
+            <div className="batch-actions">
+              <button className="batch-icon-btn" onClick={handleBatchTogglePrivacy} title="lock / unlock">
+                <BatchLockIcon open={![...selectedIds].every(id => items.find(i => i.id === id)?.is_private)} />
+              </button>
+              <button className="batch-icon-btn batch-delete-btn" onClick={handleBatchDelete} title="delete">
+                <TrashIcon size={18} color="#ff6b6b" />
+              </button>
+              <button className="batch-tag-btn" onClick={() => setBatchTagVisible(true)}>tag</button>
+            </div>
+          </div>
+        ) : (
+          <button className="fab" onClick={() => setAddModalVisible(true)}>+</button>
+        )
+      )}
 
       <ItemDetailModal
         visible={!!selectedItem}
@@ -213,6 +374,55 @@ export default function ProfilePage() {
           return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null
         })()}
       />
+
+      {isOwner && (
+        <>
+          <AddItemModal
+            visible={addModalVisible}
+            onClose={() => setAddModalVisible(false)}
+            onSave={handleSave}
+            allTags={allTags}
+          />
+
+          <BatchTagSheet
+            visible={batchTagVisible}
+            onClose={() => setBatchTagVisible(false)}
+            onApply={handleBatchTag}
+            allTags={allTags}
+            selectedCount={selectedIds.size}
+            loading={batchTagging}
+          />
+
+          {manageTagsVisible && (
+            <div className="sheet-overlay" onClick={() => setManageTagsVisible(false)}>
+              <div className="sheet" onClick={e => e.stopPropagation()}>
+                <div className="modal-header">
+                  <span className="sheet-title">manage tags</span>
+                  <button className="link-btn" onClick={() => setManageTagsVisible(false)}>done</button>
+                </div>
+                {allTags.length === 0
+                  ? <p className="manage-tags-empty">no tags yet</p>
+                  : allTags.map(tag => (
+                    <div key={tag.id} className="manage-tag-row">
+                      <span className="manage-tag-name">{tag.name}</span>
+                      <div className="manage-tag-actions">
+                        <button
+                          className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
+                          onClick={() => handleToggleTagPrivacy(tag)}
+                          title={tag.is_private ? 'make public' : 'make private'}
+                        >
+                          <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
+                        </button>
+                        <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>delete</button>
+                      </div>
+                    </div>
+                  ))
+                }
+              </div>
+            </div>
+          )}
+        </>
+      )}
     </div>
   )
 }
