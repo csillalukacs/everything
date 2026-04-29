@@ -62,7 +62,7 @@ export default function App() {
   useEffect(() => {
     if (session) {
       const displayName = session.user.user_metadata?.full_name || session.user.email
-      supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName })
+      supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName }, { ignoreDuplicates: true })
       fetchItems()
       fetchTags()
     } else {
@@ -75,6 +75,7 @@ export default function App() {
     const { data, error } = await supabase
       .from('items')
       .select('*, tags(id, name, is_private)')
+      .eq('user_id', session?.user.id)
       .order('created_at', { ascending: false })
     if (!error) setItems(data)
   }
@@ -83,6 +84,7 @@ export default function App() {
     const { data, error } = await supabase
       .from('tags')
       .select('*')
+      .eq('user_id', session?.user.id)
       .order('name')
     if (!error) setTags(data)
   }
@@ -125,13 +127,13 @@ export default function App() {
     return supabase.storage.from('item-images').getPublicUrl(path).data.publicUrl
   }
 
-  async function handleSave(name, file, tagNames, isPrivate) {
+  async function handleSave(name, file, tagNames, isPrivate, description) {
     const publicUrl = await uploadImage(file)
     if (!publicUrl) return
 
     const { data, error } = await supabase
       .from('items')
-      .insert({ name: name || null, image_url: publicUrl, is_private: isPrivate ?? false })
+      .insert({ name: name || null, description: description || null, image_url: publicUrl, is_private: isPrivate ?? false })
       .select()
       .single()
     if (error) return
@@ -144,7 +146,7 @@ export default function App() {
     setAddModalVisible(false)
   }
 
-  async function handleUpdate(name, photoOrFile, tagNames, isPrivate) {
+  async function handleUpdate(name, photoOrFile, tagNames, isPrivate, description) {
     let image_url = typeof photoOrFile === 'string' ? photoOrFile : null
     if (photoOrFile instanceof File) {
       image_url = await uploadImage(photoOrFile)
@@ -153,7 +155,7 @@ export default function App() {
 
     const { data, error } = await supabase
       .from('items')
-      .update({ name: name || null, image_url, is_private: isPrivate ?? false })
+      .update({ name: name || null, description: description || null, image_url, is_private: isPrivate ?? false })
       .eq('id', selectedItem.id)
       .select()
       .single()

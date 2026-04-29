@@ -10,6 +10,7 @@ function LockIcon({ size = 10, color = 'currentColor', open = false }) {
 export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], onPrev, onNext }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
+  const [editDescription, setEditDescription] = useState('')
   const [editPhoto, setEditPhoto] = useState(null)
   const [editPreview, setEditPreview] = useState(null)
   const [editTags, setEditTags] = useState([])
@@ -23,6 +24,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
 
   function enterEdit() {
     setEditName(item.name ?? '')
+    setEditDescription(item.description ?? '')
     setEditPhoto(item.image_url)
     setEditPreview(item.image_url)
     setEditTags((item.tags ?? []).map(t => t.name))
@@ -36,6 +38,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setNewTagName('')
     setEditPhoto(null)
     setEditPreview(null)
+    setEditDescription('')
   }
 
   function handleImageChange(f) {
@@ -57,11 +60,12 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
 
   async function handleSave() {
     setSaving(true)
-    await onSave(editName.trim(), editPhoto, editTags, editPrivate)
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim())
     setSaving(false)
     setEditing(false)
     setEditPhoto(null)
     setEditPreview(null)
+    setEditDescription('')
   }
 
   const itemTags = item.tags ?? []
@@ -150,6 +154,12 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                 />
+                <textarea
+                  className="description-input"
+                  placeholder="description (optional)"
+                  value={editDescription}
+                  onChange={e => setEditDescription(e.target.value)}
+                />
                 <button
                   className={`privacy-toggle${editPrivate ? ' privacy-toggle-on' : ''}`}
                   onClick={() => setEditPrivate(prev => !prev)}
@@ -173,6 +183,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                     ))}
                   </div>
                 )}
+                {item.description && <p className="detail-description">{item.description}</p>}
                 <p className="detail-date">
                   added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
                 </p>

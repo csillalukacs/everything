@@ -11,6 +11,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
   const [tags, setTags] = useState([])
   const [isPrivate, setIsPrivate] = useState(false)
   const [saving, setSaving] = useState(false)
@@ -46,10 +47,11 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   async function handleSave() {
     if (!file) return
     setSaving(true)
-    await onSave(name.trim(), file, tags, isPrivate)
+    await onSave(name.trim(), file, tags, isPrivate, description.trim())
     setFile(null)
     setPreview(null)
     setName('')
+    setDescription('')
     setTags([])
     setIsPrivate(false)
     setSaving(false)
@@ -59,6 +61,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setFile(null)
     setPreview(null)
     setName('')
+    setDescription('')
     setTags([])
     setIsPrivate(false)
     setAddingTag(false)
@@ -142,6 +145,12 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           placeholder="name (optional)"
           value={name}
           onChange={e => setName(e.target.value)}
+        />
+        <textarea
+          className="description-input"
+          placeholder="description (optional)"
+          value={description}
+          onChange={e => setDescription(e.target.value)}
         />
         <button
           className={`privacy-toggle${isPrivate ? ' privacy-toggle-on' : ''}`}
