@@ -339,10 +339,30 @@ input {
   font-size: 14px;
 }
 
+.batch-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.batch-icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px;
+  border-radius: 8px;
+  transition: background 0.15s;
+}
+
+.batch-icon-btn:hover {
+  background: rgba(255,255,255,0.1);
+}
+
 .batch-tag-btn {
   color: #fff;
   font-size: 15px;
   font-weight: 500;
+  padding: 8px;
 }
 
 /* ---- Modal overlay ---- */

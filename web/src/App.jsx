@@ -6,6 +6,26 @@ function LockIcon({ size = 10, color = 'currentColor', open = false }) {
     : 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
 }
+
+function BatchLockIcon({ size = 18, color = '#fff', open = false }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <rect x="3" y="11" width="18" height="11" rx="2" />
+      <path d={open ? 'M7 11V7a5 5 0 0 1 9.9-1' : 'M7 11V7a5 5 0 0 1 10 0v4'} />
+    </svg>
+  )
+}
+
+function TrashIcon({ size = 18, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <polyline points="3 6 5 6 21 6" />
+      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
+      <path d="M10 11v6M14 11v6" />
+      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
+    </svg>
+  )
+}
 import { supabase } from './lib/supabase'
 import AuthScreen from './screens/AuthScreen'
 import AddItemModal from './screens/AddItemModal'
@@ -197,6 +217,22 @@ export default function App() {
     setSelectedIds(new Set())
   }
 
+  async function handleBatchDelete() {
+    const ids = [...selectedIds]
+    setSelectedIds(new Set())
+    await supabase.from('item_tags').delete().in('item_id', ids)
+    const { error } = await supabase.from('items').delete().in('id', ids)
+    if (!error) setItems(prev => prev.filter(i => !ids.includes(i.id)))
+  }
+
+  async function handleBatchTogglePrivacy() {
+    const ids = [...selectedIds]
+    const allPrivate = ids.every(id => items.find(i => i.id === id)?.is_private)
+    const newPrivate = !allPrivate
+    await supabase.from('items').update({ is_private: newPrivate }).in('id', ids)
+    setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, is_private: newPrivate } : i))
+  }
+
   const allTagObjects = tags
   const filteredItems = activeTag
     ? activeTag.id === '__untagged__'
@@ -280,7 +316,15 @@ export default function App() {
         <div className="batch-bar">
           <button className="batch-cancel" onClick={() => setSelectedIds(new Set())}>cancel</button>
           <span className="batch-count">{selectedIds.size} selected</span>
-          <button className="batch-tag-btn" onClick={() => setBatchTagVisible(true)}>tag</button>
+          <div className="batch-actions">
+            <button className="batch-icon-btn" onClick={handleBatchTogglePrivacy} title="lock / unlock">
+              <BatchLockIcon open={![...selectedIds].every(id => items.find(i => i.id === id)?.is_private)} />
+            </button>
+            <button className="batch-icon-btn batch-delete-btn" onClick={handleBatchDelete} title="delete">
+              <TrashIcon size={18} color="#ff6b6b" />
+            </button>
+            <button className="batch-tag-btn" onClick={() => setBatchTagVisible(true)}>tag</button>
+          </div>
         </div>
       ) : (
         <button className="fab" onClick={() => setAddModalVisible(true)}>+</button>

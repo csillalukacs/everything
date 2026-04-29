@@ -231,6 +231,22 @@ export default function App() {
     setSelectedIds(new Set());
   }
 
+  async function handleBatchDelete() {
+    const ids = [...selectedIds];
+    setSelectedIds(new Set());
+    await supabase.from('item_tags').delete().in('item_id', ids);
+    const { error } = await supabase.from('items').delete().in('id', ids);
+    if (!error) setItems(prev => prev.filter(i => !ids.includes(i.id)));
+  }
+
+  async function handleBatchTogglePrivacy() {
+    const ids = [...selectedIds];
+    const allPrivate = ids.every(id => items.find(i => i.id === id)?.is_private);
+    const newPrivate = !allPrivate;
+    await supabase.from('items').update({ is_private: newPrivate }).in('id', ids);
+    setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, is_private: newPrivate } : i));
+  }
+
   const allTagObjects = tags;
 
   const filteredItems = activeTag
@@ -357,9 +373,21 @@ export default function App() {
             <Text style={styles.batchBarCancelText}>cancel</Text>
           </TouchableOpacity>
           <Text style={styles.batchBarCount}>{selectedIds.size} selected</Text>
-          <TouchableOpacity onPress={() => setBatchTagVisible(true)} style={styles.batchBarBtn}>
-            <Text style={styles.batchBarTagText}>tag</Text>
-          </TouchableOpacity>
+          <View style={styles.batchBarActions}>
+            <TouchableOpacity onPress={handleBatchTogglePrivacy} style={styles.batchBarIcon}>
+              <Ionicons
+                name={[...selectedIds].every(id => items.find(i => i.id === id)?.is_private) ? 'lock-closed' : 'lock-open-outline'}
+                size={18}
+                color="#fff"
+              />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleBatchDelete} style={styles.batchBarIcon}>
+              <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={() => setBatchTagVisible(true)} style={styles.batchBarBtn}>
+              <Text style={styles.batchBarTagText}>tag</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       ) : (
         <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
@@ -678,6 +706,14 @@ const styles = StyleSheet.create({
   batchBarCount: {
     color: '#fff',
     fontSize: 14,
+  },
+  batchBarActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  batchBarIcon: {
+    padding: 8,
   },
   batchBarTagText: {
     color: '#fff',
