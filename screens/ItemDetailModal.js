@@ -152,11 +152,15 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               </TouchableOpacity>
             </View>
           )}
-          <TouchableOpacity onPress={editing ? handleSave : enterEdit} style={styles.headerButton} disabled={saving}>
-            <Text style={[styles.headerButtonText, editing && styles.saveText]}>
-              {editing ? (saving ? 'saving...' : 'save') : 'edit'}
-            </Text>
-          </TouchableOpacity>
+          {onSave ? (
+            <TouchableOpacity onPress={editing ? handleSave : enterEdit} style={styles.headerButton} disabled={saving}>
+              <Text style={[styles.headerButtonText, editing && styles.saveText]}>
+                {editing ? (saving ? 'saving...' : 'save') : 'edit'}
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View style={styles.headerButton} />
+          )}
         </View>
 
         {editing ? (
@@ -300,9 +304,11 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </Text>
             </View>
-            <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-              <Text style={styles.deleteText}>delete item</Text>
-            </TouchableOpacity>
+            {onDelete && (
+              <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
+                <Text style={styles.deleteText}>delete item</Text>
+              </TouchableOpacity>
+            )}
           </>
         )}
       </KeyboardAvoidingView>

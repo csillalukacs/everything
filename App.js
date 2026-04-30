@@ -3,6 +3,7 @@ import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Linking from 'expo-linking';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -24,6 +25,8 @@ import ItemDetailModal from './screens/ItemDetailModal';
 import CanvasScreen from './screens/CanvasScreen';
 import BatchTagSheet from './screens/BatchTagSheet';
 import ProfileScreen from './screens/ProfileScreen';
+import ProfileViewScreen from './screens/ProfileViewScreen';
+import OpenProfileSheet from './screens/OpenProfileSheet';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -46,6 +49,8 @@ export default function App() {
   const [manageTagSearch, setManageTagSearch] = useState('');
   const [profileVisible, setProfileVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [viewingSlug, setViewingSlug] = useState(null);
+  const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
   const batchMode = selectedIds.size > 0;
 
@@ -60,6 +65,17 @@ export default function App() {
     });
 
     return () => subscription.unsubscribe();
+  }, []);
+
+  useEffect(() => {
+    function handleUrl(url) {
+      if (!url) return;
+      const m = url.match(/\/u\/([^/?#\s]+)/i);
+      if (m) setViewingSlug(decodeURIComponent(m[1]).toLowerCase());
+    }
+    Linking.getInitialURL().then(handleUrl);
+    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
+    return () => sub.remove();
   }, []);
 
   useEffect(() => {
@@ -345,9 +361,14 @@ export default function App() {
           <Text style={styles.title}>everything</Text>
           <Text style={styles.subtitle}>{items.length} {items.length === 1 ? 'object' : 'objects'}</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setCanvasVisible(true)}>
-          <Text style={styles.logout}>canvas</Text>
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
+            <Ionicons name="person-circle-outline" size={22} color="#999" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setCanvasVisible(true)}>
+            <Text style={styles.logout}>canvas</Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       <View style={styles.searchContainer}>
@@ -591,6 +612,18 @@ export default function App() {
         itemCount={items.length}
       />
 
+      <OpenProfileSheet
+        visible={openProfileVisible}
+        onClose={() => setOpenProfileVisible(false)}
+        onOpen={slug => { setOpenProfileVisible(false); setViewingSlug(slug); }}
+      />
+
+      <ProfileViewScreen
+        visible={!!viewingSlug}
+        slug={viewingSlug}
+        onClose={() => setViewingSlug(null)}
+      />
+
       <StatusBar style="dark" />
     </View>
   );
@@ -631,6 +664,15 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#999',
     marginTop: 8,
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginTop: 4,
+  },
+  headerIconBtn: {
+    padding: 4,
   },
   searchContainer: {
     flexDirection: 'row',
