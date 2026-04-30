@@ -21,6 +21,7 @@ import AddItemModal from './screens/AddItemModal';
 import ItemDetailModal from './screens/ItemDetailModal';
 import CanvasScreen from './screens/CanvasScreen';
 import BatchTagSheet from './screens/BatchTagSheet';
+import ProfileScreen from './screens/ProfileScreen';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -38,6 +39,7 @@ export default function App() {
   const [batchTagVisible, setBatchTagVisible] = useState(false);
   const [batchTagging, setBatchTagging] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
+  const [profileVisible, setProfileVisible] = useState(false);
 
   const batchMode = selectedIds.size > 0;
 
@@ -272,18 +274,13 @@ export default function App() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
+        <TouchableOpacity onPress={() => setProfileVisible(true)}>
           <Text style={styles.title}>everything</Text>
-          <Text style={styles.subtitle}>a home for your stuff</Text>
-        </View>
-        <View style={{ flexDirection: 'row', gap: 16, alignItems: 'center' }}>
-          <TouchableOpacity onPress={() => setCanvasVisible(true)}>
-            <Text style={styles.logout}>canvas</Text>
-          </TouchableOpacity>
-          <TouchableOpacity onPress={() => supabase.auth.signOut()}>
-            <Text style={styles.logout}>log out</Text>
-          </TouchableOpacity>
-        </View>
+          <Text style={styles.subtitle}>{items.length} {items.length === 1 ? 'object' : 'objects'}</Text>
+        </TouchableOpacity>
+        <TouchableOpacity onPress={() => setCanvasVisible(true)}>
+          <Text style={styles.logout}>canvas</Text>
+        </TouchableOpacity>
       </View>
 
       {tags.length > 0 && (
@@ -466,6 +463,13 @@ export default function App() {
           </TouchableOpacity>
         </TouchableOpacity>
       </Modal>
+
+      <ProfileScreen
+        visible={profileVisible}
+        onClose={() => setProfileVisible(false)}
+        session={session}
+        itemCount={items.length}
+      />
 
       <StatusBar style="dark" />
     </View>
