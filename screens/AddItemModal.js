@@ -96,6 +96,7 @@ async function cropToContent(uri) {
 export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
+  const [description, setDescription] = useState('');
   const [saving, setSaving] = useState(false);
   const [tags, setTags] = useState([]);
   const [isPrivate, setIsPrivate] = useState(false);
@@ -176,8 +177,9 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   async function handleSave() {
     if (!photo) return;
     setSaving(true);
-    await onSave(name.trim(), photo, tags, isPrivate);
+    await onSave(name.trim(), photo, tags, isPrivate, description.trim());
     setName('');
+    setDescription('');
     setPhoto(null);
     setTags([]);
     setIsPrivate(false);
@@ -187,6 +189,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   function handleClose() {
     setPhoto(null);
     setName('');
+    setDescription('');
     setTags([]);
     setIsPrivate(false);
     setAddingTag(false);
@@ -317,6 +320,16 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
             placeholderTextColor="#bbb"
             value={name}
             onChangeText={setName}
+            returnKeyType="next"
+            onSubmitEditing={Keyboard.dismiss}
+          />
+          <TextInput
+            style={[styles.input, styles.descriptionInput]}
+            placeholder="description (optional)"
+            placeholderTextColor="#bbb"
+            value={description}
+            onChangeText={setDescription}
+            multiline
             returnKeyType="done"
             onSubmitEditing={Keyboard.dismiss}
           />
@@ -503,6 +516,11 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2D2D2D',
     marginBottom: 12,
+  },
+  descriptionInput: {
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
   },
   button: {
     backgroundColor: '#2D2D2D',

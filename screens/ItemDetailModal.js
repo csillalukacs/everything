@@ -20,6 +20,7 @@ import {
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
+  const [editDescription, setEditDescription] = useState('');
   const [editPhoto, setEditPhoto] = useState(null);
   const [editTags, setEditTags] = useState([]);
   const [editPrivate, setEditPrivate] = useState(false);
@@ -47,6 +48,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   function enterEdit() {
     setEditName(item.name ?? '');
+    setEditDescription(item.description ?? '');
     setEditPhoto(item.image_url);
     setEditTags((item.tags ?? []).map(t => t.name));
     setEditPrivate(item.is_private ?? false);
@@ -58,6 +60,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditing(false);
     setAddingTag(false);
     setNewTagName('');
+    setEditDescription('');
   }
 
   async function pickFromCamera() {
@@ -112,9 +115,10 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   async function handleSave() {
     setSaving(true);
-    await onSave(editName.trim(), editPhoto, editTags, editPrivate);
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim());
     setSaving(false);
     setEditing(false);
+    setEditDescription('');
   }
 
   if (!item) return null;
@@ -249,6 +253,16 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   onSubmitEditing={Keyboard.dismiss}
                 />
               </TouchableOpacity>
+              <TextInput
+                style={[styles.nameInput, styles.descriptionInput]}
+                value={editDescription}
+                onChangeText={setEditDescription}
+                placeholder="description (optional)"
+                placeholderTextColor="#bbb"
+                multiline
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
 
               <TouchableOpacity style={styles.privacyToggle} onPress={() => setEditPrivate(prev => !prev)}>
                 <Ionicons name={editPrivate ? 'lock-closed' : 'lock-open-outline'} size={16} color={editPrivate ? '#2D2D2D' : '#bbb'} />
@@ -281,6 +295,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   ))}
                 </View>
               )}
+              {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               <Text style={styles.date}>
                 added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </Text>
@@ -490,5 +505,15 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#2D2D2D',
+  },
+  descriptionInput: {
+    fontSize: 14,
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  description: {
+    fontSize: 14,
+    color: '#555',
+    lineHeight: 21,
   },
 });
