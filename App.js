@@ -42,7 +42,6 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchTagVisible, setBatchTagVisible] = useState(false);
-  const [batchTagging, setBatchTagging] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -254,15 +253,9 @@ export default function App() {
       setBatchTagVisible(false);
       return;
     }
-    setBatchTagging(true);
     const resolved = await ensureTags(tagNames);
-    if (!resolved) { setBatchTagging(false); return; }
-    const newTagIds = resolved.map(t => t.id);
-    for (const itemId of selectedIds) {
-      const item = items.find(i => i.id === itemId);
-      const existingIds = (item?.tags ?? []).map(t => t.id);
-      await setItemTags(itemId, [...new Set([...existingIds, ...newTagIds])]);
-    }
+    if (!resolved) return;
+    const ids = [...selectedIds];
     setItems(prev => prev.map(item => {
       if (!selectedIds.has(item.id)) return item;
       const existing = item.tags ?? [];
@@ -270,9 +263,13 @@ export default function App() {
       const merged = [...existing, ...resolved.filter(t => !existingIds.has(t.id))];
       return { ...item, tags: merged };
     }));
-    setBatchTagging(false);
     setBatchTagVisible(false);
     setSelectedIds(new Set());
+    const rows = ids.flatMap(item_id => resolved.map(t => ({ item_id, tag_id: t.id })));
+    const { error } = await supabase
+      .from('item_tags')
+      .upsert(rows, { onConflict: 'item_id,tag_id', ignoreDuplicates: true });
+    if (error) console.error('Batch tag error:', error);
   }
 
   async function handleBatchDelete() {
@@ -504,7 +501,6 @@ export default function App() {
         onApply={handleBatchTag}
         allTags={allTagObjects}
         selectedCount={selectedIds.size}
-        loading={batchTagging}
       />
 
       <Modal

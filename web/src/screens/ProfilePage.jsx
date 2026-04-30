@@ -57,7 +57,6 @@ export default function ProfilePage() {
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [batchTagVisible, setBatchTagVisible] = useState(false)
-  const [batchTagging, setBatchTagging] = useState(false)
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
 
@@ -227,15 +226,9 @@ export default function ProfilePage() {
 
   async function handleBatchTag(tagNames) {
     if (tagNames.length === 0) { setBatchTagVisible(false); return }
-    setBatchTagging(true)
     const resolved = await ensureTags(tagNames)
-    if (!resolved) { setBatchTagging(false); return }
-    const newTagIds = resolved.map(t => t.id)
-    for (const itemId of selectedIds) {
-      const item = items.find(i => i.id === itemId)
-      const existingIds = (item?.tags ?? []).map(t => t.id)
-      await setItemTags(itemId, [...new Set([...existingIds, ...newTagIds])])
-    }
+    if (!resolved) return
+    const ids = [...selectedIds]
     setItems(prev => prev.map(item => {
       if (!selectedIds.has(item.id)) return item
       const existing = item.tags ?? []
@@ -243,9 +236,13 @@ export default function ProfilePage() {
       const merged = [...existing, ...resolved.filter(t => !existingIds.has(t.id))]
       return { ...item, tags: merged }
     }))
-    setBatchTagging(false)
     setBatchTagVisible(false)
     setSelectedIds(new Set())
+    const rows = ids.flatMap(item_id => resolved.map(t => ({ item_id, tag_id: t.id })))
+    const { error } = await supabase
+      .from('item_tags')
+      .upsert(rows, { onConflict: 'item_id,tag_id', ignoreDuplicates: true })
+    if (error) console.error('Batch tag error:', error)
   }
 
   async function handleBatchDelete() {
@@ -464,7 +461,6 @@ export default function ProfilePage() {
             onApply={handleBatchTag}
             allTags={allTags}
             selectedCount={selectedIds.size}
-            loading={batchTagging}
           />
 
           {manageTagsVisible && (
