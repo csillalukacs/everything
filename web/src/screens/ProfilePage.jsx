@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useParams, Link } from 'react-router-dom'
+import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
@@ -42,17 +42,27 @@ function TrashIcon({ size = 18, color = 'currentColor' }) {
   )
 }
 
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const USERNAME_RE = /^[a-z0-9_]{3,20}$/
+
 export default function ProfilePage() {
-  const { userId } = useParams()
+  const { slug } = useParams()
+  const navigate = useNavigate()
+  const [userId, setUserId] = useState(null)
+  const [notFound, setNotFound] = useState(false)
   const [items, setItems] = useState([])
   const [allTags, setAllTags] = useState([])
   const [profileName, setProfileName] = useState(null)
+  const [username, setUsername] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTag, setActiveTag] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
   const [isOwner, setIsOwner] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
+  const [editingUsername, setEditingUsername] = useState(false)
+  const [usernameInput, setUsernameInput] = useState('')
+  const [usernameStatus, setUsernameStatus] = useState(null) // null | 'checking' | 'available' | 'taken' | 'invalid' | 'reserved'
   const [sessionUserId, setSessionUserId] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [addModalVisible, setAddModalVisible] = useState(false)
@@ -65,12 +75,53 @@ export default function ProfilePage() {
 
   useEffect(() => {
     async function load() {
+      const slugIsUuid = UUID_RE.test(slug)
       const { data: { session } } = await supabase.auth.getSession()
+
+      let resolvedId = null
+      let resolvedProfile = null
+      if (slugIsUuid) {
+        resolvedId = slug
+        const { data } = await supabase
+          .from('profiles')
+          .select('display_name, username')
+          .eq('user_id', slug)
+          .maybeSingle()
+        resolvedProfile = data
+      } else {
+        const { data } = await supabase
+          .from('profiles')
+          .select('user_id, display_name, username')
+          .ilike('username', slug)
+          .maybeSingle()
+        if (data) {
+          resolvedId = data.user_id
+          resolvedProfile = { display_name: data.display_name, username: data.username }
+        }
+      }
+
+      if (!resolvedId) {
+        setNotFound(true)
+        setLoading(false)
+        return
+      }
+      if (slugIsUuid && resolvedProfile?.username) {
+        navigate(`/u/${resolvedProfile.username}`, { replace: true })
+        return
+      }
+      setUserId(resolvedId)
+      if (resolvedProfile) {
+        setProfileName(resolvedProfile.display_name)
+        setUsername(resolvedProfile.username)
+        setNameInput(resolvedProfile.display_name ?? '')
+        setUsernameInput(resolvedProfile.username ?? '')
+      }
+
       let ownerSession = false
-      const isOwnerView = session && session.user.id === userId
+      const isOwnerView = session && session.user.id === resolvedId
       if (isOwnerView) {
-        const cachedItems = readCache(itemsCacheKey(userId))
-        const cachedTags = readCache(tagsCacheKey(userId))
+        const cachedItems = readCache(itemsCacheKey(resolvedId))
+        const cachedTags = readCache(tagsCacheKey(resolvedId))
         if (cachedItems) setItems(cachedItems)
         if (cachedTags) setAllTags(cachedTags)
         if (cachedItems) setLoading(false)
@@ -79,14 +130,14 @@ export default function ProfilePage() {
       if (session) {
         const displayName = session.user.user_metadata?.full_name || session.user.email
         await supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName }, { ignoreDuplicates: true })
-        if (session.user.id === userId) {
+        if (session.user.id === resolvedId) {
           ownerSession = true
           setIsOwner(true)
           setSessionUserId(session.user.id)
           const { data: tagsData } = await supabase.from('tags').select('*').order('name')
           if (tagsData) {
             setAllTags(tagsData)
-            writeCache(tagsCacheKey(userId), tagsData)
+            writeCache(tagsCacheKey(resolvedId), tagsData)
           }
         }
       }
@@ -94,26 +145,19 @@ export default function ProfilePage() {
       let itemsQuery = supabase
         .from('items')
         .select('*, tags(id, name, is_private)')
-        .eq('user_id', userId)
+        .eq('user_id', resolvedId)
         .order('created_at', { ascending: false })
       if (!ownerSession) itemsQuery = itemsQuery.eq('is_private', false)
 
-      const [{ data: profile }, { data: fetchedItems }] = await Promise.all([
-        supabase.from('profiles').select('display_name').eq('user_id', userId).maybeSingle(),
-        itemsQuery,
-      ])
-      if (profile) {
-        setProfileName(profile.display_name)
-        setNameInput(profile.display_name ?? '')
-      }
+      const { data: fetchedItems } = await itemsQuery
       if (fetchedItems) {
         setItems(fetchedItems)
-        if (ownerSession) writeCache(itemsCacheKey(userId), fetchedItems)
+        if (ownerSession) writeCache(itemsCacheKey(resolvedId), fetchedItems)
       }
       setLoading(false)
     }
     load()
-  }, [userId])
+  }, [slug])
 
   useEffect(() => {
     if (!isOwner || !sessionUserId) return
@@ -319,6 +363,58 @@ export default function ProfilePage() {
     )
   }
 
+  if (notFound) {
+    return (
+      <div className="centered" style={{ flexDirection: 'column', gap: 12 }}>
+        <p style={{ color: '#999' }}>no profile at /u/{slug}</p>
+        <Link to="/" className="link-btn">everything</Link>
+      </div>
+    )
+  }
+
+  async function saveUsername() {
+    const trimmed = usernameInput.trim().toLowerCase()
+    if (trimmed === (username ?? '')) {
+      setEditingUsername(false)
+      setUsernameStatus(null)
+      return
+    }
+    if (trimmed === '') {
+      // Clear username
+      const { error } = await supabase.from('profiles').update({ username: null }).eq('user_id', userId)
+      if (!error) setUsername(null)
+      setEditingUsername(false)
+      setUsernameStatus(null)
+      return
+    }
+    if (!USERNAME_RE.test(trimmed)) {
+      setUsernameStatus('invalid')
+      return
+    }
+    const { data: existing } = await supabase
+      .from('profiles')
+      .select('user_id')
+      .ilike('username', trimmed)
+      .maybeSingle()
+    if (existing && existing.user_id !== userId) {
+      setUsernameStatus('taken')
+      return
+    }
+    const { error } = await supabase
+      .from('profiles')
+      .update({ username: trimmed })
+      .eq('user_id', userId)
+    if (error) {
+      // The reserved-word trigger raises an exception that surfaces here.
+      setUsernameStatus(/reserved/i.test(error.message) ? 'reserved' : 'taken')
+      return
+    }
+    setUsername(trimmed)
+    setEditingUsername(false)
+    setUsernameStatus(null)
+    if (UUID_RE.test(slug)) navigate(`/u/${trimmed}`, { replace: true })
+  }
+
   return (
     <div className="app">
       <header className="header">
@@ -345,7 +441,45 @@ export default function ProfilePage() {
             <h1
               className={`profile-name${isOwner ? ' profile-name-editable' : ''}`}
               onClick={() => isOwner && setEditingName(true)}
-            >{profileName ?? userId.split('-')[0]} : {items.length} {items.length === 1 ? 'object' : 'objects'}</h1>
+            >{profileName ?? username ?? userId.split('-')[0]} : {items.length} {items.length === 1 ? 'object' : 'objects'}</h1>
+          )}
+          {isOwner && (
+            editingUsername ? (
+              <div className="profile-username-edit">
+                <span className="profile-username-at">@</span>
+                <input
+                  className="profile-username-input"
+                  value={usernameInput}
+                  onChange={e => {
+                    setUsernameInput(e.target.value.toLowerCase())
+                    setUsernameStatus(null)
+                  }}
+                  onBlur={saveUsername}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') e.target.blur()
+                    if (e.key === 'Escape') {
+                      setUsernameInput(username ?? '')
+                      setUsernameStatus(null)
+                      setEditingUsername(false)
+                    }
+                  }}
+                  placeholder="username"
+                  maxLength={20}
+                  autoFocus
+                />
+                {usernameStatus === 'invalid' && <span className="profile-username-msg profile-username-error">3–20 chars, a–z 0–9 _</span>}
+                {usernameStatus === 'taken' && <span className="profile-username-msg profile-username-error">taken</span>}
+                {usernameStatus === 'reserved' && <span className="profile-username-msg profile-username-error">reserved</span>}
+              </div>
+            ) : (
+              <button
+                className="profile-username-btn"
+                onClick={() => { setUsernameInput(username ?? ''); setEditingUsername(true) }}
+              >{username ? `@${username}` : 'set username'}</button>
+            )
+          )}
+          {!isOwner && username && (
+            <p className="profile-username-readonly">@{username}</p>
           )}
         </div>
         <Link to="/" className="link-btn" style={{ marginTop: 8 }}>everything</Link>

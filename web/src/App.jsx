@@ -24,6 +24,7 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [items, setItems] = useState([])
+  const [username, setUsername] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -37,7 +38,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!session) { setItems([]); return }
+    if (!session) { setItems([]); setUsername(null); return }
     const cached = readCache(itemsCacheKey(session.user.id))
     if (cached) setItems(cached)
     supabase
@@ -51,6 +52,12 @@ export default function App() {
           writeCache(itemsCacheKey(session.user.id), data)
         }
       })
+    supabase
+      .from('profiles')
+      .select('username')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => setUsername(data?.username ?? null))
   }, [session])
 
   if (loading) return (
@@ -70,7 +77,7 @@ export default function App() {
         </div>
         <div className="header-right">
           <div className="header-links">
-            <Link to={`/u/${session.user.id}`} className="link-btn">my collection</Link>
+            <Link to={`/u/${username ?? session.user.id}`} className="link-btn">my collection</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>log out</button>
           </div>
         </div>
@@ -79,7 +86,7 @@ export default function App() {
       {items.length === 0 ? (
         <div className="centered" style={{ flexDirection: 'column', gap: 16 }}>
           <p style={{ color: '#999' }}>you haven't added anything yet</p>
-          <Link to={`/u/${session.user.id}`} className="link-btn link-btn-dark">add your first item</Link>
+          <Link to={`/u/${username ?? session.user.id}`} className="link-btn link-btn-dark">add your first item</Link>
         </div>
       ) : dailyItem && (
         <div className="daily-item">
