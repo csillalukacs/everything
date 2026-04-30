@@ -3,6 +3,15 @@ import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import AuthScreen from './screens/AuthScreen'
 
+const itemsCacheKey = userId => `cache:items:${userId}`
+
+function readCache(key) {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null } catch { return null }
+}
+function writeCache(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* ignore */ }
+}
+
 function getDailyItem(items) {
   if (!items.length) return null
   const dateStr = new Date().toISOString().slice(0, 10)
@@ -29,12 +38,19 @@ export default function App() {
 
   useEffect(() => {
     if (!session) { setItems([]); return }
+    const cached = readCache(itemsCacheKey(session.user.id))
+    if (cached) setItems(cached)
     supabase
       .from('items')
-      .select('*, tags(id, name)')
+      .select('*, tags(id, name, is_private)')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false })
-      .then(({ data }) => { if (data) setItems(data) })
+      .then(({ data }) => {
+        if (data) {
+          setItems(data)
+          writeCache(itemsCacheKey(session.user.id), data)
+        }
+      })
   }, [session])
 
   if (loading) return (

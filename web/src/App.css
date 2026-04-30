@@ -382,6 +382,10 @@ input {
   outline: 2.5px solid #2D2D2D;
 }
 
+.card-hidden {
+  display: none;
+}
+
 .card-private-badge {
   position: absolute;
   top: 8px;

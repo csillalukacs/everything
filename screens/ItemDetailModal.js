@@ -4,7 +4,6 @@ import { useEffect, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
-  Image,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -16,6 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext }) {
   const [editing, setEditing] = useState(false);
@@ -168,7 +168,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           >
             <View style={styles.imageContainer}>
               {displayPhoto
-                ? <Image source={{ uri: displayPhoto }} style={styles.image} />
+                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" />
                 : <View style={styles.imagePlaceholder} />
               }
               {removingBg ? (
@@ -276,7 +276,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           <>
             <View style={styles.imageContainer}>
               {displayPhoto
-                ? <Image source={{ uri: displayPhoto }} style={styles.image} />
+                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" />
                 : <View style={styles.imagePlaceholder} />
               }
             </View>

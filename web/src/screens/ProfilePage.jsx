@@ -5,6 +5,16 @@ import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchTagSheet from './BatchTagSheet'
 
+const itemsCacheKey = userId => `cache:items:${userId}`
+const tagsCacheKey = userId => `cache:tags:${userId}`
+
+function readCache(key) {
+  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null } catch { return null }
+}
+function writeCache(key, value) {
+  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* quota or disabled — ignore */ }
+}
+
 function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   const d = open
     ? 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm-1-7V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2H9z'
@@ -57,6 +67,15 @@ export default function ProfilePage() {
     async function load() {
       const { data: { session } } = await supabase.auth.getSession()
       let ownerSession = false
+      const isOwnerView = session && session.user.id === userId
+      if (isOwnerView) {
+        const cachedItems = readCache(itemsCacheKey(userId))
+        const cachedTags = readCache(tagsCacheKey(userId))
+        if (cachedItems) setItems(cachedItems)
+        if (cachedTags) setAllTags(cachedTags)
+        if (cachedItems) setLoading(false)
+      }
+
       if (session) {
         const displayName = session.user.user_metadata?.full_name || session.user.email
         await supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName }, { ignoreDuplicates: true })
@@ -65,7 +84,10 @@ export default function ProfilePage() {
           setIsOwner(true)
           setSessionUserId(session.user.id)
           const { data: tagsData } = await supabase.from('tags').select('*').order('name')
-          if (tagsData) setAllTags(tagsData)
+          if (tagsData) {
+            setAllTags(tagsData)
+            writeCache(tagsCacheKey(userId), tagsData)
+          }
         }
       }
 
@@ -84,16 +106,29 @@ export default function ProfilePage() {
         setProfileName(profile.display_name)
         setNameInput(profile.display_name ?? '')
       }
-      if (fetchedItems) setItems(fetchedItems)
+      if (fetchedItems) {
+        setItems(fetchedItems)
+        if (ownerSession) writeCache(itemsCacheKey(userId), fetchedItems)
+      }
       setLoading(false)
     }
     load()
   }, [userId])
 
+  useEffect(() => {
+    if (!isOwner || !sessionUserId) return
+    writeCache(itemsCacheKey(sessionUserId), items)
+  }, [items, isOwner, sessionUserId])
+
+  useEffect(() => {
+    if (!isOwner || !sessionUserId) return
+    writeCache(tagsCacheKey(sessionUserId), allTags)
+  }, [allTags, isOwner, sessionUserId])
+
   async function uploadImage(file) {
     const ext = file.name.split('.').pop()
     const path = `${sessionUserId}/${Date.now()}.${ext}`
-    const { error } = await supabase.storage.from('item-images').upload(path, file, { contentType: file.type })
+    const { error } = await supabase.storage.from('item-images').upload(path, file, { contentType: file.type, cacheControl: '31536000, immutable' })
     if (error) return null
     return supabase.storage.from('item-images').getPublicUrl(path).data.publicUrl
   }
@@ -201,12 +236,13 @@ export default function ProfilePage() {
       const existingIds = (item?.tags ?? []).map(t => t.id)
       await setItemTags(itemId, [...new Set([...existingIds, ...newTagIds])])
     }
-    const { data } = await supabase
-      .from('items')
-      .select('*, tags(id, name, is_private)')
-      .eq('user_id', sessionUserId)
-      .order('created_at', { ascending: false })
-    if (data) setItems(data)
+    setItems(prev => prev.map(item => {
+      if (!selectedIds.has(item.id)) return item
+      const existing = item.tags ?? []
+      const existingIds = new Set(existing.map(t => t.id))
+      const merged = [...existing, ...resolved.filter(t => !existingIds.has(t.id))]
+      return { ...item, tags: merged }
+    }))
     setBatchTagging(false)
     setBatchTagVisible(false)
     setSelectedIds(new Set())
@@ -251,6 +287,7 @@ export default function ProfilePage() {
     : activeTag
       ? searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
       : searchedItems
+  const visibleItemIds = new Set(filteredItems.map(i => i.id))
 
   const tagCounts = new Map()
   let untaggedCount = 0
@@ -351,16 +388,17 @@ export default function ProfilePage() {
       )}
 
       <div className="grid">
-        {filteredItems.map(item => {
+        {items.map(item => {
           const isSelected = selectedIds.has(item.id)
+          const visible = visibleItemIds.has(item.id)
           return (
             <div
               key={item.id}
-              className={`card${isSelected ? ' card-selected' : ''}`}
+              className={`card${isSelected ? ' card-selected' : ''}${visible ? '' : ' card-hidden'}`}
               onClick={() => isOwner && batchMode ? toggleBatchSelect(item.id) : setSelectedItem(item)}
               onContextMenu={isOwner ? e => { e.preventDefault(); toggleBatchSelect(item.id) } : undefined}
             >
-              {item.image_url && <img src={item.image_url} alt={item.name || ''} />}
+              {item.image_url && <img src={item.image_url} alt={item.name || ''} loading="lazy" />}
               {item.is_private && !batchMode && (
                 <div className="card-private-badge"><LockIcon size={10} color="#fff" /></div>
               )}

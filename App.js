@@ -2,12 +2,12 @@ import { StatusBar } from 'expo-status-bar';
 import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
 import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -16,6 +16,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import { supabase } from './lib/supabase';
 import AuthScreen from './screens/AuthScreen';
 import AddItemModal from './screens/AddItemModal';
@@ -26,6 +27,9 @@ import ProfileScreen from './screens/ProfileScreen';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
+
+const itemsCacheKey = userId => `cache:items:${userId}`;
+const tagsCacheKey = userId => `cache:tags:${userId}`;
 
 export default function App() {
   const [session, setSession] = useState(null);
@@ -59,14 +63,36 @@ export default function App() {
   }, []);
 
   useEffect(() => {
-    if (session) {
-      fetchItems();
-      fetchTags();
-    } else {
+    if (!session) {
       setItems([]);
       setTags([]);
+      return;
     }
+    let cancelled = false;
+    (async () => {
+      const [itemsStr, tagsStr] = await Promise.all([
+        AsyncStorage.getItem(itemsCacheKey(session.user.id)),
+        AsyncStorage.getItem(tagsCacheKey(session.user.id)),
+      ]);
+      if (cancelled) return;
+      setItems(itemsStr ? JSON.parse(itemsStr) : []);
+      setTags(tagsStr ? JSON.parse(tagsStr) : []);
+      if (cancelled) return;
+      fetchItems();
+      fetchTags();
+    })();
+    return () => { cancelled = true; };
   }, [session]);
+
+  useEffect(() => {
+    if (!session) return;
+    AsyncStorage.setItem(itemsCacheKey(session.user.id), JSON.stringify(items));
+  }, [items, session]);
+
+  useEffect(() => {
+    if (!session) return;
+    AsyncStorage.setItem(tagsCacheKey(session.user.id), JSON.stringify(tags));
+  }, [tags, session]);
 
   async function fetchItems() {
     const { data, error } = await supabase
@@ -74,7 +100,11 @@ export default function App() {
       .select('*, tags(id, name, is_private)')
       .eq('user_id', session.user.id)
       .order('created_at', { ascending: false });
-    if (!error) setItems(data);
+    if (!error) {
+      setItems(data);
+      const urls = data.map(i => i.image_url).filter(Boolean);
+      if (urls.length) Image.prefetch(urls, { cachePolicy: 'memory-disk' });
+    }
   }
 
   async function fetchTags() {
@@ -123,7 +153,7 @@ export default function App() {
       const base64 = await readAsStringAsync(photoUri, { encoding: EncodingType.Base64 });
       const { error: uploadError } = await supabase.storage
         .from('item-images')
-        .upload(path, decode(base64), { contentType: `image/${ext}` });
+        .upload(path, decode(base64), { contentType: `image/${ext}`, cacheControl: '31536000, immutable' });
       if (uploadError) { console.error('Upload error:', uploadError); return; }
       const { data: { publicUrl } } = supabase.storage.from('item-images').getPublicUrl(path);
       image_url = publicUrl;
@@ -145,6 +175,7 @@ export default function App() {
     const updated = { ...data, tags: resolved };
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
     setSelectedItem(updated);
+    if (!photoUri.startsWith('http')) Image.prefetch(image_url, { cachePolicy: 'memory-disk' });
   }
 
   async function handleSave(name, photoUri, tagNames, isPrivate, description) {
@@ -155,7 +186,7 @@ export default function App() {
 
     const { error: uploadError } = await supabase.storage
       .from('item-images')
-      .upload(path, decode(base64), { contentType: `image/${ext}` });
+      .upload(path, decode(base64), { contentType: `image/${ext}`, cacheControl: '31536000, immutable' });
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
@@ -179,6 +210,7 @@ export default function App() {
     await setItemTags(data.id, resolved.map(t => t.id));
 
     setItems([{ ...data, tags: resolved }, ...items]);
+    Image.prefetch(publicUrl, { cachePolicy: 'memory-disk' });
     setModalVisible(false);
   }
 
@@ -231,7 +263,13 @@ export default function App() {
       const existingIds = (item?.tags ?? []).map(t => t.id);
       await setItemTags(itemId, [...new Set([...existingIds, ...newTagIds])]);
     }
-    await fetchItems();
+    setItems(prev => prev.map(item => {
+      if (!selectedIds.has(item.id)) return item;
+      const existing = item.tags ?? [];
+      const existingIds = new Set(existing.map(t => t.id));
+      const merged = [...existing, ...resolved.filter(t => !existingIds.has(t.id))];
+      return { ...item, tags: merged };
+    }));
     setBatchTagging(false);
     setBatchTagVisible(false);
     setSelectedIds(new Set());
@@ -390,7 +428,7 @@ export default function App() {
             >
               {item.image_url && (
                 <View style={styles.cardImageContainer}>
-                  <Image source={{ uri: item.image_url }} style={styles.cardImage} />
+                  <Image source={{ uri: item.image_url }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
                 </View>
               )}
               {item.is_private && !batchMode && (

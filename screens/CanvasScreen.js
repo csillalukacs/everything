@@ -3,7 +3,6 @@ import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
-  Image,
   Modal,
   ScrollView,
   StyleSheet,
@@ -11,6 +10,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Image } from 'expo-image';
 import {
   AlphaType,
   Canvas,
@@ -30,6 +30,20 @@ import {
 
 const INITIAL_SIZE = 120;
 const SCAN_SIZE = 64;
+
+async function loadSkiaImageCached(url) {
+  let path = await Image.getCachePathAsync(url);
+  if (!path) {
+    await Image.prefetch(url);
+    path = await Image.getCachePathAsync(url);
+  }
+  if (path) {
+    const fileUri = path.startsWith('file://') ? path : `file://${path}`;
+    const data = await Skia.Data.fromURI(fileUri);
+    if (data) return data;
+  }
+  return Skia.Data.fromURI(url);
+}
 
 function computeTightBounds(skImg, itemWidth, itemHeight) {
   const surface = Skia.Surface.Make(SCAN_SIZE, SCAN_SIZE);
@@ -85,7 +99,8 @@ export default function CanvasScreen({ visible, onClose, items }) {
   useEffect(() => {
     placedItems.forEach(item => {
       if (item.skImage === null) {
-        Skia.Data.fromURI(item.imageUrl).then(data => {
+        loadSkiaImageCached(item.imageUrl).then(data => {
+          if (!data) return;
           const skImg = Skia.Image.MakeImageFromEncoded(data);
           if (skImg) {
             const maxDim = Math.max(skImg.width(), skImg.height());
@@ -340,7 +355,7 @@ export default function CanvasScreen({ visible, onClose, items }) {
                     onPress={() => addToCanvas(item)}
                   >
                     {item.image_url && (
-                      <Image source={{ uri: item.image_url }} style={styles.trayImage} />
+                      <Image source={{ uri: item.image_url }} style={styles.trayImage} cachePolicy="memory-disk" contentFit="cover" />
                     )}
                   </TouchableOpacity>
                 ))}
