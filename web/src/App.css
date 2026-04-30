@@ -239,6 +239,24 @@ input {
 
 /* ---- Filter chips ---- */
 
+.filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 24px;
+  min-width: 0;
+}
+
+.filter-row > .filter-scroll {
+  flex: 1;
+  margin-bottom: 0;
+  min-width: 0;
+}
+
+.filter-manage-btn {
+  flex-shrink: 0;
+}
+
 .filter-scroll {
   display: flex;
   gap: 8px;
@@ -296,6 +314,28 @@ input {
 .manage-tags-empty {
   font-size: 14px;
   color: #999;
+  text-align: center;
+  padding: 24px 0;
+  margin: 0;
+}
+
+.sheet-manage-tags {
+  height: min(70vh, 560px);
+  width: 420px;
+  max-width: calc(100vw - 32px);
+  gap: 12px;
+}
+
+.manage-tag-search {
+  margin-bottom: 0;
+  flex-shrink: 0;
+}
+
+.manage-tag-list {
+  flex: 1;
+  overflow-y: auto;
+  margin: 0 -8px;
+  padding: 0 8px;
 }
 
 .manage-tag-row {
@@ -304,15 +344,33 @@ input {
   justify-content: space-between;
   padding: 10px 0;
   border-bottom: 1px solid #E8E3DD;
+  gap: 12px;
 }
 
 .manage-tag-row:last-child {
   border-bottom: none;
 }
 
+.manage-tag-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+  flex: 1;
+}
+
 .manage-tag-name {
   font-size: 15px;
   color: #2D2D2D;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.manage-tag-count {
+  font-size: 12px;
+  color: #999;
+  flex-shrink: 0;
 }
 
 .manage-tag-actions {

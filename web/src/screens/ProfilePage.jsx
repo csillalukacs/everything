@@ -58,6 +58,7 @@ export default function ProfilePage() {
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [batchTagVisible, setBatchTagVisible] = useState(false)
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
+  const [manageTagSearch, setManageTagSearch] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
 
   const batchMode = selectedIds.size > 0
@@ -294,6 +295,22 @@ export default function ProfilePage() {
     for (const t of tagsArr) tagCounts.set(t.id, (tagCounts.get(t.id) ?? 0) + 1)
   }
 
+  const totalTagCounts = new Map()
+  for (const item of items) {
+    for (const t of (item.tags ?? [])) totalTagCounts.set(t.id, (totalTagCounts.get(t.id) ?? 0) + 1)
+  }
+
+  const manageQuery = manageTagSearch.trim().toLowerCase()
+  const manageTagsList = (manageQuery
+    ? allTags.filter(t => t.name.toLowerCase().includes(manageQuery))
+    : allTags
+  ).slice().sort((a, b) => a.name.localeCompare(b.name))
+
+  function closeManageTags() {
+    setManageTagsVisible(false)
+    setManageTagSearch('')
+  }
+
   if (loading) {
     return (
       <div className="centered">
@@ -353,20 +370,22 @@ export default function ProfilePage() {
 
       {isOwner ? (
         allTags.length > 0 && (
-          <div className="filter-scroll">
-            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all<span className="chip-count">{searchedItems.length}</span></button>
-            <button
-              className={`chip${activeTag?.id === '__untagged__' ? ' chip-active' : ''}`}
-              onClick={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
-            >untagged<span className="chip-count">{untaggedCount}</span></button>
-            {allTags.map(tag => (
+          <div className="filter-row">
+            <div className="filter-scroll">
+              <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all<span className="chip-count">{searchedItems.length}</span></button>
               <button
-                key={tag.id}
-                className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
-                onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
-              >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
-            ))}
-            <button className="chip chip-dashed" onClick={() => setManageTagsVisible(true)}>manage</button>
+                className={`chip${activeTag?.id === '__untagged__' ? ' chip-active' : ''}`}
+                onClick={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
+              >untagged<span className="chip-count">{untaggedCount}</span></button>
+              {allTags.map(tag => (
+                <button
+                  key={tag.id}
+                  className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
+                  onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
+                >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
+              ))}
+            </div>
+            <button className="chip chip-dashed filter-manage-btn" onClick={() => setManageTagsVisible(true)}>manage</button>
           </div>
         )
       ) : (
@@ -464,30 +483,52 @@ export default function ProfilePage() {
           />
 
           {manageTagsVisible && (
-            <div className="sheet-overlay" onClick={() => setManageTagsVisible(false)}>
-              <div className="sheet" onClick={e => e.stopPropagation()}>
+            <div className="sheet-overlay" onClick={closeManageTags}>
+              <div className="sheet sheet-manage-tags" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                  <span className="sheet-title">manage tags</span>
-                  <button className="link-btn" onClick={() => setManageTagsVisible(false)}>done</button>
+                  <span className="sheet-title">manage tags · {allTags.length}</span>
+                  <button className="link-btn" onClick={closeManageTags}>done</button>
                 </div>
-                {allTags.length === 0
-                  ? <p className="manage-tags-empty">no tags yet</p>
-                  : allTags.map(tag => (
-                    <div key={tag.id} className="manage-tag-row">
-                      <span className="manage-tag-name">{tag.name}</span>
-                      <div className="manage-tag-actions">
-                        <button
-                          className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
-                          onClick={() => handleToggleTagPrivacy(tag)}
-                          title={tag.is_private ? 'make public' : 'make private'}
-                        >
-                          <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
-                        </button>
-                        <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>delete</button>
+                <div className="search-container manage-tag-search">
+                  <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                    <circle cx="11" cy="11" r="7" />
+                    <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                  </svg>
+                  <input
+                    type="text"
+                    className="search-input"
+                    placeholder="search tags"
+                    value={manageTagSearch}
+                    onChange={e => setManageTagSearch(e.target.value)}
+                    autoFocus
+                  />
+                  {manageTagSearch && (
+                    <button className="search-clear" onClick={() => setManageTagSearch('')} aria-label="clear search">×</button>
+                  )}
+                </div>
+                <div className="manage-tag-list">
+                  {manageTagsList.length === 0
+                    ? <p className="manage-tags-empty">{allTags.length === 0 ? 'no tags yet' : 'no matches'}</p>
+                    : manageTagsList.map(tag => (
+                      <div key={tag.id} className="manage-tag-row">
+                        <div className="manage-tag-info">
+                          <span className="manage-tag-name">{tag.name}</span>
+                          <span className="manage-tag-count">{totalTagCounts.get(tag.id) ?? 0}</span>
+                        </div>
+                        <div className="manage-tag-actions">
+                          <button
+                            className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
+                            onClick={() => handleToggleTagPrivacy(tag)}
+                            title={tag.is_private ? 'make public' : 'make private'}
+                          >
+                            <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
+                          </button>
+                          <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>delete</button>
+                        </div>
                       </div>
-                    </div>
-                  ))
-                }
+                    ))
+                  }
+                </div>
               </div>
             </div>
           )}

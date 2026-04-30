@@ -43,6 +43,7 @@ export default function App() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchTagVisible, setBatchTagVisible] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
+  const [manageTagSearch, setManageTagSearch] = useState('');
   const [profileVisible, setProfileVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
 
@@ -314,6 +315,17 @@ export default function App() {
     for (const t of tagsArr) tagCounts.set(t.id, (tagCounts.get(t.id) ?? 0) + 1);
   }
 
+  const totalTagCounts = new Map();
+  for (const item of items) {
+    for (const t of (item.tags ?? [])) totalTagCounts.set(t.id, (totalTagCounts.get(t.id) ?? 0) + 1);
+  }
+
+  const manageQuery = manageTagSearch.trim().toLowerCase();
+  const manageTagsList = (manageQuery
+    ? tags.filter(t => t.name.toLowerCase().includes(manageQuery))
+    : tags
+  ).slice().sort((a, b) => a.name.localeCompare(b.name));
+
   if (loading) {
     return (
       <View style={styles.centered}>
@@ -358,12 +370,13 @@ export default function App() {
       </View>
 
       {tags.length > 0 && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.filterScroll}
-          contentContainerStyle={styles.filterScrollContent}
-        >
+        <View style={styles.filterRow}>
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.filterScroll}
+            contentContainerStyle={styles.filterScrollContent}
+          >
           <TouchableOpacity
             style={[styles.filterChip, !activeTag && styles.filterChipActive]}
             onPress={() => setActiveTag(null)}
@@ -392,13 +405,14 @@ export default function App() {
               </TouchableOpacity>
             );
           })}
+          </ScrollView>
           <TouchableOpacity
-            style={[styles.filterChip, styles.filterChipDashed]}
+            style={[styles.filterChip, styles.filterChipDashed, styles.filterManageBtn]}
             onPress={() => setManageTagsVisible(true)}
           >
             <Text style={styles.filterChipText}>manage</Text>
           </TouchableOpacity>
-        </ScrollView>
+        </View>
       )}
 
       <FlatList
@@ -507,20 +521,50 @@ export default function App() {
         visible={manageTagsVisible}
         animationType="slide"
         transparent
-        onRequestClose={() => setManageTagsVisible(false)}
+        onRequestClose={() => { setManageTagsVisible(false); setManageTagSearch(''); }}
       >
-        <TouchableOpacity style={styles.manageOverlay} activeOpacity={1} onPress={() => setManageTagsVisible(false)}>
-          <TouchableOpacity style={styles.manageSheet} activeOpacity={1} onPress={() => {}}>
+        <View style={styles.manageOverlay}>
+          <TouchableOpacity style={styles.manageOverlayTop} activeOpacity={1} onPress={() => { setManageTagsVisible(false); setManageTagSearch(''); }} />
+          <View style={styles.manageSheet}>
             <View style={styles.manageHeader}>
-              <Text style={styles.manageTitle}>manage tags</Text>
-              <TouchableOpacity onPress={() => setManageTagsVisible(false)}>
+              <Text style={styles.manageTitle}>manage tags · {tags.length}</Text>
+              <TouchableOpacity onPress={() => { setManageTagsVisible(false); setManageTagSearch(''); }}>
                 <Text style={styles.manageDone}>done</Text>
               </TouchableOpacity>
             </View>
-            <ScrollView>
-              {tags.map((tag, i) => (
-                <View key={tag.id} style={[styles.manageRow, i < tags.length - 1 && styles.manageRowBorder]}>
-                  <Text style={styles.manageTagName}>{tag.name}</Text>
+            <View style={styles.manageSearchContainer}>
+              <Ionicons name="search" size={16} color="#999" />
+              <TextInput
+                style={styles.manageSearchInput}
+                placeholder="search tags"
+                placeholderTextColor="#999"
+                value={manageTagSearch}
+                onChangeText={setManageTagSearch}
+                autoCorrect={false}
+                autoCapitalize="none"
+              />
+              {manageTagSearch.length > 0 && (
+                <TouchableOpacity onPress={() => setManageTagSearch('')}>
+                  <Ionicons name="close-circle" size={16} color="#999" />
+                </TouchableOpacity>
+              )}
+            </View>
+            <FlatList
+              style={styles.manageList}
+              data={manageTagsList}
+              keyExtractor={tag => tag.id}
+              keyboardShouldPersistTaps="handled"
+              ListEmptyComponent={
+                <Text style={styles.manageEmpty}>
+                  {tags.length === 0 ? 'no tags yet' : 'no matches'}
+                </Text>
+              }
+              renderItem={({ item: tag, index }) => (
+                <View style={[styles.manageRow, index < manageTagsList.length - 1 && styles.manageRowBorder]}>
+                  <View style={styles.manageTagInfo}>
+                    <Text style={styles.manageTagName} numberOfLines={1}>{tag.name}</Text>
+                    <Text style={styles.manageTagCount}>{totalTagCounts.get(tag.id) ?? 0}</Text>
+                  </View>
                   <View style={styles.manageActions}>
                     <TouchableOpacity onPress={() => handleToggleTagPrivacy(tag)} style={styles.manageLockBtn}>
                       <Ionicons
@@ -534,10 +578,10 @@ export default function App() {
                     </TouchableOpacity>
                   </View>
                 </View>
-              ))}
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
+              )}
+            />
+          </View>
+        </View>
       </Modal>
 
       <ProfileScreen
@@ -606,14 +650,23 @@ const styles = StyleSheet.create({
     color: '#2D2D2D',
     paddingVertical: 0,
   },
-  filterScroll: {
-    flexGrow: 0,
-    flexShrink: 0,
+  filterRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
     marginBottom: 20,
+  },
+  filterScroll: {
+    flex: 1,
+    flexGrow: 1,
+    flexShrink: 1,
   },
   filterScrollContent: {
     gap: 8,
     paddingVertical: 2,
+  },
+  filterManageBtn: {
+    flexShrink: 0,
   },
   filterChip: {
     flexDirection: 'row',
@@ -651,20 +704,64 @@ const styles = StyleSheet.create({
   manageOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
+  },
+  manageOverlayTop: {
+    flex: 1,
   },
   manageSheet: {
     backgroundColor: '#F5F0EB',
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
-    maxHeight: '70%',
+    height: '70%',
+    maxHeight: 560,
+    width: '100%',
+    maxWidth: 480,
+    alignSelf: 'center',
   },
   manageHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
+  },
+  manageSearchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    height: 36,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+    marginBottom: 8,
+  },
+  manageSearchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2D2D2D',
+    paddingVertical: 0,
+  },
+  manageList: {
+    flex: 1,
+  },
+  manageEmpty: {
+    fontSize: 14,
+    color: '#999',
+    textAlign: 'center',
+    paddingVertical: 32,
+  },
+  manageTagInfo: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    marginRight: 12,
+  },
+  manageTagCount: {
+    fontSize: 12,
+    color: '#999',
   },
   manageTitle: {
     fontSize: 15,
