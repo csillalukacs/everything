@@ -49,6 +49,7 @@ export default function ProfilePage() {
   const [batchTagVisible, setBatchTagVisible] = useState(false)
   const [batchTagging, setBatchTagging] = useState(false)
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
+  const [searchQuery, setSearchQuery] = useState('')
 
   const batchMode = selectedIds.size > 0
 
@@ -235,11 +236,29 @@ export default function ProfilePage() {
   })
   const visibleTags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name))
 
-  const filteredItems = activeTag
-    ? activeTag.id === '__untagged__'
-      ? items.filter(i => (i.tags ?? []).length === 0)
-      : items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+  const query = searchQuery.trim().toLowerCase()
+  const searchedItems = query
+    ? items.filter(i => {
+        const name = (i.name ?? '').toLowerCase()
+        const desc = (i.description ?? '').toLowerCase()
+        const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase())
+        return name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query))
+      })
     : items
+
+  const filteredItems = activeTag?.id === '__untagged__'
+    ? searchedItems.filter(i => (i.tags ?? []).length === 0)
+    : activeTag
+      ? searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+      : searchedItems
+
+  const tagCounts = new Map()
+  let untaggedCount = 0
+  for (const item of searchedItems) {
+    const tagsArr = item.tags ?? []
+    if (tagsArr.length === 0) untaggedCount++
+    for (const t of tagsArr) tagCounts.set(t.id, (tagCounts.get(t.id) ?? 0) + 1)
+  }
 
   if (loading) {
     return (
@@ -281,20 +300,37 @@ export default function ProfilePage() {
         <Link to="/" className="link-btn" style={{ marginTop: 8 }}>everything</Link>
       </header>
 
+      <div className="search-container">
+        <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+          <circle cx="11" cy="11" r="7" />
+          <line x1="21" y1="21" x2="16.65" y2="16.65" />
+        </svg>
+        <input
+          type="text"
+          className="search-input"
+          placeholder="search"
+          value={searchQuery}
+          onChange={e => setSearchQuery(e.target.value)}
+        />
+        {searchQuery && (
+          <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="clear search">×</button>
+        )}
+      </div>
+
       {isOwner ? (
         allTags.length > 0 && (
           <div className="filter-scroll">
-            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all</button>
+            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all<span className="chip-count">{searchedItems.length}</span></button>
             <button
               className={`chip${activeTag?.id === '__untagged__' ? ' chip-active' : ''}`}
               onClick={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
-            >untagged</button>
+            >untagged<span className="chip-count">{untaggedCount}</span></button>
             {allTags.map(tag => (
               <button
                 key={tag.id}
                 className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
                 onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
-              >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}</button>
+              >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
             ))}
             <button className="chip chip-dashed" onClick={() => setManageTagsVisible(true)}>manage</button>
           </div>
@@ -302,13 +338,13 @@ export default function ProfilePage() {
       ) : (
         visibleTags.length > 0 && (
           <div className="filter-scroll">
-            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all</button>
+            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all<span className="chip-count">{searchedItems.length}</span></button>
             {visibleTags.map(tag => (
               <button
                 key={tag.id}
                 className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
                 onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
-              >{tag.name}</button>
+              >{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
             ))}
           </div>
         )

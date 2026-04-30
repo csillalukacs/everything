@@ -190,6 +190,53 @@ input {
   cursor: not-allowed;
 }
 
+/* ---- Search ---- */
+
+.search-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 14px;
+  height: 40px;
+  border-radius: 20px;
+  border: 1.5px solid #E0E0E0;
+  background: #fff;
+  margin-bottom: 16px;
+}
+
+.search-icon {
+  flex-shrink: 0;
+}
+
+.search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #2D2D2D;
+  font-family: inherit;
+  padding: 0;
+}
+
+.search-input::placeholder {
+  color: #999;
+}
+
+.search-clear {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.search-clear:hover {
+  color: #2D2D2D;
+}
+
 /* ---- Filter chips ---- */
 
 .filter-scroll {
@@ -238,6 +285,12 @@ input {
 
 .chip-dashed {
   border-style: dashed;
+}
+
+.chip-count {
+  font-size: 11px;
+  color: #bbb;
+  margin-left: 2px;
 }
 
 .manage-tags-empty {

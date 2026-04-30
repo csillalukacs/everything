@@ -12,6 +12,7 @@ import {
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -40,6 +41,7 @@ export default function App() {
   const [batchTagging, setBatchTagging] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [profileVisible, setProfileVisible] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
 
   const batchMode = selectedIds.size > 0;
 
@@ -253,11 +255,29 @@ export default function App() {
 
   const allTagObjects = tags;
 
-  const filteredItems = activeTag
-    ? activeTag.id === '__untagged__'
-      ? items.filter(i => (i.tags ?? []).length === 0)
-      : items.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+  const query = searchQuery.trim().toLowerCase();
+  const searchedItems = query
+    ? items.filter(i => {
+        const name = (i.name ?? '').toLowerCase();
+        const desc = (i.description ?? '').toLowerCase();
+        const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase());
+        return name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query));
+      })
     : items;
+
+  const filteredItems = activeTag?.id === '__untagged__'
+    ? searchedItems.filter(i => (i.tags ?? []).length === 0)
+    : activeTag
+      ? searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+      : searchedItems;
+
+  const tagCounts = new Map();
+  let untaggedCount = 0;
+  for (const item of searchedItems) {
+    const tagsArr = item.tags ?? [];
+    if (tagsArr.length === 0) untaggedCount++;
+    for (const t of tagsArr) tagCounts.set(t.id, (tagCounts.get(t.id) ?? 0) + 1);
+  }
 
   if (loading) {
     return (
@@ -283,6 +303,25 @@ export default function App() {
         </TouchableOpacity>
       </View>
 
+      <View style={styles.searchContainer}>
+        <Ionicons name="search" size={16} color="#999" />
+        <TextInput
+          style={styles.searchInput}
+          placeholder="search"
+          placeholderTextColor="#999"
+          value={searchQuery}
+          onChangeText={setSearchQuery}
+          autoCorrect={false}
+          autoCapitalize="none"
+          returnKeyType="search"
+        />
+        {searchQuery.length > 0 && (
+          <TouchableOpacity onPress={() => setSearchQuery('')}>
+            <Ionicons name="close-circle" size={16} color="#999" />
+          </TouchableOpacity>
+        )}
+      </View>
+
       {tags.length > 0 && (
         <ScrollView
           horizontal
@@ -295,12 +334,14 @@ export default function App() {
             onPress={() => setActiveTag(null)}
           >
             <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>all</Text>
+            <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.filterChip, activeTag?.id === '__untagged__' && styles.filterChipActive]}
             onPress={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
           >
             <Text style={[styles.filterChipText, activeTag?.id === '__untagged__' && styles.filterChipTextActive]}>untagged</Text>
+            <Text style={[styles.filterChipCount, activeTag?.id === '__untagged__' && styles.filterChipCountActive]}>{untaggedCount}</Text>
           </TouchableOpacity>
           {tags.map(tag => {
             const active = activeTag?.id === tag.id;
@@ -312,6 +353,7 @@ export default function App() {
               >
                 {tag.is_private && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
                 <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
+                <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>
               </TouchableOpacity>
             );
           })}
@@ -512,6 +554,24 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 14,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+    marginBottom: 12,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 14,
+    color: '#2D2D2D',
+    paddingVertical: 0,
+  },
   filterScroll: {
     flexGrow: 0,
     flexShrink: 0,
@@ -542,6 +602,14 @@ const styles = StyleSheet.create({
   },
   filterChipTextActive: {
     color: '#fff',
+  },
+  filterChipCount: {
+    fontSize: 11,
+    color: '#bbb',
+    marginLeft: 2,
+  },
+  filterChipCountActive: {
+    color: '#bbb',
   },
   filterChipDashed: {
     borderStyle: 'dashed',
