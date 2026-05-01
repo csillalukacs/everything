@@ -18,7 +18,7 @@ import { Image } from 'expo-image';
 import { cropToContent } from '../lib/cropToContent';
 import CameraCaptureModal from './CameraCaptureModal';
 
-export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext }) {
+export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -272,12 +272,19 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               </View>
               {itemTags.length > 0 && (
                 <View style={styles.tagRow}>
-                  {itemTags.map(tag => (
-                    <View key={tag.id} style={styles.tagBadge}>
-                      {tag.is_private && <Ionicons name="lock-closed" size={9} color="#bbb" />}
-                      <Text style={styles.tagBadgeText}>{tag.name}</Text>
-                    </View>
-                  ))}
+                  {itemTags.map(tag => {
+                    const Wrapper = onTagPress ? TouchableOpacity : View;
+                    return (
+                      <Wrapper
+                        key={tag.id}
+                        style={styles.tagBadge}
+                        {...(onTagPress ? { onPress: () => onTagPress(tag) } : {})}
+                      >
+                        {tag.is_private && <Ionicons name="lock-closed" size={9} color="#bbb" />}
+                        <Text style={styles.tagBadgeText}>{tag.name}</Text>
+                      </Wrapper>
+                    );
+                  })}
                 </View>
               )}
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}

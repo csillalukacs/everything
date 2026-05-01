@@ -589,6 +589,7 @@ export default function ProfilePage() {
         onSave={isOwner ? handleUpdate : undefined}
         onDelete={isOwner ? handleDelete : undefined}
         allTags={allTags}
+        onTagPress={tag => { setActiveTag(tag); setSelectedItem(null); }}
         onPrev={(() => {
           const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
           return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null

@@ -231,6 +231,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
           item={selectedItem}
           onClose={() => setSelectedItem(null)}
           allTags={[]}
+          onTagPress={tag => { setActiveTag(tag); setSelectedItem(null); }}
           onPrev={(() => {
             const idx = filteredItems.findIndex(i => i.id === selectedItem?.id);
             return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null;

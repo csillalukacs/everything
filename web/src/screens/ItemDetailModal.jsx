@@ -7,7 +7,7 @@ function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
 }
 
-export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], onPrev, onNext }) {
+export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], onPrev, onNext, onTagPress }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -177,9 +177,15 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 {itemTags.length > 0 && (
                   <div className="tag-row">
                     {itemTags.map(tag => (
-                      <span key={tag.id} className="tag-badge">
-                        {tag.is_private && <LockIcon size={9} color="#bbb" />}{tag.name}
-                      </span>
+                      onTagPress ? (
+                        <button key={tag.id} className="tag-badge" onClick={() => onTagPress(tag)}>
+                          {tag.is_private && <LockIcon size={9} color="#bbb" />}{tag.name}
+                        </button>
+                      ) : (
+                        <span key={tag.id} className="tag-badge">
+                          {tag.is_private && <LockIcon size={9} color="#bbb" />}{tag.name}
+                        </span>
+                      )
                     ))}
                   </div>
                 )}

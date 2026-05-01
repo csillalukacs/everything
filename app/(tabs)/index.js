@@ -283,6 +283,7 @@ export default function Collection() {
         onDelete={handleDelete}
         onSave={handleUpdate}
         allTags={tags}
+        onTagPress={tag => { setActiveTag(tag); setSelectedItem(null); }}
         onPrev={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null; })()}
         onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
       />
