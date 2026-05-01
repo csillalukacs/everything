@@ -12,22 +12,25 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
-import { useCollection } from '../lib/CollectionProvider';
-import AddItemModal from '../screens/AddItemModal';
-import ItemDetailModal from '../screens/ItemDetailModal';
-import BatchTagSheet from '../screens/BatchTagSheet';
-import OpenProfileSheet from '../screens/OpenProfileSheet';
+import { useCollection } from '../../lib/CollectionProvider';
+import ItemDetailModal from '../../screens/ItemDetailModal';
+import BatchTagSheet from '../../screens/BatchTagSheet';
+import OpenProfileSheet from '../../screens/OpenProfileSheet';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
+const TAB_BAR_HEIGHT = 70;
 
-export default function Home() {
+export default function Collection() {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const {
+    session,
     items,
     tags,
-    addItem,
+    profile,
     updateItem,
     deleteItem,
     batchTagItems,
@@ -38,7 +41,6 @@ export default function Home() {
   } = useCollection();
 
   const [activeTag, setActiveTag] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchTagVisible, setBatchTagVisible] = useState(false);
@@ -48,6 +50,7 @@ export default function Home() {
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
   const batchMode = selectedIds.size > 0;
+  const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
 
   function toggleBatchSelect(itemId) {
     setSelectedIds(prev => {
@@ -56,11 +59,6 @@ export default function Home() {
       else next.add(itemId);
       return next;
     });
-  }
-
-  async function handleSave(name, photoUri, tagNames, isPrivate, description) {
-    const created = await addItem(name, photoUri, tagNames, isPrivate, description);
-    if (created) setModalVisible(false);
   }
 
   async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description) {
@@ -128,19 +126,27 @@ export default function Home() {
     : tags
   ).slice().sort((a, b) => a.name.localeCompare(b.name));
 
+  const headlineName = profile?.display_name
+    ?? session?.user.user_metadata?.full_name
+    ?? session?.user.email
+    ?? 'you';
+
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <View>
-          <Text style={styles.title}>things</Text>
-          <Text style={styles.subtitle}>{items.length} {items.length === 1 ? 'object' : 'objects'}</Text>
+        <View style={styles.headerLeft}>
+          <Text style={styles.title} numberOfLines={1}>{headlineName}</Text>
+          <Text style={styles.subtitle}>
+            {profile?.username ? `@${profile.username} · ` : ''}
+            {items.length} {items.length === 1 ? 'object' : 'objects'}
+          </Text>
         </View>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
             <Ionicons name="search" size={22} color="#999" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerIconBtn}>
-            <Ionicons name="person-circle-outline" size={26} color="#999" />
+          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.headerIconBtn}>
+            <Ionicons name="settings-outline" size={22} color="#999" />
           </TouchableOpacity>
         </View>
       </View>
@@ -215,7 +221,7 @@ export default function Home() {
         keyExtractor={item => item.id}
         numColumns={2}
         columnWrapperStyle={styles.row}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarOffset + 24 }]}
         style={styles.list}
         renderItem={({ item }) => {
           const isSelected = selectedIds.has(item.id);
@@ -246,8 +252,8 @@ export default function Home() {
         }}
       />
 
-      {batchMode ? (
-        <View style={styles.batchBar}>
+      {batchMode && (
+        <View style={[styles.batchBar, { bottom: tabBarOffset + 16 }]}>
           <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.batchBarBtn}>
             <Text style={styles.batchBarCancelText}>cancel</Text>
           </TouchableOpacity>
@@ -268,18 +274,7 @@ export default function Home() {
             </TouchableOpacity>
           </View>
         </View>
-      ) : (
-        <TouchableOpacity style={styles.fab} onPress={() => setModalVisible(true)}>
-          <Text style={styles.fabText}>+</Text>
-        </TouchableOpacity>
       )}
-
-      <AddItemModal
-        visible={modalVisible}
-        onClose={() => setModalVisible(false)}
-        onSave={handleSave}
-        allTags={tags}
-      />
 
       <ItemDetailModal
         visible={!!selectedItem}
@@ -391,24 +386,29 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 20,
+    gap: 12,
+  },
+  headerLeft: {
+    flex: 1,
   },
   title: {
-    fontSize: 40,
+    fontSize: 36,
     fontWeight: '300',
-    letterSpacing: 2,
+    letterSpacing: 1,
     color: '#2D2D2D',
+    fontFamily: 'Georgia',
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#999',
-    marginTop: 8,
-    letterSpacing: 1,
+    marginTop: 6,
+    letterSpacing: 0.5,
   },
   headerActions: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 12,
-    marginTop: 4,
+    gap: 8,
+    marginTop: 10,
   },
   headerIconBtn: {
     padding: 4,
@@ -644,29 +644,8 @@ const styles = StyleSheet.create({
     lineHeight: 16,
     fontWeight: 'bold',
   },
-  fab: {
-    position: 'absolute',
-    bottom: 40,
-    right: 24,
-    width: 56,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2D2D2D',
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  fabText: {
-    color: '#fff',
-    fontSize: 28,
-    lineHeight: 32,
-  },
   batchBar: {
     position: 'absolute',
-    bottom: 40,
     left: 24,
     right: 24,
     height: 56,
