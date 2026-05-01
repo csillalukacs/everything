@@ -16,7 +16,8 @@
       "supportsTablet": true,
       "bundleIdentifier": "xyz.whimsylabs.things",
       "infoPlist": {
-        "NSCameraUsageDescription": "Used to take photos of your items."
+        "NSCameraUsageDescription": "Used to take photos of your items.",
+        "ITSAppUsesNonExemptEncryption": false
       }
     },
     "android": {
@@ -27,12 +28,6 @@
         "monochromeImage": "./assets/android-icon-monochrome.png"
       },
       "permissions": [
-        "android.permission.READ_EXTERNAL_STORAGE",
-        "android.permission.WRITE_EXTERNAL_STORAGE",
-        "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
-        "android.permission.READ_MEDIA_IMAGES",
-        "android.permission.READ_MEDIA_VIDEO",
-        "android.permission.READ_MEDIA_AUDIO",
         "android.permission.READ_EXTERNAL_STORAGE",
         "android.permission.WRITE_EXTERNAL_STORAGE",
         "android.permission.READ_MEDIA_VISUAL_USER_SELECTED",
@@ -50,6 +45,12 @@
       "expo-web-browser",
       "expo-media-library",
       "expo-router"
-    ]
+    ],
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "d2efd03c-235b-44fd-8753-888ed9cb355c"
+      }
+    }
   }
 }
