@@ -367,7 +367,7 @@ export default function ProfilePage() {
     return (
       <div className="centered" style={{ flexDirection: 'column', gap: 12 }}>
         <p style={{ color: '#999' }}>no profile at /u/{slug}</p>
-        <Link to="/" className="link-btn">everything</Link>
+        <Link to="/" className="link-btn">things</Link>
       </div>
     )
   }
@@ -482,7 +482,7 @@ export default function ProfilePage() {
             <p className="profile-username-readonly">@{username}</p>
           )}
         </div>
-        <Link to="/" className="link-btn" style={{ marginTop: 8 }}>everything</Link>
+        <Link to="/" className="link-btn" style={{ marginTop: 8 }}>things</Link>
       </header>
 
       <div className="search-container">

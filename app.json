@@ -1,8 +1,8 @@
 {
   "expo": {
-    "name": "everything",
-    "slug": "everything",
-    "scheme": "everything",
+    "name": "things",
+    "slug": "things",
+    "scheme": "things",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.csillalukacs.everything",
+      "bundleIdentifier": "xyz.whimsylabs.things",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take photos of your items."
       }
@@ -40,7 +40,7 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
       ],
-      "package": "com.csillalukacs.everything"
+      "package": "xyz.whimsylabs.things"
     },
     "web": {
       "favicon": "./assets/favicon.png"

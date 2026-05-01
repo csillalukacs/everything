@@ -72,7 +72,7 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div>
-          <h1 className="title">everything</h1>
+          <h1 className="title">things</h1>
           <p className="subtitle">a home for your stuff</p>
         </div>
         <div className="header-right">

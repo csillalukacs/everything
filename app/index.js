@@ -131,16 +131,16 @@ export default function Home() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => router.push('/profile')}>
-          <Text style={styles.title}>everything</Text>
+        <View>
+          <Text style={styles.title}>things</Text>
           <Text style={styles.subtitle}>{items.length} {items.length === 1 ? 'object' : 'objects'}</Text>
-        </TouchableOpacity>
+        </View>
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
-            <Ionicons name="person-circle-outline" size={22} color="#999" />
+            <Ionicons name="search" size={22} color="#999" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/canvas')}>
-            <Text style={styles.logout}>canvas</Text>
+          <TouchableOpacity onPress={() => router.push('/profile')} style={styles.headerIconBtn}>
+            <Ionicons name="person-circle-outline" size={26} color="#999" />
           </TouchableOpacity>
         </View>
       </View>
@@ -403,11 +403,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     letterSpacing: 1,
-  },
-  logout: {
-    fontSize: 14,
-    color: '#999',
-    marginTop: 8,
   },
   headerActions: {
     flexDirection: 'row',
