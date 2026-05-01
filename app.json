@@ -44,7 +44,17 @@
       "expo-asset",
       "expo-web-browser",
       "expo-media-library",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-share-intent",
+        {
+          "disableIOS": true,
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsImageWithMaxCount": 1
+          },
+          "androidIntentFilters": ["image/*"]
+        }
+      ]
     ],
     "extra": {
       "router": {},

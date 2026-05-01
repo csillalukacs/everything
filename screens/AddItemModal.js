@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
@@ -18,7 +18,7 @@ import {
 import { cropToContent } from '../lib/cropToContent';
 import CameraCaptureModal from './CameraCaptureModal';
 
-export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
+export default function AddItemModal({ visible, onClose, onSave, allTags = [], initialPhoto = null }) {
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -28,6 +28,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [addingTag, setAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [removingBg, setRemovingBg] = useState(false);
+  const consumedInitial = useRef(false);
 
   async function processCapturedUri(uri) {
     setPhoto(uri);
@@ -39,6 +40,12 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
       setRemovingBg(false);
     }
   }
+
+  useEffect(() => {
+    if (!initialPhoto || consumedInitial.current) return;
+    consumedInitial.current = true;
+    processCapturedUri(initialPhoto);
+  }, [initialPhoto]);
 
   function toggleTag(tag) {
     setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
