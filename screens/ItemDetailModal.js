@@ -1,5 +1,4 @@
 import { Ionicons } from '@expo/vector-icons';
-import * as ImagePicker from 'expo-image-picker';
 import { useEffect, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
@@ -16,6 +15,8 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { cropToContent } from '../lib/cropToContent';
+import CameraCaptureModal from './CameraCaptureModal';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext }) {
   const [editing, setEditing] = useState(false);
@@ -26,6 +27,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [editPrivate, setEditPrivate] = useState(false);
   const [saving, setSaving] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
+  const [cameraVisible, setCameraVisible] = useState(false);
   const [nameEditable, setNameEditable] = useState(false);
   const [addingTag, setAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
@@ -63,37 +65,15 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditDescription('');
   }
 
-  async function pickFromCamera() {
-    const { status } = await ImagePicker.requestCameraPermissionsAsync();
-    if (status !== 'granted') return;
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [1, 1], quality: 0.7 });
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setEditPhoto(uri);
-      setRemovingBg(true);
-      try {
-        const cleaned = await removeBackground(uri);
-        setEditPhoto(cleaned);
-      } finally {
-        setRemovingBg(false);
-      }
-    }
-  }
-
-  async function pickFromLibrary() {
-    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
-    if (status !== 'granted') return;
-    const result = await ImagePicker.launchImageLibraryAsync({ mediaTypes: ['images'], allowsEditing: true, aspect: [1, 1], quality: 0.7 });
-    if (!result.canceled) {
-      const uri = result.assets[0].uri;
-      setEditPhoto(uri);
-      setRemovingBg(true);
-      try {
-        const cleaned = await removeBackground(uri);
-        setEditPhoto(cleaned);
-      } finally {
-        setRemovingBg(false);
-      }
+  async function handleCaptured(uri) {
+    setCameraVisible(false);
+    setEditPhoto(uri);
+    setRemovingBg(true);
+    try {
+      const cleaned = await removeBackground(uri);
+      setEditPhoto(await cropToContent(cleaned));
+    } finally {
+      setRemovingBg(false);
     }
   }
 
@@ -181,19 +161,20 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   <Text style={styles.photoActionText}>removing background...</Text>
                 </View>
               ) : (
-                <View style={styles.photoOverlay}>
-                  <TouchableOpacity style={styles.photoAction} onPress={pickFromCamera}>
+                <TouchableOpacity style={styles.photoOverlay} onPress={() => setCameraVisible(true)}>
+                  <View style={styles.photoAction}>
                     <Ionicons name="camera-outline" size={22} color="#fff" />
-                    <Text style={styles.photoActionText}>camera</Text>
-                  </TouchableOpacity>
-                  <View style={styles.photoActionDivider} />
-                  <TouchableOpacity style={styles.photoAction} onPress={pickFromLibrary}>
-                    <Ionicons name="image-outline" size={22} color="#fff" />
-                    <Text style={styles.photoActionText}>library</Text>
-                  </TouchableOpacity>
-                </View>
+                    <Text style={styles.photoActionText}>change photo</Text>
+                  </View>
+                </TouchableOpacity>
               )}
             </View>
+
+            <CameraCaptureModal
+              visible={cameraVisible}
+              onCapture={handleCaptured}
+              onCancel={() => setCameraVisible(false)}
+            />
 
             <View style={styles.editFields}>
               <ScrollView
@@ -377,10 +358,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 8,
     paddingVertical: 14,
-  },
-  photoActionDivider: {
-    width: StyleSheet.hairlineWidth,
-    backgroundColor: 'rgba(255,255,255,0.3)',
   },
   photoActionText: {
     color: '#fff',
