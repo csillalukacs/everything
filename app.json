@@ -48,7 +48,8 @@
     "plugins": [
       "expo-asset",
       "expo-web-browser",
-      "expo-media-library"
+      "expo-media-library",
+      "expo-router"
     ]
   }
 }

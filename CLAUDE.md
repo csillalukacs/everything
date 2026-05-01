@@ -6,8 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 There are **two parallel apps** sharing the same Supabase backend:
 
-1. **Mobile / native** — Expo React Native at the repo root (`App.js`, `screens/*.js`). This is the primary app per the original design.
-2. **Web** — a separate React + Vite app under [`web/`](web/) (`web/src/App.jsx`, `web/src/screens/*.jsx`). It is **not** built from `App.js` — it is a hand-written web port with its own components and CSS. When the user says "on web" or reports a browser-only issue, edit files under `web/src/`, not the root.
+1. **Mobile / native** — Expo React Native at the repo root, using **Expo Router** (file-based routing). Routes live under [`app/`](app/), screen components under [`screens/`](screens/). This is the primary app per the original design.
+2. **Web** — a separate React + Vite app under [`web/`](web/) (`web/src/App.jsx`, `web/src/screens/*.jsx`). It is **not** built from the mobile app — it is a hand-written web port with its own components and CSS. When the user says "on web" or reports a browser-only issue, edit files under `web/src/`, not the root.
 
 Features added to one app usually need to be mirrored in the other. Check both before assuming a feature is missing.
 
@@ -18,7 +18,7 @@ Features added to one app usually need to be mirrored in the other. Check both b
 npx expo start          # Start dev server (opens Expo Go / Metro bundler)
 npx expo run:ios        # Build and run on iOS simulator
 npx expo run:android    # Build and run on Android emulator
-npx expo start --web    # Runs App.js in a browser via react-native-web (limited — distinct from the web/ app)
+npx expo start --web    # Runs the mobile app in a browser via react-native-web (limited — distinct from the web/ app)
 
 # Web app (web/)
 cd web && npm run dev      # Vite dev server
@@ -33,9 +33,9 @@ No test suite or linter is configured.
 
 ### State and data flow
 
-`App.js` is the single root component and owns all application state: `session`, `items`, `tags`, `activeTag`, `selectedItem`, `selectedIds`, and modal visibility flags. There is no navigation library or global state manager — everything flows down via props and up via callbacks.
+App-wide state — `session`, `items`, `tags`, and all collection mutators (`addItem`, `updateItem`, `deleteItem`, `batchTagItems`, `deleteTag`, etc.) — lives in [`lib/CollectionProvider.js`](lib/CollectionProvider.js), exposed via `useCollection()`. Screen-local state (search query, active tag filter, batch selection, modal flags) lives in the screen file that uses it.
 
-All database and storage operations go through Supabase (`lib/supabase.js`). The Supabase client uses `AsyncStorage` for session persistence.
+All database and storage operations go through Supabase (`lib/supabase.js`). The Supabase client uses `AsyncStorage` for session persistence. Items and tags are also cached in `AsyncStorage` keyed by user_id for fast cold starts.
 
 ### Data model (Supabase)
 
@@ -45,15 +45,34 @@ All database and storage operations go through Supabase (`lib/supabase.js`). The
 - Items are fetched with `select('*, tags(id, name)')` so tags are embedded in each item object.
 - Images are uploaded to the `item-images` Supabase Storage bucket as base64, keyed by `{user_id}/{timestamp}.{ext}`.
 
-### Screens (all rendered as `<Modal>` overlays, not navigation routes)
+### Routes (`app/`)
+
+| Route file | Path | Role |
+|---|---|---|
+| `app/_layout.js` | — | Root: `CollectionProvider`, auth gate (`AuthScreen` if no session), `<Stack>` |
+| `app/index.js` | `/` | Home grid — your collection, with add/edit/batch flows as in-screen modals |
+| `app/canvas.js` | `/canvas` | Free-form collage canvas |
+| `app/profile.js` | `/profile` | Your own profile/settings sheet (display name, username, logout) |
+| `app/u/[slug].js` | `/u/<username\|uuid>` | Public profile view; redirects to `/` if `slug` resolves to current user |
+
+### Screen components (`screens/`)
+
+These are reused by the routes above. Most are still rendered as `<Modal>` overlays from inside route files (transient flows like add-item, item-detail, batch-tag). Routes that use a `<Modal>`-based screen pass `visible={true}` and `onClose={() => router.back()}`.
 
 | File | Role |
 |---|---|
 | `screens/AuthScreen.js` | Google OAuth via `expo-auth-session` + `expo-web-browser` |
 | `screens/AddItemModal.js` | Camera capture or library pick → background removal → tag + name → upload |
-| `screens/ItemDetailModal.js` | View/edit a single item; prev/next navigation through filtered list |
+| `screens/ItemDetailModal.js` | View/edit a single item; prev/next navigation through filtered list. Edit/delete buttons hidden when `onSave`/`onDelete` not provided (read-only mode) |
 | `screens/BatchTagSheet.js` | Bottom sheet to apply tags to multiple selected items |
 | `screens/CanvasScreen.js` | Free-form collage: drag/pinch/rotate items on a Skia canvas |
+| `screens/ProfileScreen.js` | Your own profile/settings sheet (mounted by `app/profile.js`) |
+| `screens/ProfileViewScreen.js` | Read-only public profile (mounted by `app/u/[slug].js`) |
+| `screens/OpenProfileSheet.js` | Bottom sheet to type/paste a username and navigate to `/u/<slug>` |
+
+### Deep linking
+
+The `scheme: "everything"` in `app.json` plus Expo Router's automatic linking config means `everything://u/alice` opens `/u/alice` natively. HTTPS universal links require additional platform-side setup (`apple-app-site-association`, `assetlinks.json`) — not yet configured.
 
 ### Key libraries
 
@@ -66,7 +85,7 @@ All database and storage operations go through Supabase (`lib/supabase.js`). The
 
 - Color palette: `#F5F0EB` (warm beige bg), `#2D2D2D` (dark text/accent), `#E8E3DD` (secondary bg), `#999` (muted text).
 - All styles are co-located with their component via `StyleSheet.create`.
-- Tag names are always stored and compared lowercased. `ensureTags()` in `App.js` upserts tags by name and returns the resolved tag objects.
+- Tag names are always stored and compared lowercased. `ensureTags()` in `CollectionProvider` upserts tags by name and returns the resolved tag objects.
 - Batch-select mode activates when `selectedIds.size > 0`; long-press on a card enters it.
 
 ## Architecture (web app)

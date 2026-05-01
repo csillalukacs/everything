@@ -1,12 +1,7 @@
-import { StatusBar } from 'expo-status-bar';
-import { readAsStringAsync, EncodingType } from 'expo-file-system/legacy';
-import { decode } from 'base64-arraybuffer';
 import { Ionicons } from '@expo/vector-icons';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as Linking from 'expo-linking';
-import { useEffect, useState } from 'react';
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-  ActivityIndicator,
   Dimensions,
   FlatList,
   Modal,
@@ -18,227 +13,41 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
-import { supabase } from './lib/supabase';
-import AuthScreen from './screens/AuthScreen';
-import AddItemModal from './screens/AddItemModal';
-import ItemDetailModal from './screens/ItemDetailModal';
-import CanvasScreen from './screens/CanvasScreen';
-import BatchTagSheet from './screens/BatchTagSheet';
-import ProfileScreen from './screens/ProfileScreen';
-import ProfileViewScreen from './screens/ProfileViewScreen';
-import OpenProfileSheet from './screens/OpenProfileSheet';
+import { useCollection } from '../lib/CollectionProvider';
+import AddItemModal from '../screens/AddItemModal';
+import ItemDetailModal from '../screens/ItemDetailModal';
+import BatchTagSheet from '../screens/BatchTagSheet';
+import OpenProfileSheet from '../screens/OpenProfileSheet';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
 
-const itemsCacheKey = userId => `cache:items:${userId}`;
-const tagsCacheKey = userId => `cache:tags:${userId}`;
+export default function Home() {
+  const router = useRouter();
+  const {
+    items,
+    tags,
+    addItem,
+    updateItem,
+    deleteItem,
+    batchTagItems,
+    batchDeleteItems,
+    batchTogglePrivacy,
+    deleteTag,
+    toggleTagPrivacy,
+  } = useCollection();
 
-export default function App() {
-  const [session, setSession] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [items, setItems] = useState([]);
-  const [tags, setTags] = useState([]);
   const [activeTag, setActiveTag] = useState(null);
   const [modalVisible, setModalVisible] = useState(false);
-  const [canvasVisible, setCanvasVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchTagVisible, setBatchTagVisible] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [manageTagSearch, setManageTagSearch] = useState('');
-  const [profileVisible, setProfileVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [viewingSlug, setViewingSlug] = useState(null);
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
   const batchMode = selectedIds.size > 0;
-
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      setSession(session);
-      setLoading(false);
-    });
-
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
-
-  useEffect(() => {
-    function handleUrl(url) {
-      if (!url) return;
-      const m = url.match(/\/u\/([^/?#\s]+)/i);
-      if (m) setViewingSlug(decodeURIComponent(m[1]).toLowerCase());
-    }
-    Linking.getInitialURL().then(handleUrl);
-    const sub = Linking.addEventListener('url', ({ url }) => handleUrl(url));
-    return () => sub.remove();
-  }, []);
-
-  useEffect(() => {
-    if (!session) {
-      setItems([]);
-      setTags([]);
-      return;
-    }
-    let cancelled = false;
-    (async () => {
-      const [itemsStr, tagsStr] = await Promise.all([
-        AsyncStorage.getItem(itemsCacheKey(session.user.id)),
-        AsyncStorage.getItem(tagsCacheKey(session.user.id)),
-      ]);
-      if (cancelled) return;
-      setItems(itemsStr ? JSON.parse(itemsStr) : []);
-      setTags(tagsStr ? JSON.parse(tagsStr) : []);
-      if (cancelled) return;
-      fetchItems();
-      fetchTags();
-    })();
-    return () => { cancelled = true; };
-  }, [session]);
-
-  useEffect(() => {
-    if (!session) return;
-    AsyncStorage.setItem(itemsCacheKey(session.user.id), JSON.stringify(items));
-  }, [items, session]);
-
-  useEffect(() => {
-    if (!session) return;
-    AsyncStorage.setItem(tagsCacheKey(session.user.id), JSON.stringify(tags));
-  }, [tags, session]);
-
-  async function fetchItems() {
-    const { data, error } = await supabase
-      .from('items')
-      .select('*, tags(id, name, is_private)')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false });
-    if (!error) {
-      setItems(data);
-      const urls = data.map(i => i.image_url).filter(Boolean);
-      if (urls.length) Image.prefetch(urls, { cachePolicy: 'memory-disk' });
-    }
-  }
-
-  async function fetchTags() {
-    const { data, error } = await supabase
-      .from('tags')
-      .select('*')
-      .eq('user_id', session.user.id)
-      .order('name');
-    if (!error) setTags(data);
-  }
-
-  async function ensureTags(tagNames) {
-    const lowered = [...new Set(tagNames.map(n => n.trim().toLowerCase()).filter(Boolean))];
-    if (lowered.length === 0) return [];
-
-    const byName = new Map(tags.map(t => [t.name, t]));
-    const newNames = lowered.filter(n => !byName.has(n));
-
-    let created = [];
-    if (newNames.length > 0) {
-      const { data, error } = await supabase
-        .from('tags')
-        .insert(newNames.map(name => ({ name, user_id: session.user.id })))
-        .select();
-      if (error) { console.error('Tag insert error:', error); return null; }
-      created = data;
-      setTags(prev => [...prev, ...created]);
-      created.forEach(t => byName.set(t.name, t));
-    }
-
-    return lowered.map(n => byName.get(n));
-  }
-
-  async function setItemTags(itemId, tagIds) {
-    await supabase.from('item_tags').delete().eq('item_id', itemId);
-    if (tagIds.length === 0) return;
-    await supabase.from('item_tags').insert(tagIds.map(tag_id => ({ item_id: itemId, tag_id })));
-  }
-
-  async function handleUpdate(name, photoUri, tagNames, isPrivate, description) {
-    let image_url = photoUri;
-
-    if (!photoUri.startsWith('http')) {
-      const ext = photoUri.split('.').pop();
-      const path = `${session.user.id}/${Date.now()}.${ext}`;
-      const base64 = await readAsStringAsync(photoUri, { encoding: EncodingType.Base64 });
-      const { error: uploadError } = await supabase.storage
-        .from('item-images')
-        .upload(path, decode(base64), { contentType: `image/${ext}`, cacheControl: '31536000, immutable' });
-      if (uploadError) { console.error('Upload error:', uploadError); return; }
-      const { data: { publicUrl } } = supabase.storage.from('item-images').getPublicUrl(path);
-      image_url = publicUrl;
-    }
-
-    const { data, error } = await supabase
-      .from('items')
-      .update({ name: name || null, description: description || null, image_url, is_private: isPrivate ?? false })
-      .eq('id', selectedItem.id)
-      .select()
-      .single();
-
-    if (error) return;
-
-    const resolved = await ensureTags(tagNames);
-    if (!resolved) return;
-    await setItemTags(data.id, resolved.map(t => t.id));
-
-    const updated = { ...data, tags: resolved };
-    setItems(prev => prev.map(i => i.id === updated.id ? updated : i));
-    setSelectedItem(updated);
-    if (!photoUri.startsWith('http')) Image.prefetch(image_url, { cachePolicy: 'memory-disk' });
-  }
-
-  async function handleSave(name, photoUri, tagNames, isPrivate, description) {
-    const ext = photoUri.split('.').pop();
-    const path = `${session.user.id}/${Date.now()}.${ext}`;
-
-    const base64 = await readAsStringAsync(photoUri, { encoding: EncodingType.Base64 });
-
-    const { error: uploadError } = await supabase.storage
-      .from('item-images')
-      .upload(path, decode(base64), { contentType: `image/${ext}`, cacheControl: '31536000, immutable' });
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      return;
-    }
-
-    const { data: { publicUrl } } = supabase.storage
-      .from('item-images')
-      .getPublicUrl(path);
-
-    const { data, error } = await supabase
-      .from('items')
-      .insert({ name: name || null, description: description || null, image_url: publicUrl, is_private: isPrivate ?? false })
-      .select()
-      .single();
-
-    if (error) return;
-
-    const resolved = await ensureTags(tagNames);
-    if (!resolved) return;
-    await setItemTags(data.id, resolved.map(t => t.id));
-
-    setItems([{ ...data, tags: resolved }, ...items]);
-    Image.prefetch(publicUrl, { cachePolicy: 'memory-disk' });
-    setModalVisible(false);
-  }
-
-  async function handleDelete() {
-    const itemToDelete = selectedItem;
-    setSelectedItem(null);
-    const { error } = await supabase
-      .from('items')
-      .delete()
-      .eq('id', itemToDelete.id);
-    if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id));
-  }
 
   function toggleBatchSelect(itemId) {
     setSelectedIds(prev => {
@@ -249,63 +58,40 @@ export default function App() {
     });
   }
 
-  async function handleDeleteTag(tag) {
-    await supabase.from('item_tags').delete().eq('tag_id', tag.id);
-    const { error } = await supabase.from('tags').delete().eq('id', tag.id);
-    if (!error) {
-      setTags(prev => prev.filter(t => t.id !== tag.id));
-      setItems(prev => prev.map(i => ({ ...i, tags: (i.tags ?? []).filter(t => t.id !== tag.id) })));
-      if (activeTag?.id === tag.id) setActiveTag(null);
-    }
+  async function handleSave(name, photoUri, tagNames, isPrivate, description) {
+    const created = await addItem(name, photoUri, tagNames, isPrivate, description);
+    if (created) setModalVisible(false);
   }
 
-  async function handleToggleTagPrivacy(tag) {
-    const newPrivate = !tag.is_private;
-    const { error } = await supabase.from('tags').update({ is_private: newPrivate }).eq('id', tag.id);
-    if (!error) setTags(prev => prev.map(t => t.id === tag.id ? { ...t, is_private: newPrivate } : t));
+  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description) {
+    if (!selectedItem) return;
+    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description);
+    if (updated) setSelectedItem(updated);
+  }
+
+  async function handleDelete() {
+    const item = selectedItem;
+    setSelectedItem(null);
+    if (item) await deleteItem(item.id);
   }
 
   async function handleBatchTag(tagNames) {
-    if (tagNames.length === 0) {
-      setBatchTagVisible(false);
-      return;
-    }
-    const resolved = await ensureTags(tagNames);
-    if (!resolved) return;
+    if (tagNames.length === 0) { setBatchTagVisible(false); return; }
     const ids = [...selectedIds];
-    setItems(prev => prev.map(item => {
-      if (!selectedIds.has(item.id)) return item;
-      const existing = item.tags ?? [];
-      const existingIds = new Set(existing.map(t => t.id));
-      const merged = [...existing, ...resolved.filter(t => !existingIds.has(t.id))];
-      return { ...item, tags: merged };
-    }));
     setBatchTagVisible(false);
     setSelectedIds(new Set());
-    const rows = ids.flatMap(item_id => resolved.map(t => ({ item_id, tag_id: t.id })));
-    const { error } = await supabase
-      .from('item_tags')
-      .upsert(rows, { onConflict: 'item_id,tag_id', ignoreDuplicates: true });
-    if (error) console.error('Batch tag error:', error);
+    await batchTagItems(ids, tagNames);
   }
 
   async function handleBatchDelete() {
     const ids = [...selectedIds];
     setSelectedIds(new Set());
-    await supabase.from('item_tags').delete().in('item_id', ids);
-    const { error } = await supabase.from('items').delete().in('id', ids);
-    if (!error) setItems(prev => prev.filter(i => !ids.includes(i.id)));
+    await batchDeleteItems(ids);
   }
 
   async function handleBatchTogglePrivacy() {
-    const ids = [...selectedIds];
-    const allPrivate = ids.every(id => items.find(i => i.id === id)?.is_private);
-    const newPrivate = !allPrivate;
-    await supabase.from('items').update({ is_private: newPrivate }).in('id', ids);
-    setItems(prev => prev.map(i => ids.includes(i.id) ? { ...i, is_private: newPrivate } : i));
+    await batchTogglePrivacy([...selectedIds]);
   }
-
-  const allTagObjects = tags;
 
   const query = searchQuery.trim().toLowerCase();
   const searchedItems = query
@@ -342,22 +128,10 @@ export default function App() {
     : tags
   ).slice().sort((a, b) => a.name.localeCompare(b.name));
 
-  if (loading) {
-    return (
-      <View style={styles.centered}>
-        <ActivityIndicator color="#999" />
-      </View>
-    );
-  }
-
-  if (!session) {
-    return <AuthScreen />;
-  }
-
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setProfileVisible(true)}>
+        <TouchableOpacity onPress={() => router.push('/profile')}>
           <Text style={styles.title}>everything</Text>
           <Text style={styles.subtitle}>{items.length} {items.length === 1 ? 'object' : 'objects'}</Text>
         </TouchableOpacity>
@@ -365,7 +139,7 @@ export default function App() {
           <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
             <Ionicons name="person-circle-outline" size={22} color="#999" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => setCanvasVisible(true)}>
+          <TouchableOpacity onPress={() => router.push('/canvas')}>
             <Text style={styles.logout}>canvas</Text>
           </TouchableOpacity>
         </View>
@@ -398,34 +172,34 @@ export default function App() {
             style={styles.filterScroll}
             contentContainerStyle={styles.filterScrollContent}
           >
-          <TouchableOpacity
-            style={[styles.filterChip, !activeTag && styles.filterChipActive]}
-            onPress={() => setActiveTag(null)}
-          >
-            <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>all</Text>
-            <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.filterChip, activeTag?.id === '__untagged__' && styles.filterChipActive]}
-            onPress={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
-          >
-            <Text style={[styles.filterChipText, activeTag?.id === '__untagged__' && styles.filterChipTextActive]}>untagged</Text>
-            <Text style={[styles.filterChipCount, activeTag?.id === '__untagged__' && styles.filterChipCountActive]}>{untaggedCount}</Text>
-          </TouchableOpacity>
-          {tags.map(tag => {
-            const active = activeTag?.id === tag.id;
-            return (
-              <TouchableOpacity
-                key={tag.id}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setActiveTag(active ? null : tag)}
-              >
-                {tag.is_private && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
-                <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>
-              </TouchableOpacity>
-            );
-          })}
+            <TouchableOpacity
+              style={[styles.filterChip, !activeTag && styles.filterChipActive]}
+              onPress={() => setActiveTag(null)}
+            >
+              <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>all</Text>
+              <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.filterChip, activeTag?.id === '__untagged__' && styles.filterChipActive]}
+              onPress={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
+            >
+              <Text style={[styles.filterChipText, activeTag?.id === '__untagged__' && styles.filterChipTextActive]}>untagged</Text>
+              <Text style={[styles.filterChipCount, activeTag?.id === '__untagged__' && styles.filterChipCountActive]}>{untaggedCount}</Text>
+            </TouchableOpacity>
+            {tags.map(tag => {
+              const active = activeTag?.id === tag.id;
+              return (
+                <TouchableOpacity
+                  key={tag.id}
+                  style={[styles.filterChip, active && styles.filterChipActive]}
+                  onPress={() => setActiveTag(active ? null : tag)}
+                >
+                  {tag.is_private && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
+                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
+                  <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>
+                </TouchableOpacity>
+              );
+            })}
           </ScrollView>
           <TouchableOpacity
             style={[styles.filterChip, styles.filterChipDashed, styles.filterManageBtn]}
@@ -438,7 +212,7 @@ export default function App() {
 
       <FlatList
         data={filteredItems}
-        keyExtractor={(item) => item.id}
+        keyExtractor={item => item.id}
         numColumns={2}
         columnWrapperStyle={styles.row}
         contentContainerStyle={styles.listContent}
@@ -448,13 +222,7 @@ export default function App() {
           return (
             <TouchableOpacity
               style={[styles.card, isSelected && styles.cardSelected]}
-              onPress={() => {
-                if (batchMode) {
-                  toggleBatchSelect(item.id);
-                } else {
-                  setSelectedItem(item);
-                }
-              }}
+              onPress={() => batchMode ? toggleBatchSelect(item.id) : setSelectedItem(item)}
               onLongPress={() => toggleBatchSelect(item.id)}
               delayLongPress={400}
             >
@@ -510,13 +278,7 @@ export default function App() {
         visible={modalVisible}
         onClose={() => setModalVisible(false)}
         onSave={handleSave}
-        allTags={allTagObjects}
-      />
-
-      <CanvasScreen
-        visible={canvasVisible}
-        onClose={() => setCanvasVisible(false)}
-        items={items}
+        allTags={tags}
       />
 
       <ItemDetailModal
@@ -525,7 +287,7 @@ export default function App() {
         onClose={() => setSelectedItem(null)}
         onDelete={handleDelete}
         onSave={handleUpdate}
-        allTags={allTagObjects}
+        allTags={tags}
         onPrev={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null; })()}
         onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
       />
@@ -534,8 +296,14 @@ export default function App() {
         visible={batchTagVisible}
         onClose={() => setBatchTagVisible(false)}
         onApply={handleBatchTag}
-        allTags={allTagObjects}
+        allTags={tags}
         selectedCount={selectedIds.size}
+      />
+
+      <OpenProfileSheet
+        visible={openProfileVisible}
+        onClose={() => setOpenProfileVisible(false)}
+        onOpen={slug => { setOpenProfileVisible(false); router.push(`/u/${slug}`); }}
       />
 
       <Modal
@@ -587,14 +355,17 @@ export default function App() {
                     <Text style={styles.manageTagCount}>{totalTagCounts.get(tag.id) ?? 0}</Text>
                   </View>
                   <View style={styles.manageActions}>
-                    <TouchableOpacity onPress={() => handleToggleTagPrivacy(tag)} style={styles.manageLockBtn}>
+                    <TouchableOpacity onPress={() => toggleTagPrivacy(tag)} style={styles.manageLockBtn}>
                       <Ionicons
                         name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
                         size={16}
                         color={tag.is_private ? '#2D2D2D' : '#ccc'}
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => handleDeleteTag(tag)}>
+                    <TouchableOpacity onPress={() => {
+                      deleteTag(tag.id);
+                      if (activeTag?.id === tag.id) setActiveTag(null);
+                    }}>
                       <Text style={styles.manageDeleteBtn}>delete</Text>
                     </TouchableOpacity>
                   </View>
@@ -604,38 +375,11 @@ export default function App() {
           </View>
         </View>
       </Modal>
-
-      <ProfileScreen
-        visible={profileVisible}
-        onClose={() => setProfileVisible(false)}
-        session={session}
-        itemCount={items.length}
-      />
-
-      <OpenProfileSheet
-        visible={openProfileVisible}
-        onClose={() => setOpenProfileVisible(false)}
-        onOpen={slug => { setOpenProfileVisible(false); setViewingSlug(slug); }}
-      />
-
-      <ProfileViewScreen
-        visible={!!viewingSlug}
-        slug={viewingSlug}
-        onClose={() => setViewingSlug(null)}
-      />
-
-      <StatusBar style="dark" />
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  centered: {
-    flex: 1,
-    backgroundColor: '#F5F0EB',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   container: {
     flex: 1,
     backgroundColor: '#F5F0EB',
