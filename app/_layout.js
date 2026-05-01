@@ -1,9 +1,7 @@
-import { Stack, useRouter } from 'expo-router';
-import { useEffect } from 'react';
+import { Stack } from 'expo-router';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
-import { useShareIntent } from 'expo-share-intent';
 import { CollectionProvider, useCollection } from '../lib/CollectionProvider';
 import AuthScreen from '../screens/AuthScreen';
 
@@ -15,16 +13,6 @@ const transparentSheetOptions = {
 
 function RootStack() {
   const { session, authLoading } = useCollection();
-  const router = useRouter();
-  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
-
-  useEffect(() => {
-    if (!session || !hasShareIntent) return;
-    const file = shareIntent?.files?.[0];
-    if (!file?.path) return;
-    router.push({ pathname: '/add', params: { sharedUri: file.path } });
-    resetShareIntent();
-  }, [session, hasShareIntent, shareIntent, resetShareIntent, router]);
 
   if (authLoading) {
     return (
