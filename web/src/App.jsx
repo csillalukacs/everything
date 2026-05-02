@@ -78,6 +78,7 @@ export default function App() {
         <div className="header-right">
           <div className="header-links">
             <Link to={`/u/${username ?? session.user.id}`} className="link-btn">my collection</Link>
+            <Link to="/stats" className="link-btn">stats</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>log out</button>
           </div>
         </div>
