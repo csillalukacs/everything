@@ -51,19 +51,22 @@ export default function OpenProfileSheet({ visible, onClose, onOpen }) {
                 <Text style={styles.cancel}>cancel</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.label}>username or link</Text>
-            <TextInput
-              ref={inputRef}
-              style={styles.input}
-              value={input}
-              onChangeText={setInput}
-              placeholder="@alice or /u/alice"
-              placeholderTextColor="#bbb"
-              autoCapitalize="none"
-              autoCorrect={false}
-              returnKeyType="go"
-              onSubmitEditing={submit}
-            />
+            <Text style={styles.label}>username</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', gap: 3 }}>
+              <Text style={{fontSize: 22, color: '#999'}}>@</Text>
+              <TextInput
+                ref={inputRef}
+                style={[styles.input, { flex: 1 }]}
+                value={input}
+                onChangeText={setInput}
+                placeholder="alice"
+                placeholderTextColor="#bbb"
+                autoCapitalize="none"
+                autoCorrect={false}
+                returnKeyType="go"
+                onSubmitEditing={submit}
+              />
+            </View>
             <TouchableOpacity
               style={[styles.goBtn, !parseSlug(input) && styles.goBtnDisabled]}
               onPress={submit}
