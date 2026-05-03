@@ -253,7 +253,7 @@ export default function Collection() {
       />
 
       {batchMode && (
-        <View style={[styles.batchBar, { bottom: tabBarOffset + 16 }]}>
+        <View style={[styles.batchBar]}>
           <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.batchBarBtn}>
             <Text style={styles.batchBarCancelText}>cancel</Text>
           </TouchableOpacity>
@@ -649,6 +649,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 24,
     right: 24,
+    bottom: 10,
     height: 56,
     borderRadius: 28,
     backgroundColor: '#2D2D2D',
