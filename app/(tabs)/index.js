@@ -59,6 +59,8 @@ export default function Collection() {
 
   const availableYears = [...new Set(items.map(i => i.acquired_year).filter(y => y != null))].sort((a, b) => b - a);
   const availableCities = [...new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))].sort();
+  const hasMissingYear = items.some(i => i.acquired_year == null);
+  const hasMissingCity = items.some(i => cityOf(i.acquired_location) == null);
 
   const batchMode = selectedIds.size > 0;
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
@@ -110,8 +112,12 @@ export default function Collection() {
       const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase());
       if (!(name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query)))) return false;
     }
-    if (activeYear != null && i.acquired_year !== activeYear) return false;
-    if (activeCity != null) {
+    if (activeYear === 'none') {
+      if (i.acquired_year != null) return false;
+    } else if (activeYear != null && i.acquired_year !== activeYear) return false;
+    if (activeCity === 'none') {
+      if (cityOf(i.acquired_location) != null) return false;
+    } else if (activeCity != null) {
       const c = cityOf(i.acquired_location);
       if (!c || c.toLowerCase() !== activeCity.toLowerCase()) return false;
     }
@@ -190,13 +196,25 @@ export default function Collection() {
         )}
       </View>
 
-      {(availableYears.length > 0 || availableCities.length > 0) && (
+      {(availableYears.length > 0 || availableCities.length > 0 || hasMissingYear || hasMissingCity) && (
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
           style={styles.metaFilterScroll}
           contentContainerStyle={styles.filterScrollContent}
         >
+          {hasMissingYear && (() => {
+            const active = activeYear === 'none';
+            return (
+              <TouchableOpacity
+                key="y-none"
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setActiveYear(active ? null : 'none')}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>no year</Text>
+              </TouchableOpacity>
+            );
+          })()}
           {availableYears.map(y => {
             const active = activeYear === y;
             return (
@@ -209,6 +227,19 @@ export default function Collection() {
               </TouchableOpacity>
             );
           })}
+          {hasMissingCity && (() => {
+            const active = activeCity === 'none';
+            return (
+              <TouchableOpacity
+                key="c-none"
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setActiveCity(active ? null : 'none')}
+              >
+                <Ionicons name="location-outline" size={11} color={active ? '#fff' : '#999'} />
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>no city</Text>
+              </TouchableOpacity>
+            );
+          })()}
           {availableCities.map(c => {
             const active = activeCity === c;
             return (

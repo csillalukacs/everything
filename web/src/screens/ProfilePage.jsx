@@ -393,14 +393,18 @@ export default function ProfilePage() {
       const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase())
       if (!(name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query)))) return false
     }
-    if (yearParam) {
+    if (yearParam === 'none') {
+      if (i.acquired_year != null) return false
+    } else if (yearParam) {
       if (String(i.acquired_year) !== yearParam) return false
     } else if (yearMinParam || yearMaxParam) {
       if (i.acquired_year == null) return false
       if (yearMinParam && i.acquired_year < parseInt(yearMinParam, 10)) return false
       if (yearMaxParam && i.acquired_year > parseInt(yearMaxParam, 10)) return false
     }
-    if (cityParamLower) {
+    if (cityParam === 'none') {
+      if (cityOf(i.acquired_location) != null) return false
+    } else if (cityParamLower) {
       const c = cityOf(i.acquired_location)
       if (!c || c.toLowerCase() !== cityParamLower) return false
     }
@@ -421,6 +425,9 @@ export default function ProfilePage() {
     const set = new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))
     return [...set].sort((a, b) => a.localeCompare(b))
   }, [items])
+
+  const hasMissingYear = items.some(i => i.acquired_year == null)
+  const hasMissingCity = items.some(i => cityOf(i.acquired_location) == null)
 
   const dateRangeLabel = fromParam || toParam
     ? (fromParam && toParam && fromParam === toParam
@@ -612,18 +619,19 @@ export default function ProfilePage() {
             <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="clear search">×</button>
           )}
         </div>
-        {availableYears.length > 0 && (
+        {(availableYears.length > 0 || hasMissingYear) && (
           <select
             className={`filter-select${yearParam ? ' filter-select-active' : ''}`}
             value={yearParam ?? ''}
-            onChange={e => updateParams({ year: e.target.value || null })}
+            onChange={e => updateParams({ year: e.target.value || null, yearMin: null, yearMax: null })}
             aria-label="filter by year"
           >
             <option value="">all years</option>
+            {hasMissingYear && <option value="none">no year</option>}
             {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
           </select>
         )}
-        {availableCities.length > 0 && (
+        {(availableCities.length > 0 || hasMissingCity) && (
           <select
             className={`filter-select${cityParam ? ' filter-select-active' : ''}`}
             value={cityParam ?? ''}
@@ -631,6 +639,7 @@ export default function ProfilePage() {
             aria-label="filter by city"
           >
             <option value="">all cities</option>
+            {hasMissingCity && <option value="none">no city</option>}
             {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
