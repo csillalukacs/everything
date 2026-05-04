@@ -1,6 +1,19 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import L from 'leaflet'
+import 'leaflet/dist/leaflet.css'
 import { supabase } from '../lib/supabase'
+
+const markerIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+  iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41],
+  popupAnchor: [1, -34],
+  shadowSize: [41, 41],
+})
 
 const itemsCacheKey = userId => `cache:items:${userId}`
 
@@ -146,7 +159,7 @@ export default function StatsPage() {
       if (cached) { setItems(cached); setLoading(false) }
       supabase
         .from('items')
-        .select('id, created_at')
+        .select('id, created_at, name, acquired_year, acquired_location, acquired_lat, acquired_lng')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => {
@@ -166,6 +179,45 @@ export default function StatsPage() {
     for (const [k, v] of byDay) if (v > bestDayCount) { bestDayKey = k; bestDayCount = v }
     return { byDay, byWeek, byMonth, streak, longest, bestDayKey, bestDayCount }
   }, [items])
+
+  const yearStats = useMemo(() => {
+    const years = items.map(i => i.acquired_year).filter(y => y != null)
+    if (years.length === 0) return null
+    const min = Math.min(...years)
+    const max = Math.max(...years)
+    const range = max - min
+    const bucketSize = range > 30 ? 5 : 1
+    const buckets = new Map()
+    for (const y of years) {
+      const bucket = Math.floor(y / bucketSize) * bucketSize
+      buckets.set(bucket, (buckets.get(bucket) ?? 0) + 1)
+    }
+    const startBucket = Math.floor(min / bucketSize) * bucketSize
+    const endBucket = Math.floor(max / bucketSize) * bucketSize
+    const bars = []
+    for (let b = startBucket; b <= endBucket; b += bucketSize) {
+      bars.push({ key: b, label: bucketSize === 1 ? `'${String(b).slice(2)}` : String(b), count: buckets.get(b) ?? 0 })
+    }
+    const maxCount = Math.max(...bars.map(b => b.count))
+    return { bars, max: maxCount, bucketSize }
+  }, [items])
+
+  const mapMarkers = useMemo(() => {
+    return items
+      .filter(i => i.acquired_lat != null && i.acquired_lng != null)
+      .map(i => ({
+        id: i.id,
+        lat: i.acquired_lat,
+        lng: i.acquired_lng,
+        title: i.name || i.acquired_location?.split(',')[0] || 'item',
+        subtitle: [i.acquired_year, i.acquired_location?.split(',').slice(1, 3).join(',').trim()].filter(Boolean).join(' · '),
+      }))
+  }, [items])
+
+  const mapBounds = useMemo(() => {
+    if (mapMarkers.length === 0) return null
+    return mapMarkers.map(m => [m.lat, m.lng])
+  }, [mapMarkers])
 
   if (loading) {
     return <div className="centered"><div className="spinner" /></div>
@@ -277,6 +329,55 @@ export default function StatsPage() {
               })}
             </div>
           </section>
+
+          {yearStats && (
+            <section className="stats-section">
+              <h2 className="stats-section-title">
+                acquisition {yearStats.bucketSize === 1 ? 'years' : `${yearStats.bucketSize}-year periods`}
+              </h2>
+              <div className="stats-chart">
+                {yearStats.bars.map(b => (
+                  <Bar
+                    key={b.key}
+                    count={b.count}
+                    max={yearStats.max}
+                    label={b.label}
+                    title={`${b.label}: ${b.count}`}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {mapMarkers.length > 0 && (
+            <section className="stats-section">
+              <h2 className="stats-section-title">acquired around the world</h2>
+              <div className="stats-map">
+                <MapContainer
+                  bounds={mapBounds}
+                  boundsOptions={{ padding: [40, 40] }}
+                  scrollWheelZoom={false}
+                  style={{ height: '100%', width: '100%' }}
+                >
+                  <TileLayer
+                    attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+                    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                  />
+                  {mapMarkers.map(m => (
+                    <Marker key={m.id} position={[m.lat, m.lng]} icon={markerIcon}>
+                      <Popup>
+                        <strong>{m.title}</strong>
+                        {m.subtitle && <><br />{m.subtitle}</>}
+                      </Popup>
+                    </Marker>
+                  ))}
+                </MapContainer>
+              </div>
+              <p className="stats-map-caption">
+                {mapMarkers.length} object{mapMarkers.length === 1 ? '' : 's'} with a known location
+              </p>
+            </section>
+          )}
         </>
       )}
     </div>

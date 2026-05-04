@@ -30,6 +30,7 @@ function RootStack() {
       <Stack.Screen name="settings" options={transparentSheetOptions} />
       <Stack.Screen name="add" options={transparentSheetOptions} />
       <Stack.Screen name="u/[slug]" />
+      <Stack.Screen name="stats" />
       <Stack.Screen name="canvas" />
     </Stack>
   );

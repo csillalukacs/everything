@@ -3,7 +3,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
-import BatchTagSheet from './BatchTagSheet'
+import BatchEditSheet from './BatchEditSheet'
 
 const itemsCacheKey = userId => `cache:items:${userId}`
 const tagsCacheKey = userId => `cache:tags:${userId}`
@@ -66,7 +66,7 @@ export default function ProfilePage() {
   const [sessionUserId, setSessionUserId] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [addModalVisible, setAddModalVisible] = useState(false)
-  const [batchTagVisible, setBatchTagVisible] = useState(false)
+  const [batchEditVisible, setBatchEditVisible] = useState(false)
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [manageTagSearch, setManageTagSearch] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -200,12 +200,27 @@ export default function ProfilePage() {
       await supabase.from('item_tags').insert(tagIds.map(tag_id => ({ item_id: itemId, tag_id })))
   }
 
-  async function handleSave(name, file, tagNames, isPrivate, description) {
+  function acquiredFields(acquired) {
+    return {
+      acquired_year: acquired?.year ?? null,
+      acquired_location: acquired?.location ?? null,
+      acquired_lat: acquired?.lat ?? null,
+      acquired_lng: acquired?.lng ?? null,
+    }
+  }
+
+  async function handleSave(name, file, tagNames, isPrivate, description, acquired) {
     const image_url = await uploadImage(file)
     if (!image_url) return
     const { data, error } = await supabase
       .from('items')
-      .insert({ name: name || null, description: description || null, image_url, is_private: isPrivate ?? false })
+      .insert({
+        name: name || null,
+        description: description || null,
+        image_url,
+        is_private: isPrivate ?? false,
+        ...acquiredFields(acquired),
+      })
       .select()
       .single()
     if (error) return
@@ -216,7 +231,7 @@ export default function ProfilePage() {
     setAddModalVisible(false)
   }
 
-  async function handleUpdate(name, photoOrFile, tagNames, isPrivate, description) {
+  async function handleUpdate(name, photoOrFile, tagNames, isPrivate, description, acquired) {
     let image_url = typeof photoOrFile === 'string' ? photoOrFile : null
     if (photoOrFile instanceof File) {
       image_url = await uploadImage(photoOrFile)
@@ -224,7 +239,13 @@ export default function ProfilePage() {
     }
     const { data, error } = await supabase
       .from('items')
-      .update({ name: name || null, description: description || null, image_url, is_private: isPrivate ?? false })
+      .update({
+        name: name || null,
+        description: description || null,
+        image_url,
+        is_private: isPrivate ?? false,
+        ...acquiredFields(acquired),
+      })
       .eq('id', selectedItem.id)
       .select()
       .single()
@@ -269,25 +290,38 @@ export default function ProfilePage() {
     if (!error) setAllTags(prev => prev.map(t => t.id === tag.id ? { ...t, is_private: newPrivate } : t))
   }
 
-  async function handleBatchTag(tagNames) {
-    if (tagNames.length === 0) { setBatchTagVisible(false); return }
-    const resolved = await ensureTags(tagNames)
-    if (!resolved) return
+  async function handleBatchEdit({ addTags, acquired }) {
+    if (addTags.length === 0 && !acquired) { setBatchEditVisible(false); return }
+    const resolved = addTags.length > 0 ? await ensureTags(addTags) : []
+    if (resolved === null) return
     const ids = [...selectedIds]
+    const acquiredPatch = acquired ? acquiredFields(acquired) : null
+
     setItems(prev => prev.map(item => {
       if (!selectedIds.has(item.id)) return item
-      const existing = item.tags ?? []
-      const existingIds = new Set(existing.map(t => t.id))
-      const merged = [...existing, ...resolved.filter(t => !existingIds.has(t.id))]
-      return { ...item, tags: merged }
+      const next = { ...item }
+      if (resolved.length > 0) {
+        const existing = item.tags ?? []
+        const existingIds = new Set(existing.map(t => t.id))
+        next.tags = [...existing, ...resolved.filter(t => !existingIds.has(t.id))]
+      }
+      if (acquiredPatch) Object.assign(next, acquiredPatch)
+      return next
     }))
-    setBatchTagVisible(false)
+    setBatchEditVisible(false)
     setSelectedIds(new Set())
-    const rows = ids.flatMap(item_id => resolved.map(t => ({ item_id, tag_id: t.id })))
-    const { error } = await supabase
-      .from('item_tags')
-      .upsert(rows, { onConflict: 'item_id,tag_id', ignoreDuplicates: true })
-    if (error) console.error('Batch tag error:', error)
+
+    if (resolved.length > 0) {
+      const rows = ids.flatMap(item_id => resolved.map(t => ({ item_id, tag_id: t.id })))
+      const { error } = await supabase
+        .from('item_tags')
+        .upsert(rows, { onConflict: 'item_id,tag_id', ignoreDuplicates: true })
+      if (error) console.error('Batch tag error:', error)
+    }
+    if (acquiredPatch) {
+      const { error } = await supabase.from('items').update(acquiredPatch).in('id', ids)
+      if (error) console.error('Batch acquired error:', error)
+    }
   }
 
   async function handleBatchDelete() {
@@ -574,7 +608,7 @@ export default function ProfilePage() {
               <button className="batch-icon-btn batch-delete-btn" onClick={handleBatchDelete} title="delete">
                 <TrashIcon size={18} color="#ff6b6b" />
               </button>
-              <button className="batch-tag-btn" onClick={() => setBatchTagVisible(true)}>tag</button>
+              <button className="batch-tag-btn" onClick={() => setBatchEditVisible(true)}>edit</button>
             </div>
           </div>
         ) : (
@@ -609,10 +643,10 @@ export default function ProfilePage() {
             allTags={allTags}
           />
 
-          <BatchTagSheet
-            visible={batchTagVisible}
-            onClose={() => setBatchTagVisible(false)}
-            onApply={handleBatchTag}
+          <BatchEditSheet
+            visible={batchEditVisible}
+            onClose={() => setBatchEditVisible(false)}
+            onApply={handleBatchEdit}
             allTags={allTags}
             selectedCount={selectedIds.size}
           />

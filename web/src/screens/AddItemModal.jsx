@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import LocationPicker from './LocationPicker'
 
 function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   const d = open
@@ -17,6 +18,8 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [saving, setSaving] = useState(false)
   const [addingTag, setAddingTag] = useState(false)
   const [newTagName, setNewTagName] = useState('')
+  const [year, setYear] = useState('')
+  const [acquired, setAcquired] = useState(null)
   const fileInputRef = useRef(null)
 
   if (!visible) return null
@@ -44,16 +47,26 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setNewTagName('')
   }
 
+  function buildAcquired() {
+    const y = year.trim()
+    const yearNum = y ? parseInt(y, 10) : null
+    const validYear = yearNum && yearNum >= 1800 && yearNum <= 2100 ? yearNum : null
+    if (!validYear && !acquired) return null
+    return { year: validYear, location: acquired?.location ?? null, lat: acquired?.lat ?? null, lng: acquired?.lng ?? null }
+  }
+
   async function handleSave() {
     if (!file) return
     setSaving(true)
-    await onSave(name.trim(), file, tags, isPrivate, description.trim())
+    await onSave(name.trim(), file, tags, isPrivate, description.trim(), buildAcquired())
     setFile(null)
     setPreview(null)
     setName('')
     setDescription('')
     setTags([])
     setIsPrivate(false)
+    setYear('')
+    setAcquired(null)
     setSaving(false)
   }
 
@@ -66,6 +79,8 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setIsPrivate(false)
     setAddingTag(false)
     setNewTagName('')
+    setYear('')
+    setAcquired(null)
     onClose()
   }
 
@@ -152,6 +167,15 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           value={description}
           onChange={e => setDescription(e.target.value)}
         />
+        <input
+          className="name-input"
+          placeholder="year acquired (optional)"
+          inputMode="numeric"
+          maxLength={4}
+          value={year}
+          onChange={e => setYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+        />
+        <LocationPicker value={acquired} onChange={setAcquired} placeholder="city acquired (optional)" />
         <button
           className={`privacy-toggle${isPrivate ? ' privacy-toggle-on' : ''}`}
           onClick={() => setIsPrivate(prev => !prev)}

@@ -1092,3 +1092,110 @@ input {
   white-space: nowrap;
   height: 12px;
 }
+
+/* ---- Location picker ---- */
+
+.location-picker {
+  position: relative;
+  width: 100%;
+}
+
+.location-picker-input-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fff;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+.location-picker-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 14px;
+  color: #2D2D2D;
+  font-family: inherit;
+  padding: 0;
+}
+
+.location-picker-input::placeholder {
+  color: #bbb;
+}
+
+.location-picker-clear {
+  background: none;
+  border: none;
+  color: #999;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0 4px;
+}
+
+.location-picker-results {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #E0E0E0;
+  border-radius: 10px;
+  overflow: hidden;
+  z-index: 200;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
+  display: flex;
+  flex-direction: column;
+}
+
+.location-picker-result {
+  text-align: left;
+  background: #fff;
+  border: none;
+  padding: 10px 14px;
+  font-size: 13px;
+  color: #2D2D2D;
+  font-family: inherit;
+  cursor: pointer;
+  border-bottom: 1px solid #F0EBE5;
+}
+
+.location-picker-result:last-child {
+  border-bottom: none;
+}
+
+.location-picker-result:hover {
+  background: #F5F0EB;
+}
+
+/* ---- Batch edit sheet sections ---- */
+
+.sheet-batch-edit {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+}
+
+.batch-section-label {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #999;
+  margin: 0 0 8px;
+}
+
+/* ---- Stats map ---- */
+
+.stats-map {
+  height: 360px;
+  border-radius: 16px;
+  overflow: hidden;
+  border: 1px solid #E0E0E0;
+}
+
+.stats-map-caption {
+  font-size: 12px;
+  color: #999;
+  text-align: center;
+  margin-top: 10px;
+}

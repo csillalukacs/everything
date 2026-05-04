@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
-import BatchTagSheet from '../../screens/BatchTagSheet';
+import BatchEditSheet from '../../screens/BatchEditSheet';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -33,7 +33,7 @@ export default function Collection() {
     profile,
     updateItem,
     deleteItem,
-    batchTagItems,
+    batchEditItems,
     batchDeleteItems,
     batchTogglePrivacy,
     deleteTag,
@@ -43,7 +43,7 @@ export default function Collection() {
   const [activeTag, setActiveTag] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
-  const [batchTagVisible, setBatchTagVisible] = useState(false);
+  const [batchEditVisible, setBatchEditVisible] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [manageTagSearch, setManageTagSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
@@ -61,9 +61,9 @@ export default function Collection() {
     });
   }
 
-  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description) {
+  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired) {
     if (!selectedItem) return;
-    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description);
+    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired);
     if (updated) setSelectedItem(updated);
   }
 
@@ -73,12 +73,12 @@ export default function Collection() {
     if (item) await deleteItem(item.id);
   }
 
-  async function handleBatchTag(tagNames) {
-    if (tagNames.length === 0) { setBatchTagVisible(false); return; }
+  async function handleBatchEdit({ addTags, acquired }) {
+    if (addTags.length === 0 && !acquired) { setBatchEditVisible(false); return; }
     const ids = [...selectedIds];
-    setBatchTagVisible(false);
+    setBatchEditVisible(false);
     setSelectedIds(new Set());
-    await batchTagItems(ids, tagNames);
+    await batchEditItems(ids, { addTags, acquired });
   }
 
   async function handleBatchDelete() {
@@ -144,6 +144,9 @@ export default function Collection() {
         <View style={styles.headerActions}>
           <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
             <Ionicons name="search" size={22} color="#999" />
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => router.push('/stats')} style={styles.headerIconBtn}>
+            <Ionicons name="bar-chart-outline" size={22} color="#999" />
           </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/settings')} style={styles.headerIconBtn}>
             <Ionicons name="settings-outline" size={22} color="#999" />
@@ -269,8 +272,8 @@ export default function Collection() {
             <TouchableOpacity onPress={handleBatchDelete} style={styles.batchBarIcon}>
               <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => setBatchTagVisible(true)} style={styles.batchBarBtn}>
-              <Text style={styles.batchBarTagText}>tag</Text>
+            <TouchableOpacity onPress={() => setBatchEditVisible(true)} style={styles.batchBarBtn}>
+              <Text style={styles.batchBarTagText}>edit</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -288,10 +291,10 @@ export default function Collection() {
         onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
       />
 
-      <BatchTagSheet
-        visible={batchTagVisible}
-        onClose={() => setBatchTagVisible(false)}
-        onApply={handleBatchTag}
+      <BatchEditSheet
+        visible={batchEditVisible}
+        onClose={() => setBatchEditVisible(false)}
+        onApply={handleBatchEdit}
         allTags={tags}
         selectedCount={selectedIds.size}
       />

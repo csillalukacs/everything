@@ -17,6 +17,7 @@ import {
 import { Image } from 'expo-image';
 import { cropToContent } from '../lib/cropToContent';
 import CameraCaptureModal from './CameraCaptureModal';
+import LocationPicker from './LocationPicker';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress }) {
   const [editing, setEditing] = useState(false);
@@ -25,6 +26,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [editPhoto, setEditPhoto] = useState(null);
   const [editTags, setEditTags] = useState([]);
   const [editPrivate, setEditPrivate] = useState(false);
+  const [editYear, setEditYear] = useState('');
+  const [editAcquired, setEditAcquired] = useState(null);
   const [saving, setSaving] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
@@ -54,6 +57,10 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditPhoto(item.image_url);
     setEditTags((item.tags ?? []).map(t => t.name));
     setEditPrivate(item.is_private ?? false);
+    setEditYear(item.acquired_year ? String(item.acquired_year) : '');
+    setEditAcquired(item.acquired_location
+      ? { location: item.acquired_location, lat: item.acquired_lat, lng: item.acquired_lng }
+      : null);
     setNameEditable(false);
     setEditing(true);
   }
@@ -93,9 +100,21 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setNewTagName('');
   }
 
+  function buildAcquired() {
+    const y = editYear.trim();
+    const yearNum = y ? parseInt(y, 10) : null;
+    const validYear = yearNum && yearNum >= 1800 && yearNum <= 2100 ? yearNum : null;
+    return {
+      year: validYear,
+      location: editAcquired?.location ?? null,
+      lat: editAcquired?.lat ?? null,
+      lng: editAcquired?.lng ?? null,
+    };
+  }
+
   async function handleSave() {
     setSaving(true);
-    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim());
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired());
     setSaving(false);
     setEditing(false);
     setEditDescription('');
@@ -249,6 +268,20 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 onSubmitEditing={Keyboard.dismiss}
               />
 
+              <TextInput
+                style={styles.nameInput}
+                placeholder="year acquired (optional)"
+                placeholderTextColor="#bbb"
+                value={editYear}
+                onChangeText={t => setEditYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+                keyboardType="number-pad"
+                maxLength={4}
+                returnKeyType="done"
+                onSubmitEditing={Keyboard.dismiss}
+              />
+
+              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder="city acquired (optional)" />
+
               <TouchableOpacity style={styles.privacyToggle} onPress={() => setEditPrivate(prev => !prev)}>
                 <Ionicons name={editPrivate ? 'lock-closed' : 'lock-open-outline'} size={16} color={editPrivate ? '#2D2D2D' : '#bbb'} />
                 <Text style={[styles.privacyToggleText, editPrivate && styles.privacyToggleTextOn]}>
@@ -288,6 +321,12 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 </View>
               )}
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
+              {(item.acquired_location || item.acquired_year) && (
+                <Text style={styles.date}>
+                  acquired{item.acquired_location ? ` in ${item.acquired_location.split(',')[0]}` : ''}
+                  {item.acquired_year ? ` · ${item.acquired_year}` : ''}
+                </Text>
+              )}
               <Text style={styles.date}>
                 added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
               </Text>

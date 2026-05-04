@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { cropToContent } from '../lib/cropToContent';
 import CameraCaptureModal from './CameraCaptureModal';
+import LocationPicker from './LocationPicker';
 
 export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
   const [photo, setPhoto] = useState(null);
@@ -28,6 +29,8 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [addingTag, setAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
   const [removingBg, setRemovingBg] = useState(false);
+  const [year, setYear] = useState('');
+  const [acquired, setAcquired] = useState(null);
 
   async function processCapturedUri(uri) {
     setPhoto(uri);
@@ -56,15 +59,25 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setNewTagName('');
   }
 
+  function buildAcquired() {
+    const y = year.trim();
+    const yearNum = y ? parseInt(y, 10) : null;
+    const validYear = yearNum && yearNum >= 1800 && yearNum <= 2100 ? yearNum : null;
+    if (!validYear && !acquired) return null;
+    return { year: validYear, location: acquired?.location ?? null, lat: acquired?.lat ?? null, lng: acquired?.lng ?? null };
+  }
+
   async function handleSave() {
     if (!photo) return;
     setSaving(true);
-    await onSave(name.trim(), photo, tags, isPrivate, description.trim());
+    await onSave(name.trim(), photo, tags, isPrivate, description.trim(), buildAcquired());
     setName('');
     setDescription('');
     setPhoto(null);
     setTags([]);
     setIsPrivate(false);
+    setYear('');
+    setAcquired(null);
     setSaving(false);
   }
 
@@ -76,6 +89,8 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setIsPrivate(false);
     setAddingTag(false);
     setNewTagName('');
+    setYear('');
+    setAcquired(null);
     onClose();
   }
 
@@ -186,6 +201,22 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           returnKeyType="done"
           onSubmitEditing={Keyboard.dismiss}
         />
+
+        <TextInput
+          style={styles.input}
+          placeholder="year acquired (optional)"
+          placeholderTextColor="#bbb"
+          value={year}
+          onChangeText={t => setYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
+          keyboardType="number-pad"
+          maxLength={4}
+          returnKeyType="done"
+          onSubmitEditing={Keyboard.dismiss}
+        />
+
+        <View style={{ marginBottom: 12 }}>
+          <LocationPicker value={acquired} onChange={setAcquired} placeholder="city acquired (optional)" />
+        </View>
 
         <TouchableOpacity style={styles.privacyToggle} onPress={() => setIsPrivate(prev => !prev)}>
           <Ionicons name={isPrivate ? 'lock-closed' : 'lock-open-outline'} size={16} color={isPrivate ? '#2D2D2D' : '#bbb'} />
