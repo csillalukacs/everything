@@ -90,7 +90,10 @@ export default function App() {
           <Link to={`/u/${username ?? session.user.id}`} className="link-btn link-btn-dark">add your first item</Link>
         </div>
       ) : dailyItem && (
-        <div className="daily-item">
+        <Link
+          to={`/u/${username ?? session.user.id}?item=${dailyItem.id}`}
+          className="daily-item daily-item-link"
+        >
           <p className="daily-label">item of the day</p>
           {dailyItem.image_url && (
             <div className="daily-image-wrap">
@@ -106,7 +109,7 @@ export default function App() {
               ))}
             </div>
           )}
-        </div>
+        </Link>
       )}
     </div>
   )

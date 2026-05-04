@@ -1,9 +1,22 @@
-import { useEffect, useState } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useEffect, useMemo, useState } from 'react'
+import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
+
+function cityOf(loc) {
+  if (!loc) return null
+  const c = loc.split(',')[0].trim()
+  return c || null
+}
+
+function formatDateLabel(s) {
+  if (!s) return ''
+  const d = new Date(s)
+  if (Number.isNaN(d.getTime())) return s
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase()
+}
 
 const itemsCacheKey = userId => `cache:items:${userId}`
 const tagsCacheKey = userId => `cache:tags:${userId}`
@@ -48,6 +61,15 @@ const USERNAME_RE = /^[a-z0-9_]{3,20}$/
 export default function ProfilePage() {
   const { slug } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const yearParam = searchParams.get('year') || null
+  const yearMinParam = searchParams.get('yearMin') || null
+  const yearMaxParam = searchParams.get('yearMax') || null
+  const cityParam = searchParams.get('city') || null
+  const fromParam = searchParams.get('from') || null
+  const toParam = searchParams.get('to') || null
+  const itemIdParam = searchParams.get('item') || null
+
   const [userId, setUserId] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [items, setItems] = useState([])
@@ -56,7 +78,6 @@ export default function ProfilePage() {
   const [username, setUsername] = useState(null)
   const [loading, setLoading] = useState(true)
   const [activeTag, setActiveTag] = useState(null)
-  const [selectedItem, setSelectedItem] = useState(null)
   const [isOwner, setIsOwner] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
@@ -72,6 +93,20 @@ export default function ProfilePage() {
   const [searchQuery, setSearchQuery] = useState('')
 
   const batchMode = selectedIds.size > 0
+
+  const selectedItem = itemIdParam ? (items.find(i => i.id === itemIdParam) ?? null) : null
+
+  function updateParams(patch) {
+    const next = new URLSearchParams(searchParams)
+    for (const [k, v] of Object.entries(patch)) {
+      if (v == null || v === '') next.delete(k)
+      else next.set(k, String(v))
+    }
+    setSearchParams(next)
+  }
+
+  function openItem(item) { updateParams({ item: item.id }) }
+  function closeItem() { updateParams({ item: null }) }
 
   useEffect(() => {
     async function load() {
@@ -255,12 +290,11 @@ export default function ProfilePage() {
     await setItemTags(data.id, resolved.map(t => t.id))
     const updated = { ...data, tags: resolved }
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
-    setSelectedItem(updated)
   }
 
   async function handleDelete() {
     const itemToDelete = selectedItem
-    setSelectedItem(null)
+    closeItem()
     const { error } = await supabase.from('items').delete().eq('id', itemToDelete.id)
     if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
   }
@@ -349,14 +383,56 @@ export default function ProfilePage() {
   const visibleTags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name))
 
   const query = searchQuery.trim().toLowerCase()
-  const searchedItems = query
-    ? items.filter(i => {
-        const name = (i.name ?? '').toLowerCase()
-        const desc = (i.description ?? '').toLowerCase()
-        const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase())
-        return name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query))
-      })
-    : items
+  const fromDate = fromParam ? new Date(fromParam) : null
+  const toDate = toParam ? new Date(toParam + 'T23:59:59') : null
+  const cityParamLower = cityParam?.toLowerCase() ?? null
+  const searchedItems = items.filter(i => {
+    if (query) {
+      const name = (i.name ?? '').toLowerCase()
+      const desc = (i.description ?? '').toLowerCase()
+      const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase())
+      if (!(name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query)))) return false
+    }
+    if (yearParam) {
+      if (String(i.acquired_year) !== yearParam) return false
+    } else if (yearMinParam || yearMaxParam) {
+      if (i.acquired_year == null) return false
+      if (yearMinParam && i.acquired_year < parseInt(yearMinParam, 10)) return false
+      if (yearMaxParam && i.acquired_year > parseInt(yearMaxParam, 10)) return false
+    }
+    if (cityParamLower) {
+      const c = cityOf(i.acquired_location)
+      if (!c || c.toLowerCase() !== cityParamLower) return false
+    }
+    if (fromDate || toDate) {
+      const t = new Date(i.created_at)
+      if (fromDate && t < fromDate) return false
+      if (toDate && t > toDate) return false
+    }
+    return true
+  })
+
+  const availableYears = useMemo(() => {
+    const set = new Set(items.map(i => i.acquired_year).filter(y => y != null))
+    return [...set].sort((a, b) => b - a)
+  }, [items])
+
+  const availableCities = useMemo(() => {
+    const set = new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))
+    return [...set].sort((a, b) => a.localeCompare(b))
+  }, [items])
+
+  const dateRangeLabel = fromParam || toParam
+    ? (fromParam && toParam && fromParam === toParam
+        ? `added ${formatDateLabel(fromParam)}`
+        : `added ${fromParam ? formatDateLabel(fromParam) : '…'} – ${toParam ? formatDateLabel(toParam) : '…'}`)
+    : null
+
+  const yearRangeLabel = !yearParam && (yearMinParam || yearMaxParam)
+    ? (yearMinParam && yearMaxParam && yearMinParam === yearMaxParam
+        ? `${yearMinParam}`
+        : `${yearMinParam ?? '…'}–${yearMaxParam ?? '…'}`)
+    : null
 
   const filteredItems = activeTag?.id === '__untagged__'
     ? searchedItems.filter(i => (i.tags ?? []).length === 0)
@@ -519,20 +595,58 @@ export default function ProfilePage() {
         <Link to="/" className="link-btn" style={{ marginTop: 8 }}>things</Link>
       </header>
 
-      <div className="search-container">
-        <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-          <circle cx="11" cy="11" r="7" />
-          <line x1="21" y1="21" x2="16.65" y2="16.65" />
-        </svg>
-        <input
-          type="text"
-          className="search-input"
-          placeholder="search"
-          value={searchQuery}
-          onChange={e => setSearchQuery(e.target.value)}
-        />
-        {searchQuery && (
-          <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="clear search">×</button>
+      <div className="search-row">
+        <div className="search-container">
+          <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+            <circle cx="11" cy="11" r="7" />
+            <line x1="21" y1="21" x2="16.65" y2="16.65" />
+          </svg>
+          <input
+            type="text"
+            className="search-input"
+            placeholder="search"
+            value={searchQuery}
+            onChange={e => setSearchQuery(e.target.value)}
+          />
+          {searchQuery && (
+            <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="clear search">×</button>
+          )}
+        </div>
+        {availableYears.length > 0 && (
+          <select
+            className={`filter-select${yearParam ? ' filter-select-active' : ''}`}
+            value={yearParam ?? ''}
+            onChange={e => updateParams({ year: e.target.value || null })}
+            aria-label="filter by year"
+          >
+            <option value="">all years</option>
+            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
+          </select>
+        )}
+        {availableCities.length > 0 && (
+          <select
+            className={`filter-select${cityParam ? ' filter-select-active' : ''}`}
+            value={cityParam ?? ''}
+            onChange={e => updateParams({ city: e.target.value || null })}
+            aria-label="filter by city"
+          >
+            <option value="">all cities</option>
+            {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
+          </select>
+        )}
+        {yearRangeLabel && (
+          <button
+            className="filter-select filter-select-active filter-date-chip"
+            onClick={() => updateParams({ yearMin: null, yearMax: null })}
+            title="clear year range"
+          >{yearRangeLabel} ×</button>
+        )}
+        {dateRangeLabel && (
+          <button
+            className="filter-select filter-select-active filter-date-chip"
+            onClick={() => updateParams({ from: null, to: null })}
+            title="clear date filter"
+          >{dateRangeLabel} ×</button>
         )}
       </div>
 
@@ -579,7 +693,7 @@ export default function ProfilePage() {
             <div
               key={item.id}
               className={`card${isSelected ? ' card-selected' : ''}${visible ? '' : ' card-hidden'}`}
-              onClick={() => isOwner && batchMode ? toggleBatchSelect(item.id) : setSelectedItem(item)}
+              onClick={() => isOwner && batchMode ? toggleBatchSelect(item.id) : openItem(item)}
               onContextMenu={isOwner ? e => { e.preventDefault(); toggleBatchSelect(item.id) } : undefined}
             >
               {item.image_url && <img src={item.image_url} alt={item.name || ''} loading="lazy" />}
@@ -619,18 +733,18 @@ export default function ProfilePage() {
       <ItemDetailModal
         visible={!!selectedItem}
         item={selectedItem}
-        onClose={() => setSelectedItem(null)}
+        onClose={closeItem}
         onSave={isOwner ? handleUpdate : undefined}
         onDelete={isOwner ? handleDelete : undefined}
         allTags={allTags}
-        onTagPress={tag => { setActiveTag(tag); setSelectedItem(null); }}
+        onTagPress={tag => { setActiveTag(tag); closeItem(); }}
         onPrev={(() => {
           const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
-          return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null
+          return idx > 0 ? () => openItem(filteredItems[idx - 1]) : null
         })()}
         onNext={(() => {
           const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
-          return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null
+          return idx < filteredItems.length - 1 ? () => openItem(filteredItems[idx + 1]) : null
         })()}
       />
 

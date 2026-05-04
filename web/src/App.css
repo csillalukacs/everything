@@ -44,6 +44,20 @@ input {
   gap: 16px;
 }
 
+.daily-item-link {
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+}
+
+.daily-item-link:hover .daily-image {
+  opacity: 0.92;
+}
+
+.daily-item-link:hover .daily-name {
+  text-decoration: underline;
+}
+
 .daily-label {
   font-size: 11px;
   text-transform: uppercase;
@@ -246,6 +260,51 @@ input {
 }
 
 /* ---- Search ---- */
+
+.search-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+}
+
+.search-row .search-container {
+  flex: 1 1 240px;
+  margin-bottom: 0;
+}
+
+.filter-select {
+  height: 40px;
+  border-radius: 20px;
+  border: 1.5px solid #E0E0E0;
+  background: #fff;
+  color: #2D2D2D;
+  font-family: inherit;
+  font-size: 14px;
+  padding: 0 14px;
+  cursor: pointer;
+  outline: none;
+  flex-shrink: 0;
+  transition: border-color 0.1s;
+}
+
+.filter-select:hover {
+  border-color: #ccc;
+}
+
+.filter-select-active {
+  background: #2D2D2D;
+  color: #fff;
+  border-color: #2D2D2D;
+}
+
+.filter-date-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
 
 .search-container {
   display: flex;
@@ -1054,6 +1113,26 @@ input {
   align-items: center;
   min-width: 0;
   gap: 6px;
+}
+
+button.stats-bar-col {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+}
+
+.stats-bar-col-clickable {
+  cursor: pointer;
+}
+
+.stats-bar-col-clickable:hover .stats-bar-fill {
+  background: #555;
+}
+
+.stats-bar-col-clickable:hover .stats-bar-label {
+  color: #2D2D2D;
 }
 
 .stats-bar-track {

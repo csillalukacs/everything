@@ -129,10 +129,17 @@ function formatMonthLabel(d) {
   return MONTH_NAMES[d.getMonth()].toLowerCase()
 }
 
-function Bar({ count, max, label, title }) {
+function Bar({ count, max, label, title, onClick }) {
   const heightPct = max > 0 ? (count / max) * 100 : 0
+  const interactive = !!onClick && count > 0
+  const Tag = interactive ? 'button' : 'div'
   return (
-    <div className="stats-bar-col" title={title}>
+    <Tag
+      className={`stats-bar-col${interactive ? ' stats-bar-col-clickable' : ''}`}
+      title={title}
+      onClick={interactive ? onClick : undefined}
+      type={interactive ? 'button' : undefined}
+    >
       <div className="stats-bar-track">
         {count > 0 && (
           <div className="stats-bar-fill" style={{ height: `${Math.max(heightPct, 2)}%` }}>
@@ -141,8 +148,30 @@ function Bar({ count, max, label, title }) {
         )}
       </div>
       <span className="stats-bar-label">{label}</span>
-    </div>
+    </Tag>
   )
+}
+
+function dayKeyToDate(k) {
+  return new Date(k)
+}
+
+function endOfWeekKey(k) {
+  const d = dayKeyToDate(k)
+  d.setDate(d.getDate() + 6)
+  return dayKey(d)
+}
+
+function endOfMonthKey(k) {
+  const [y, m] = k.split('-').map(Number)
+  const d = new Date(y, m, 0)
+  return dayKey(d)
+}
+
+function cityOf(loc) {
+  if (!loc) return null
+  const c = loc.split(',')[0].trim()
+  return c || null
 }
 
 export default function StatsPage() {
@@ -150,6 +179,7 @@ export default function StatsPage() {
   const [session, setSession] = useState(null)
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
+  const [username, setUsername] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -166,8 +196,22 @@ export default function StatsPage() {
           if (data) setItems(data)
           setLoading(false)
         })
+      supabase
+        .from('profiles')
+        .select('username')
+        .eq('user_id', session.user.id)
+        .maybeSingle()
+        .then(({ data }) => setUsername(data?.username ?? null))
     })
   }, [navigate])
+
+  const targetSlug = username ?? session?.user.id ?? ''
+
+  function goWith(params) {
+    const qs = new URLSearchParams()
+    for (const [k, v] of Object.entries(params)) if (v != null && v !== '') qs.set(k, String(v))
+    navigate(`/u/${targetSlug}${qs.toString() ? `?${qs.toString()}` : ''}`)
+  }
 
   const stats = useMemo(() => {
     const byDay = bucketize(items, dayKey)
@@ -209,10 +253,26 @@ export default function StatsPage() {
         id: i.id,
         lat: i.acquired_lat,
         lng: i.acquired_lng,
-        title: i.name || i.acquired_location?.split(',')[0] || 'item',
+        city: cityOf(i.acquired_location),
+        title: i.name || cityOf(i.acquired_location) || 'item',
         subtitle: [i.acquired_year, i.acquired_location?.split(',').slice(1, 3).join(',').trim()].filter(Boolean).join(' · '),
       }))
   }, [items])
+
+  const topCities = useMemo(() => {
+    const counts = new Map()
+    for (const i of items) {
+      const c = cityOf(i.acquired_location)
+      if (!c) continue
+      counts.set(c, (counts.get(c) ?? 0) + 1)
+    }
+    return [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12)
+  }, [items])
+
+  const topCitiesMax = topCities.length > 0 ? Math.max(...topCities.map(c => c.count)) : 0
 
   const mapBounds = useMemo(() => {
     if (mapMarkers.length === 0) return null
@@ -286,6 +346,7 @@ export default function StatsPage() {
                     max={dayMax}
                     label={formatDayLabel(d, i, days.length)}
                     title={`${k}: ${count}`}
+                    onClick={() => goWith({ from: k, to: k })}
                   />
                 )
               })}
@@ -305,6 +366,7 @@ export default function StatsPage() {
                     max={weekMax}
                     label={formatWeekLabel(d)}
                     title={`week of ${k}: ${count}`}
+                    onClick={() => goWith({ from: k, to: endOfWeekKey(k) })}
                   />
                 )
               })}
@@ -324,6 +386,7 @@ export default function StatsPage() {
                     max={monthMax}
                     label={formatMonthLabel(d)}
                     title={`${k}: ${count}`}
+                    onClick={() => goWith({ from: `${k}-01`, to: endOfMonthKey(k) })}
                   />
                 )
               })}
@@ -343,6 +406,29 @@ export default function StatsPage() {
                     max={yearStats.max}
                     label={b.label}
                     title={`${b.label}: ${b.count}`}
+                    onClick={() => goWith(
+                      yearStats.bucketSize === 1
+                        ? { year: b.key }
+                        : { yearMin: b.key, yearMax: b.key + yearStats.bucketSize - 1 }
+                    )}
+                  />
+                ))}
+              </div>
+            </section>
+          )}
+
+          {topCities.length > 0 && (
+            <section className="stats-section">
+              <h2 className="stats-section-title">top cities</h2>
+              <div className="stats-chart">
+                {topCities.map(c => (
+                  <Bar
+                    key={c.name}
+                    count={c.count}
+                    max={topCitiesMax}
+                    label={c.name}
+                    title={`${c.name}: ${c.count}`}
+                    onClick={() => goWith({ city: c.name })}
                   />
                 ))}
               </div>
@@ -368,6 +454,12 @@ export default function StatsPage() {
                       <Popup>
                         <strong>{m.title}</strong>
                         {m.subtitle && <><br />{m.subtitle}</>}
+                        {m.city && (
+                          <><br /><a
+                            href="#"
+                            onClick={e => { e.preventDefault(); goWith({ city: m.city }) }}
+                          >see all from {m.city}</a></>
+                        )}
                       </Popup>
                     </Marker>
                   ))}

@@ -41,6 +41,8 @@ export default function Collection() {
   } = useCollection();
 
   const [activeTag, setActiveTag] = useState(null);
+  const [activeYear, setActiveYear] = useState(null);
+  const [activeCity, setActiveCity] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchEditVisible, setBatchEditVisible] = useState(false);
@@ -48,6 +50,15 @@ export default function Collection() {
   const [manageTagSearch, setManageTagSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
+
+  function cityOf(loc) {
+    if (!loc) return null;
+    const c = loc.split(',')[0].trim();
+    return c || null;
+  }
+
+  const availableYears = [...new Set(items.map(i => i.acquired_year).filter(y => y != null))].sort((a, b) => b - a);
+  const availableCities = [...new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))].sort();
 
   const batchMode = selectedIds.size > 0;
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
@@ -92,14 +103,20 @@ export default function Collection() {
   }
 
   const query = searchQuery.trim().toLowerCase();
-  const searchedItems = query
-    ? items.filter(i => {
-        const name = (i.name ?? '').toLowerCase();
-        const desc = (i.description ?? '').toLowerCase();
-        const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase());
-        return name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query));
-      })
-    : items;
+  const searchedItems = items.filter(i => {
+    if (query) {
+      const name = (i.name ?? '').toLowerCase();
+      const desc = (i.description ?? '').toLowerCase();
+      const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase());
+      if (!(name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query)))) return false;
+    }
+    if (activeYear != null && i.acquired_year !== activeYear) return false;
+    if (activeCity != null) {
+      const c = cityOf(i.acquired_location);
+      if (!c || c.toLowerCase() !== activeCity.toLowerCase()) return false;
+    }
+    return true;
+  });
 
   const filteredItems = activeTag?.id === '__untagged__'
     ? searchedItems.filter(i => (i.tags ?? []).length === 0)
@@ -172,6 +189,41 @@ export default function Collection() {
           </TouchableOpacity>
         )}
       </View>
+
+      {(availableYears.length > 0 || availableCities.length > 0) && (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.metaFilterScroll}
+          contentContainerStyle={styles.filterScrollContent}
+        >
+          {availableYears.map(y => {
+            const active = activeYear === y;
+            return (
+              <TouchableOpacity
+                key={`y-${y}`}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setActiveYear(active ? null : y)}
+              >
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{y}</Text>
+              </TouchableOpacity>
+            );
+          })}
+          {availableCities.map(c => {
+            const active = activeCity === c;
+            return (
+              <TouchableOpacity
+                key={`c-${c}`}
+                style={[styles.filterChip, active && styles.filterChipActive]}
+                onPress={() => setActiveCity(active ? null : c)}
+              >
+                <Ionicons name="location-outline" size={11} color={active ? '#fff' : '#999'} />
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{c}</Text>
+              </TouchableOpacity>
+            );
+          })}
+        </ScrollView>
+      )}
 
       {tags.length > 0 && (
         <View style={styles.filterRow}>
@@ -445,6 +497,10 @@ const styles = StyleSheet.create({
     flex: 1,
     flexGrow: 1,
     flexShrink: 1,
+  },
+  metaFilterScroll: {
+    flexGrow: 0,
+    marginBottom: 12,
   },
   filterScrollContent: {
     gap: 8,
