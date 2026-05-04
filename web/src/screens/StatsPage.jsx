@@ -299,7 +299,10 @@ export default function StatsPage() {
           <h1 className="profile-name">stats</h1>
           <p className="profile-username-readonly">your collection over time</p>
         </div>
-        <Link to="/" className="link-btn" style={{ marginTop: 8 }}>things</Link>
+        <div className="header-links" style={{ marginTop: 8 }}>
+          <Link to={`/u/${targetSlug}`} className="link-btn">my collection</Link>
+          <Link to="/" className="link-btn">things</Link>
+        </div>
       </header>
 
       {items.length === 0 ? (

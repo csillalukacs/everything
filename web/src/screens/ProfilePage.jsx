@@ -599,7 +599,10 @@ export default function ProfilePage() {
             <p className="profile-username-readonly">@{username}</p>
           )}
         </div>
-        <Link to="/" className="link-btn" style={{ marginTop: 8 }}>things</Link>
+        <div className="header-links" style={{ marginTop: 8 }}>
+          {isOwner && <Link to="/stats" className="link-btn">stats</Link>}
+          <Link to="/" className="link-btn">things</Link>
+        </div>
       </header>
 
       <div className="search-row">
