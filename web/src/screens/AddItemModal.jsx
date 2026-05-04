@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import LocationPicker from './LocationPicker'
+import TagInput from './TagInput'
 
 function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   const d = open
@@ -16,8 +17,6 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [tags, setTags] = useState([])
   const [isPrivate, setIsPrivate] = useState(false)
   const [saving, setSaving] = useState(false)
-  const [addingTag, setAddingTag] = useState(false)
-  const [newTagName, setNewTagName] = useState('')
   const [year, setYear] = useState('')
   const [acquired, setAcquired] = useState(null)
   const fileInputRef = useRef(null)
@@ -36,17 +35,6 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     if (f?.type.startsWith('image/')) handleFileChange(f)
   }
 
-  function toggleTag(tag) {
-    setTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  }
-
-  function handleConfirmNewTag() {
-    const trimmed = newTagName.trim().toLowerCase()
-    if (trimmed && !tags.includes(trimmed)) setTags(prev => [...prev, trimmed])
-    setAddingTag(false)
-    setNewTagName('')
-  }
-
   function buildAcquired() {
     const y = year.trim()
     const yearNum = y ? parseInt(y, 10) : null
@@ -55,38 +43,29 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     return { year: validYear, location: acquired?.location ?? null, lat: acquired?.lat ?? null, lng: acquired?.lng ?? null }
   }
 
+  function resetState() {
+    setFile(null)
+    setPreview(null)
+    setName('')
+    setDescription('')
+    setTags([])
+    setIsPrivate(false)
+    setYear('')
+    setAcquired(null)
+  }
+
   async function handleSave() {
     if (!file) return
     setSaving(true)
     await onSave(name.trim(), file, tags, isPrivate, description.trim(), buildAcquired())
-    setFile(null)
-    setPreview(null)
-    setName('')
-    setDescription('')
-    setTags([])
-    setIsPrivate(false)
-    setYear('')
-    setAcquired(null)
+    resetState()
     setSaving(false)
   }
 
   function handleClose() {
-    setFile(null)
-    setPreview(null)
-    setName('')
-    setDescription('')
-    setTags([])
-    setIsPrivate(false)
-    setAddingTag(false)
-    setNewTagName('')
-    setYear('')
-    setAcquired(null)
+    resetState()
     onClose()
   }
-
-  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name))
-  const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]))
-  const tagOptions = [...new Set([...allTagNames, ...tags])].sort()
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>
@@ -102,9 +81,17 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         </div>
 
         {preview ? (
-          <div className="image-preview-wrap" onClick={() => { setFile(null); setPreview(null) }}>
+          <div className="image-preview-wrap">
             <img src={preview} alt="" className="image-preview" />
-            <div className="image-overlay">retake</div>
+            <button
+              type="button"
+              className={`privacy-corner${isPrivate ? ' privacy-corner-on' : ''}`}
+              onClick={() => setIsPrivate(prev => !prev)}
+              title={isPrivate ? 'private — click to make public' : 'public — click to make private'}
+            >
+              <LockIcon size={14} color="#fff" open={!isPrivate} />
+            </button>
+            <div className="image-overlay" onClick={() => { setFile(null); setPreview(null) }}>retake</div>
           </div>
         ) : (
           <div
@@ -125,64 +112,31 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           </div>
         )}
 
-        <div className="tag-scroll">
-          {tagOptions.map(tag => {
-            const selected = tags.includes(tag)
-            const isTagPrivate = tagPrivacyMap[tag]
-            return (
-              <button
-                key={tag}
-                className={`chip${selected ? ' chip-active' : ''}`}
-                onClick={() => toggleTag(tag)}
-              >{isTagPrivate && <LockIcon size={10} color="currentColor" />}{tag}</button>
-            )
-          })}
-          {addingTag ? (
-            <div className="new-tag-row">
-              <input
-                className="new-tag-input"
-                placeholder="tag"
-                value={newTagName}
-                onChange={e => setNewTagName(e.target.value)}
-                autoFocus
-                onKeyDown={e => e.key === 'Enter' && handleConfirmNewTag()}
-                onBlur={handleConfirmNewTag}
-              />
-              <button onClick={handleConfirmNewTag} className="new-tag-confirm">✓</button>
-            </div>
-          ) : (
-            <button className="chip chip-dashed" onClick={() => setAddingTag(true)}>+</button>
-          )}
+        <div className="modal-fields">
+          <TagInput value={tags} onChange={setTags} allTags={allTags} />
+          <input
+            className="name-input"
+            placeholder="name (optional)"
+            value={name}
+            onChange={e => setName(e.target.value)}
+          />
+          <textarea
+            className="description-input"
+            placeholder="description (optional)"
+            value={description}
+            onChange={e => setDescription(e.target.value)}
+          />
+          <input
+            className="name-input year-input-full"
+            type="number"
+            placeholder="year acquired (optional)"
+            min={1800}
+            max={2100}
+            value={year}
+            onChange={e => setYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
+          />
+          <LocationPicker value={acquired} onChange={setAcquired} placeholder="city acquired (optional)" />
         </div>
-
-        <input
-          className="name-input"
-          placeholder="name (optional)"
-          value={name}
-          onChange={e => setName(e.target.value)}
-        />
-        <textarea
-          className="description-input"
-          placeholder="description (optional)"
-          value={description}
-          onChange={e => setDescription(e.target.value)}
-        />
-        <input
-          className="name-input"
-          placeholder="year acquired (optional)"
-          inputMode="numeric"
-          maxLength={4}
-          value={year}
-          onChange={e => setYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-        />
-        <LocationPicker value={acquired} onChange={setAcquired} placeholder="city acquired (optional)" />
-        <button
-          className={`privacy-toggle${isPrivate ? ' privacy-toggle-on' : ''}`}
-          onClick={() => setIsPrivate(prev => !prev)}
-        >
-          <LockIcon size={12} color={isPrivate ? '#2D2D2D' : '#bbb'} open={!isPrivate} />
-          {isPrivate ? 'private' : 'public'}
-        </button>
       </div>
     </div>
   )

@@ -1,5 +1,6 @@
 import { useRef, useState } from 'react'
 import LocationPicker from './LocationPicker'
+import TagInput from './TagInput'
 
 function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   const d = open
@@ -19,8 +20,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [editYear, setEditYear] = useState('')
   const [editAcquired, setEditAcquired] = useState(null)
   const [saving, setSaving] = useState(false)
-  const [addingTag, setAddingTag] = useState(false)
-  const [newTagName, setNewTagName] = useState('')
   const fileInputRef = useRef(null)
 
   if (!visible || !item) return null
@@ -41,8 +40,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
 
   function cancelEdit() {
     setEditing(false)
-    setAddingTag(false)
-    setNewTagName('')
     setEditPhoto(null)
     setEditPreview(null)
     setEditDescription('')
@@ -52,17 +49,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     if (!f) return
     setEditPhoto(f)
     setEditPreview(URL.createObjectURL(f))
-  }
-
-  function toggleTag(tag) {
-    setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag])
-  }
-
-  function handleConfirmNewTag() {
-    const trimmed = newTagName.trim().toLowerCase()
-    if (trimmed && !editTags.includes(trimmed)) setEditTags(prev => [...prev, trimmed])
-    setAddingTag(false)
-    setNewTagName('')
   }
 
   function buildAcquired() {
@@ -88,9 +74,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   }
 
   const itemTags = item.tags ?? []
-  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name))
-  const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]))
-  const tagOptions = [...new Set([...allTagNames, ...editTags])].sort()
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && (editing ? cancelEdit() : onClose())}>
@@ -121,52 +104,34 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 <img src={editing ? editPreview : item.image_url} alt={item.name || ''} className="detail-image" />
               )}
               {editing && (
-                <div className="image-overlay" onClick={() => fileInputRef.current?.click()}>
-                  change image
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept="image/*"
-                    style={{ display: 'none' }}
-                    onChange={e => handleImageChange(e.target.files[0])}
-                  />
-                </div>
+                <>
+                  <button
+                    type="button"
+                    className={`privacy-corner${editPrivate ? ' privacy-corner-on' : ''}`}
+                    onClick={() => setEditPrivate(prev => !prev)}
+                    title={editPrivate ? 'private — click to make public' : 'public — click to make private'}
+                  >
+                    <LockIcon size={14} color="#fff" open={!editPrivate} />
+                  </button>
+                  <div className="image-overlay" onClick={() => fileInputRef.current?.click()}>
+                    change image
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      style={{ display: 'none' }}
+                      onChange={e => handleImageChange(e.target.files[0])}
+                    />
+                  </div>
+                </>
               )}
             </div>
           </div>
 
-          <div className="detail-info-col">
+          <div className={`detail-info-col${editing ? ' detail-info-col-editing' : ''}`}>
             {editing ? (
               <>
-                <div className="tag-scroll">
-                  {tagOptions.map(tag => {
-                    const selected = editTags.includes(tag)
-                    const isTagPrivate = tagPrivacyMap[tag]
-                    return (
-                      <button
-                        key={tag}
-                        className={`chip${selected ? ' chip-active' : ''}`}
-                        onClick={() => toggleTag(tag)}
-                      >{isTagPrivate && <LockIcon size={10} color="currentColor" />}{tag}</button>
-                    )
-                  })}
-                  {addingTag ? (
-                    <div className="new-tag-row">
-                      <input
-                        className="new-tag-input"
-                        placeholder="tag"
-                        value={newTagName}
-                        onChange={e => setNewTagName(e.target.value)}
-                        autoFocus
-                        onKeyDown={e => e.key === 'Enter' && handleConfirmNewTag()}
-                        onBlur={handleConfirmNewTag}
-                      />
-                      <button onClick={handleConfirmNewTag} className="new-tag-confirm">✓</button>
-                    </div>
-                  ) : (
-                    <button className="chip chip-dashed" onClick={() => setAddingTag(true)}>+</button>
-                  )}
-                </div>
+                <TagInput value={editTags} onChange={setEditTags} allTags={allTags} />
                 <input
                   className="name-input"
                   placeholder="name (optional)"
@@ -180,21 +145,15 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   onChange={e => setEditDescription(e.target.value)}
                 />
                 <input
-                  className="name-input"
+                  className="name-input year-input-full"
+                  type="number"
                   placeholder="year acquired (optional)"
-                  inputMode="numeric"
-                  maxLength={4}
+                  min={1800}
+                  max={2100}
                   value={editYear}
                   onChange={e => setEditYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                 />
                 <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder="city acquired (optional)" />
-                <button
-                  className={`privacy-toggle${editPrivate ? ' privacy-toggle-on' : ''}`}
-                  onClick={() => setEditPrivate(prev => !prev)}
-                >
-                  <LockIcon size={12} color={editPrivate ? '#2D2D2D' : '#bbb'} open={!editPrivate} />
-                  {editPrivate ? 'private' : 'public'}
-                </button>
               </>
             ) : (
               <>

@@ -187,6 +187,16 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   </View>
                 </TouchableOpacity>
               )}
+              <TouchableOpacity
+                style={[styles.privacyCorner, editPrivate && styles.privacyCornerOn]}
+                onPress={() => setEditPrivate(prev => !prev)}
+              >
+                <Ionicons
+                  name={editPrivate ? 'lock-closed' : 'lock-open-outline'}
+                  size={16}
+                  color="#fff"
+                />
+              </TouchableOpacity>
             </View>
 
             <CameraCaptureModal
@@ -281,13 +291,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               />
 
               <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder="city acquired (optional)" />
-
-              <TouchableOpacity style={styles.privacyToggle} onPress={() => setEditPrivate(prev => !prev)}>
-                <Ionicons name={editPrivate ? 'lock-closed' : 'lock-open-outline'} size={16} color={editPrivate ? '#2D2D2D' : '#bbb'} />
-                <Text style={[styles.privacyToggleText, editPrivate && styles.privacyToggleTextOn]}>
-                  {editPrivate ? 'private' : 'public'}
-                </Text>
-              </TouchableOpacity>
             </View>
           </ScrollView>
         ) : (
@@ -447,18 +450,19 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#2D2D2D',
   },
-  privacyToggle: {
-    flexDirection: 'row',
+  privacyCorner: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
+    justifyContent: 'center',
   },
-  privacyToggleText: {
-    fontSize: 14,
-    color: '#bbb',
-  },
-  privacyToggleTextOn: {
-    color: '#2D2D2D',
+  privacyCornerOn: {
+    backgroundColor: '#2D2D2D',
   },
   date: {
     fontSize: 13,

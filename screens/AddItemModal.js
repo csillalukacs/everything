@@ -118,19 +118,31 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           <Text style={styles.cancelText}>cancel</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity style={styles.imageContainer} onPress={() => setPhoto(null)} disabled={removingBg}>
-          <Image source={{ uri: photo }} style={styles.photo} />
-          {removingBg ? (
-            <View style={styles.retakeOverlay}>
-              <ActivityIndicator color="#fff" />
-              <Text style={styles.retakeText}>removing background...</Text>
-            </View>
-          ) : (
-            <View style={styles.retakeOverlay}>
-              <Text style={styles.retakeText}>retake</Text>
-            </View>
-          )}
-        </TouchableOpacity>
+        <View style={styles.imageContainer}>
+          <TouchableOpacity activeOpacity={0.9} onPress={() => setPhoto(null)} disabled={removingBg} style={StyleSheet.absoluteFill}>
+            <Image source={{ uri: photo }} style={styles.photo} />
+            {removingBg ? (
+              <View style={styles.retakeOverlay}>
+                <ActivityIndicator color="#fff" />
+                <Text style={styles.retakeText}>removing background...</Text>
+              </View>
+            ) : (
+              <View style={styles.retakeOverlay}>
+                <Text style={styles.retakeText}>retake</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.privacyCorner, isPrivate && styles.privacyCornerOn]}
+            onPress={() => setIsPrivate(prev => !prev)}
+          >
+            <Ionicons
+              name={isPrivate ? 'lock-closed' : 'lock-open-outline'}
+              size={16}
+              color="#fff"
+            />
+          </TouchableOpacity>
+        </View>
 
         <ScrollView
           horizontal
@@ -217,13 +229,6 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         <View style={{ marginBottom: 12 }}>
           <LocationPicker value={acquired} onChange={setAcquired} placeholder="city acquired (optional)" />
         </View>
-
-        <TouchableOpacity style={styles.privacyToggle} onPress={() => setIsPrivate(prev => !prev)}>
-          <Ionicons name={isPrivate ? 'lock-closed' : 'lock-open-outline'} size={16} color={isPrivate ? '#2D2D2D' : '#bbb'} />
-          <Text style={[styles.privacyToggleText, isPrivate && styles.privacyToggleTextOn]}>
-            {isPrivate ? 'private' : 'public'}
-          </Text>
-        </TouchableOpacity>
 
         <TouchableOpacity
           style={[styles.button, saving && styles.buttonDisabled]}
@@ -355,18 +360,18 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
   },
-  privacyToggle: {
-    flexDirection: 'row',
+  privacyCorner: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: 'rgba(0,0,0,0.45)',
     alignItems: 'center',
-    gap: 8,
-    paddingVertical: 10,
-    marginBottom: 4,
+    justifyContent: 'center',
   },
-  privacyToggleText: {
-    fontSize: 14,
-    color: '#bbb',
-  },
-  privacyToggleTextOn: {
-    color: '#2D2D2D',
+  privacyCornerOn: {
+    backgroundColor: '#2D2D2D',
   },
 });
