@@ -44,7 +44,15 @@
       "expo-asset",
       "expo-web-browser",
       "expo-media-library",
-      "expo-router"
+      "expo-router",
+      [
+        "expo-build-properties",
+        {
+          "ios": {
+            "deploymentTarget": "15.5"
+          }
+        }
+      ]
     ],
     "extra": {
       "router": {},

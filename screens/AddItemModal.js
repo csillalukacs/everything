@@ -16,6 +16,7 @@ import {
   View,
 } from 'react-native';
 import { cropToContent } from '../lib/cropToContent';
+import { ocrImage } from '../lib/ocr';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
@@ -31,11 +32,13 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [removingBg, setRemovingBg] = useState(false);
   const [year, setYear] = useState('');
   const [acquired, setAcquired] = useState(null);
+  const ocrPromiseRef = useRef(null);
   const scrollRef = useRef(null);
 
   async function processCapturedUri(uri) {
     setPhoto(uri);
     setRemovingBg(true);
+    ocrPromiseRef.current = ocrImage(uri);
     try {
       const cleaned = await removeBackground(uri);
       setPhoto(await cropToContent(cleaned));
@@ -71,7 +74,8 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   async function handleSave() {
     if (!photo) return;
     setSaving(true);
-    await onSave(name.trim(), photo, tags, isPrivate, description.trim(), buildAcquired());
+    const ocrText = await (ocrPromiseRef.current ?? Promise.resolve(null));
+    await onSave(name.trim(), photo, tags, isPrivate, description.trim(), buildAcquired(), ocrText);
     setName('');
     setDescription('');
     setPhoto(null);
@@ -79,6 +83,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setIsPrivate(false);
     setYear('');
     setAcquired(null);
+    ocrPromiseRef.current = null;
     setSaving(false);
   }
 
@@ -92,6 +97,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setNewTagName('');
     setYear('');
     setAcquired(null);
+    ocrPromiseRef.current = null;
     onClose();
   }
 

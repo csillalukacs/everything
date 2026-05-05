@@ -22,6 +22,7 @@ import { runOnJS } from 'react-native-worklets';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 import { cropToContent } from '../lib/cropToContent';
+import { ocrImage } from '../lib/ocr';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
@@ -42,6 +43,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [newTagName, setNewTagName] = useState('');
   const nameInputRef = useRef(null);
   const scrollRef = useRef(null);
+  const ocrPromiseRef = useRef(null);
   const translateX = useSharedValue(0);
 
   const swipeGesture = Gesture.Pan()
@@ -110,12 +112,14 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setAddingTag(false);
     setNewTagName('');
     setEditDescription('');
+    ocrPromiseRef.current = null;
   }
 
   async function handleCaptured(uri) {
     setCameraVisible(false);
     setEditPhoto(uri);
     setRemovingBg(true);
+    ocrPromiseRef.current = ocrImage(uri);
     try {
       const cleaned = await removeBackground(uri);
       setEditPhoto(await cropToContent(cleaned));
@@ -154,7 +158,9 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   async function handleSave() {
     setSaving(true);
-    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired());
+    const ocrText = ocrPromiseRef.current ? await ocrPromiseRef.current : undefined;
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), ocrText);
+    ocrPromiseRef.current = null;
     setSaving(false);
     setEditing(false);
     setEditDescription('');

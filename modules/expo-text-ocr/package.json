@@ -1,0 +1,7 @@
+{
+  "name": "expo-text-ocr",
+  "version": "0.1.0",
+  "description": "Local Apple Vision text recognition module",
+  "main": "index.js",
+  "private": true
+}

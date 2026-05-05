@@ -72,9 +72,9 @@ export default function Collection() {
     });
   }
 
-  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired) {
+  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText) {
     if (!selectedItem) return;
-    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired);
+    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText);
     if (updated) setSelectedItem(updated);
   }
 
@@ -107,8 +107,9 @@ export default function Collection() {
     if (query) {
       const name = (i.name ?? '').toLowerCase();
       const desc = (i.description ?? '').toLowerCase();
+      const ocr = (i.ocr_text ?? '').toLowerCase();
       const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase());
-      if (!(name.includes(query) || desc.includes(query) || tagNames.some(n => n.includes(query)))) return false;
+      if (!(name.includes(query) || desc.includes(query) || ocr.includes(query) || tagNames.some(n => n.includes(query)))) return false;
     }
     if (activeYear === 'none') {
       if (i.acquired_year != null) return false;
