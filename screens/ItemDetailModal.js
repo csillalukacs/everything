@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
+  Dimensions,
   Keyboard,
   KeyboardAvoidingView,
   Modal,
@@ -15,6 +16,11 @@ import {
   View,
 } from 'react-native';
 import { Image } from 'expo-image';
+import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import { runOnJS } from 'react-native-worklets';
+
+const SCREEN_WIDTH = Dimensions.get('window').width;
 import { cropToContent } from '../lib/cropToContent';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
@@ -36,6 +42,40 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [newTagName, setNewTagName] = useState('');
   const nameInputRef = useRef(null);
   const scrollRef = useRef(null);
+  const translateX = useSharedValue(0);
+
+  const swipeGesture = Gesture.Pan()
+    .activeOffsetX([-20, 20])
+    .failOffsetY([-20, 20])
+    .onUpdate((e) => {
+      translateX.value = e.translationX;
+    })
+    .onEnd((e) => {
+      const threshold = 80;
+      if (e.translationX > threshold && onPrev) {
+        translateX.value = withTiming(SCREEN_WIDTH, { duration: 200 }, (finished) => {
+          if (finished) {
+            runOnJS(onPrev)();
+            translateX.value = -SCREEN_WIDTH;
+            translateX.value = withTiming(0, { duration: 220 });
+          }
+        });
+      } else if (e.translationX < -threshold && onNext) {
+        translateX.value = withTiming(-SCREEN_WIDTH, { duration: 200 }, (finished) => {
+          if (finished) {
+            runOnJS(onNext)();
+            translateX.value = SCREEN_WIDTH;
+            translateX.value = withTiming(0, { duration: 220 });
+          }
+        });
+      } else {
+        translateX.value = withSpring(0);
+      }
+    });
+
+  const swipeStyle = useAnimatedStyle(() => ({
+    transform: [{ translateX: translateX.value }],
+  }));
 
   useEffect(() => {
     if (visible && autoEdit) enterEdit();
@@ -130,6 +170,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={editing ? cancelEdit : onClose}>
+      <GestureHandlerRootView style={{ flex: 1 }}>
       <KeyboardAvoidingView
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
@@ -293,7 +334,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
             </View>
           </ScrollView>
         ) : (
-          <>
+          <GestureDetector gesture={swipeGesture}>
+          <Animated.View style={[{ flex: 1 }, swipeStyle]}>
             <View style={styles.imageContainer}>
               {displayPhoto
                 ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" />
@@ -338,9 +380,11 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 <Text style={styles.deleteText}>delete item</Text>
               </TouchableOpacity>
             )}
-          </>
+          </Animated.View>
+          </GestureDetector>
         )}
       </KeyboardAvoidingView>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
