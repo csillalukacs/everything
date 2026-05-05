@@ -69,6 +69,8 @@ export default function ProfilePage() {
   const fromParam = searchParams.get('from') || null
   const toParam = searchParams.get('to') || null
   const itemIdParam = searchParams.get('item') || null
+  const sortParam = searchParams.get('sort') || 'newest'
+  const tagParam = searchParams.get('tag') || null
 
   const [userId, setUserId] = useState(null)
   const [notFound, setNotFound] = useState(false)
@@ -77,7 +79,6 @@ export default function ProfilePage() {
   const [profileName, setProfileName] = useState(null)
   const [username, setUsername] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [activeTag, setActiveTag] = useState(null)
   const [isOwner, setIsOwner] = useState(false)
   const [editingName, setEditingName] = useState(false)
   const [nameInput, setNameInput] = useState('')
@@ -107,6 +108,23 @@ export default function ProfilePage() {
 
   function openItem(item) { updateParams({ item: item.id }) }
   function closeItem() { updateParams({ item: null }) }
+  function setActiveTag(tag) {
+    if (!tag) updateParams({ tag: null })
+    else if (tag.id === '__untagged__') updateParams({ tag: '__untagged__' })
+    else updateParams({ tag: tag.name })
+  }
+
+  const activeTag = useMemo(() => {
+    if (!tagParam) return null
+    if (tagParam === '__untagged__') return { id: '__untagged__' }
+    const fromAll = allTags.find(t => t.name === tagParam)
+    if (fromAll) return fromAll
+    for (const item of items) {
+      const t = (item.tags ?? []).find(t => t.name === tagParam)
+      if (t) return t
+    }
+    return null
+  }, [tagParam, allTags, items])
 
   useEffect(() => {
     async function load() {
@@ -382,11 +400,37 @@ export default function ProfilePage() {
   })
   const visibleTags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name))
 
+  const sortedItems = useMemo(() => {
+    const arr = [...items]
+    const cmpName = (a, b) => {
+      const an = (a.name ?? '').toLowerCase()
+      const bn = (b.name ?? '').toLowerCase()
+      if (!an && !bn) return 0
+      if (!an) return 1
+      if (!bn) return -1
+      return an.localeCompare(bn)
+    }
+    const cmpYear = (a, b) => {
+      if (a.acquired_year == null && b.acquired_year == null) return 0
+      if (a.acquired_year == null) return 1
+      if (b.acquired_year == null) return -1
+      return a.acquired_year - b.acquired_year
+    }
+    switch (sortParam) {
+      case 'oldest': return arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      case 'name-asc': return arr.sort(cmpName)
+      case 'name-desc': return arr.sort((a, b) => -cmpName(a, b))
+      case 'acquired-desc': return arr.sort((a, b) => -cmpYear(a, b))
+      case 'acquired-asc': return arr.sort(cmpYear)
+      default: return arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+    }
+  }, [items, sortParam])
+
   const query = searchQuery.trim().toLowerCase()
   const fromDate = fromParam ? new Date(fromParam) : null
   const toDate = toParam ? new Date(toParam + 'T23:59:59') : null
   const cityParamLower = cityParam?.toLowerCase() ?? null
-  const searchedItems = items.filter(i => {
+  const searchedItems = sortedItems.filter(i => {
     if (query) {
       const name = (i.name ?? '').toLowerCase()
       const desc = (i.description ?? '').toLowerCase()
@@ -647,6 +691,19 @@ export default function ProfilePage() {
             {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
           </select>
         )}
+        <select
+          className={`filter-select${sortParam !== 'newest' ? ' filter-select-active' : ''}`}
+          value={sortParam}
+          onChange={e => updateParams({ sort: e.target.value === 'newest' ? null : e.target.value })}
+          aria-label="sort"
+        >
+          <option value="newest">newest</option>
+          <option value="oldest">oldest</option>
+          <option value="name-asc">name a–z</option>
+          <option value="name-desc">name z–a</option>
+          <option value="acquired-desc">acquired (newest)</option>
+          <option value="acquired-asc">acquired (oldest)</option>
+        </select>
         {yearRangeLabel && (
           <button
             className="filter-select filter-select-active filter-date-chip"
@@ -699,7 +756,7 @@ export default function ProfilePage() {
       )}
 
       <div className="grid">
-        {items.map(item => {
+        {sortedItems.map(item => {
           const isSelected = selectedIds.has(item.id)
           const visible = visibleItemIds.has(item.id)
           return (
