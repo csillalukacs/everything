@@ -1,9 +1,12 @@
 import { useState } from 'react';
+import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
+import OpenProfileSheet from '../../screens/OpenProfileSheet';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -16,9 +19,11 @@ function getDailyItem(items) {
 }
 
 export default function Feed() {
+  const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, tags, updateItem, deleteItem } = useCollection();
   const [selectedItem, setSelectedItem] = useState(null);
+  const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
   const dailyItem = getDailyItem(items);
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
@@ -43,6 +48,9 @@ export default function Feed() {
       >
         <View style={styles.header}>
           <Text style={styles.title}>things</Text>
+          <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
+            <Ionicons name="search" size={22} color="#999" />
+          </TouchableOpacity>
         </View>
 
         {!dailyItem ? (
@@ -91,6 +99,12 @@ export default function Feed() {
         onDelete={handleDelete}
         allTags={tags}
       />
+
+      <OpenProfileSheet
+        visible={openProfileVisible}
+        onClose={() => setOpenProfileVisible(false)}
+        onOpen={slug => { setOpenProfileVisible(false); router.push(`/u/${slug}`); }}
+      />
     </View>
   );
 }
@@ -101,6 +115,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#F5F0EB',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 28,
   },
   title: {
@@ -109,6 +126,9 @@ const styles = StyleSheet.create({
     letterSpacing: 1,
     color: '#2D2D2D',
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
+  },
+  headerIconBtn: {
+    padding: 4,
   },
   empty: {
     paddingVertical: 80,

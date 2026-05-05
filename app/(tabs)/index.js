@@ -17,7 +17,6 @@ import { Image } from 'expo-image';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
-import OpenProfileSheet from '../../screens/OpenProfileSheet';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -49,7 +48,6 @@ export default function Collection() {
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [manageTagSearch, setManageTagSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
-  const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
   function cityOf(loc) {
     if (!loc) return null;
@@ -165,9 +163,6 @@ export default function Collection() {
           </Text>
         </View>
         <View style={styles.headerActions}>
-          <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
-            <Ionicons name="search" size={22} color="#999" />
-          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/stats')} style={styles.headerIconBtn}>
             <Ionicons name="bar-chart-outline" size={22} color="#999" />
           </TouchableOpacity>
@@ -380,12 +375,6 @@ export default function Collection() {
         onApply={handleBatchEdit}
         allTags={tags}
         selectedCount={selectedIds.size}
-      />
-
-      <OpenProfileSheet
-        visible={openProfileVisible}
-        onClose={() => setOpenProfileVisible(false)}
-        onOpen={slug => { setOpenProfileVisible(false); router.push(`/u/${slug}`); }}
       />
 
       <Modal
