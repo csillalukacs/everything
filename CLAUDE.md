@@ -29,7 +29,7 @@ No test suite or linter is configured.
 
 ## Architecture (mobile / native)
 
-**everything** is an Expo React Native app ("a home for your stuff") — a personal item catalogue with photo capture, tagging, and a free-form collage canvas.
+**things** (the app's name in `app.json`, despite the repo being called `everything`) is an Expo React Native app ("a home for your stuff") — a personal item catalogue with photo capture, tagging, and a free-form collage canvas.
 
 ### State and data flow
 
@@ -77,7 +77,7 @@ These are reused by the routes above. Most are still rendered as `<Modal>` overl
 
 ### Deep linking
 
-The `scheme: "everything"` in `app.json` plus Expo Router's automatic linking config means `everything://u/alice` opens `/u/alice` natively. HTTPS universal links require additional platform-side setup (`apple-app-site-association`, `assetlinks.json`) — not yet configured.
+The `scheme: "things"` in `app.json` plus Expo Router's automatic linking config means `things://u/alice` opens `/u/alice` natively. HTTPS universal links require additional platform-side setup (`apple-app-site-association`, `assetlinks.json`) — not yet configured.
 
 ### Key libraries
 
