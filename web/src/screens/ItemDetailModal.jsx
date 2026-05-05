@@ -178,7 +178,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 )}
                 {item.description && <p className="detail-description">{item.description}</p>}
                 {(item.acquired_location || item.acquired_year) && (
-                  <p className="detail-date">
+                  <p className="detail-acquired">
                     acquired{item.acquired_location ? ` in ${item.acquired_location.split(',')[0]}` : ''}
                     {item.acquired_year ? ` · ${item.acquired_year}` : ''}
                   </p>

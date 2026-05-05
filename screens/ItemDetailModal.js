@@ -45,6 +45,17 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const scrollRef = useRef(null);
   const ocrPromiseRef = useRef(null);
   const translateX = useSharedValue(0);
+  const pendingDir = useRef(null);
+
+  function triggerPrev() {
+    pendingDir.current = 'prev';
+    onPrev();
+  }
+
+  function triggerNext() {
+    pendingDir.current = 'next';
+    onNext();
+  }
 
   const swipeGesture = Gesture.Pan()
     .activeOffsetX([-20, 20])
@@ -56,24 +67,23 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       const threshold = 80;
       if (e.translationX > threshold && onPrev) {
         translateX.value = withTiming(SCREEN_WIDTH, { duration: 200 }, (finished) => {
-          if (finished) {
-            runOnJS(onPrev)();
-            translateX.value = -SCREEN_WIDTH;
-            translateX.value = withTiming(0, { duration: 220 });
-          }
+          if (finished) runOnJS(triggerPrev)();
         });
       } else if (e.translationX < -threshold && onNext) {
         translateX.value = withTiming(-SCREEN_WIDTH, { duration: 200 }, (finished) => {
-          if (finished) {
-            runOnJS(onNext)();
-            translateX.value = SCREEN_WIDTH;
-            translateX.value = withTiming(0, { duration: 220 });
-          }
+          if (finished) runOnJS(triggerNext)();
         });
       } else {
         translateX.value = withSpring(0);
       }
     });
+
+  useEffect(() => {
+    if (!pendingDir.current) return;
+    translateX.value = pendingDir.current === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH;
+    translateX.value = withTiming(0, { duration: 220 });
+    pendingDir.current = null;
+  }, [item?.id]);
 
   const swipeStyle = useAnimatedStyle(() => ({
     transform: [{ translateX: translateX.value }],
@@ -372,7 +382,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               )}
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               {(item.acquired_location || item.acquired_year) && (
-                <Text style={styles.date}>
+                <Text style={styles.acquired}>
                   acquired{item.acquired_location ? ` in ${item.acquired_location.split(',')[0]}` : ''}
                   {item.acquired_year ? ` · ${item.acquired_year}` : ''}
                 </Text>
@@ -516,6 +526,11 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 13,
     color: '#999',
+  },
+  acquired: {
+    fontSize: 16,
+    color: '#2D2D2D',
+    fontWeight: '500',
   },
   deleteButton: {
     paddingVertical: 16,

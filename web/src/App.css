@@ -824,6 +824,12 @@ input {
   color: #999;
 }
 
+.detail-acquired {
+  font-size: 16px;
+  color: #2D2D2D;
+  font-weight: 500;
+}
+
 .delete-btn {
   color: #E74C3C;
   font-size: 15px;
