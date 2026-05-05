@@ -2,8 +2,19 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useMemo } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import MapView, { Marker, PROVIDER_DEFAULT } from 'react-native-maps';
 import { useCollection } from '../lib/CollectionProvider';
+
+let MapView = null;
+let Marker = null;
+let PROVIDER_DEFAULT = null;
+try {
+  const maps = require('react-native-maps');
+  MapView = maps.default;
+  Marker = maps.Marker;
+  PROVIDER_DEFAULT = maps.PROVIDER_DEFAULT;
+} catch {
+  // react-native-maps native module not registered — map section will be hidden.
+}
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
@@ -249,7 +260,7 @@ export default function StatsScreen() {
               </Section>
             )}
 
-            {mapMarkers.length > 0 && mapRegion && (
+            {MapView && mapMarkers.length > 0 && mapRegion && (
               <Section title="acquired around the world">
                 <View style={styles.mapWrap}>
                   <MapView
