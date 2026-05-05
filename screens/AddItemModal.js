@@ -204,12 +204,11 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           onSubmitEditing={Keyboard.dismiss}
         />
         <TextInput
-          style={[styles.input, styles.descriptionInput]}
+          style={styles.input}
           placeholder="description (optional)"
           placeholderTextColor="#bbb"
           value={description}
           onChangeText={setDescription}
-          multiline
           returnKeyType="done"
           onSubmitEditing={Keyboard.dismiss}
         />
@@ -341,11 +340,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2D2D2D',
     marginBottom: 12,
-  },
-  descriptionInput: {
-    fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
   button: {
     backgroundColor: '#2D2D2D',

@@ -268,12 +268,11 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 />
               </TouchableOpacity>
               <TextInput
-                style={[styles.nameInput, styles.descriptionInput]}
+                style={styles.nameInput}
                 value={editDescription}
                 onChangeText={setEditDescription}
                 placeholder="description (optional)"
                 placeholderTextColor="#bbb"
-                multiline
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
               />
@@ -538,11 +537,6 @@ const styles = StyleSheet.create({
     paddingVertical: 14,
     fontSize: 16,
     color: '#2D2D2D',
-  },
-  descriptionInput: {
-    fontSize: 14,
-    minHeight: 80,
-    textAlignVertical: 'top',
   },
   description: {
     fontSize: 14,
