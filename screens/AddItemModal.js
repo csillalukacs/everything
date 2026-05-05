@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
@@ -31,6 +31,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [removingBg, setRemovingBg] = useState(false);
   const [year, setYear] = useState('');
   const [acquired, setAcquired] = useState(null);
+  const scrollRef = useRef(null);
 
   async function processCapturedUri(uri) {
     setPhoto(uri);
@@ -114,6 +115,12 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
+        <ScrollView
+          ref={scrollRef}
+          contentContainerStyle={styles.scrollContent}
+          keyboardShouldPersistTaps="handled"
+          showsVerticalScrollIndicator={false}
+        >
         <TouchableOpacity style={styles.cancel} onPress={handleClose}>
           <Text style={styles.cancelText}>cancel</Text>
         </TouchableOpacity>
@@ -226,7 +233,12 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         />
 
         <View style={{ marginBottom: 12 }}>
-          <LocationPicker value={acquired} onChange={setAcquired} placeholder="city acquired (optional)" />
+          <LocationPicker
+            value={acquired}
+            onChange={setAcquired}
+            placeholder="city acquired (optional)"
+            onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)}
+          />
         </View>
 
         <TouchableOpacity
@@ -236,6 +248,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         >
           <Text style={styles.buttonText}>{saving ? 'saving...' : 'save'}</Text>
         </TouchableOpacity>
+        </ScrollView>
       </KeyboardAvoidingView>
     </Modal>
   );
@@ -245,8 +258,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F0EB',
+  },
+  scrollContent: {
     paddingTop: 60,
     paddingHorizontal: 24,
+    paddingBottom: 40,
   },
   cancel: {
     marginBottom: 24,

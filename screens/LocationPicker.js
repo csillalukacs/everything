@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { searchPlaces } from '../lib/geocode';
 
-export default function LocationPicker({ value, onChange, placeholder = 'city (optional)' }) {
+export default function LocationPicker({ value, onChange, placeholder = 'city (optional)', onFocus: onFocusProp }) {
   const [query, setQuery] = useState(value?.location ?? '');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -60,7 +60,7 @@ export default function LocationPicker({ value, onChange, placeholder = 'city (o
           placeholderTextColor="#bbb"
           value={query}
           onChangeText={handleChange}
-          onFocus={() => setFocused(true)}
+          onFocus={() => { setFocused(true); onFocusProp?.(); }}
           onBlur={() => setTimeout(() => setFocused(false), 150)}
           autoCorrect={false}
           autoCapitalize="words"
@@ -74,7 +74,7 @@ export default function LocationPicker({ value, onChange, placeholder = 'city (o
           )}
       </View>
       {showResults && (
-        <View style={styles.results}>
+        <View style={styles.results} onLayout={() => onFocusProp?.()}>
           {results.map((r, i) => (
             <TouchableOpacity
               key={`${r.lat},${r.lng},${i}`}
