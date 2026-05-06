@@ -197,7 +197,7 @@ export default function StatsPage() {
       if (cached) { setItems(cached); setLoading(false) }
       supabase
         .from('items')
-        .select('id, created_at, name, acquired_year, acquired_location, acquired_lat, acquired_lng')
+        .select('id, created_at, name, image_url, acquired_year, acquired_location, acquired_lat, acquired_lng')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => {
@@ -261,17 +261,37 @@ export default function StatsPage() {
     return { bars, max: maxCount, bucketSize }
   }, [items])
 
-  const mapMarkers = useMemo(() => {
-    return items
-      .filter(i => i.acquired_lat != null && i.acquired_lng != null)
-      .map(i => ({
-        id: i.id,
-        lat: i.acquired_lat,
-        lng: i.acquired_lng,
-        city: cityOf(i.acquired_location),
-        title: i.name || cityOf(i.acquired_location) || 'item',
-        subtitle: [i.acquired_year, i.acquired_location?.split(',').slice(1, 3).join(',').trim()].filter(Boolean).join(' · '),
-      }))
+  const mapGroups = useMemo(() => {
+    const groups = new Map()
+    for (const i of items) {
+      if (i.acquired_lat == null || i.acquired_lng == null) continue
+      const city = cityOf(i.acquired_location)
+      const key = city
+        ? `city:${city.toLowerCase()}`
+        : `coord:${Math.round(i.acquired_lat * 10) / 10},${Math.round(i.acquired_lng * 10) / 10}`
+      let g = groups.get(key)
+      if (!g) {
+        g = { key, city, items: [], latSum: 0, lngSum: 0 }
+        groups.set(key, g)
+      }
+      g.items.push(i)
+      g.latSum += i.acquired_lat
+      g.lngSum += i.acquired_lng
+    }
+    return [...groups.values()].map(g => {
+      const withImage = g.items.filter(i => i.image_url)
+      const pool = withImage.length > 0 ? withImage : g.items
+      const shuffled = [...pool].sort(() => Math.random() - 0.5)
+      return {
+        key: g.key,
+        lat: g.latSum / g.items.length,
+        lng: g.lngSum / g.items.length,
+        city: g.city,
+        count: g.items.length,
+        samples: shuffled.slice(0, 5),
+        regionLabel: g.items[0]?.acquired_location?.split(',').slice(1, 3).join(',').trim() || null,
+      }
+    })
   }, [items])
 
   const topCities = useMemo(() => {
@@ -290,11 +310,16 @@ export default function StatsPage() {
   const topCitiesMax = topCities.length > 0 ? Math.max(...topCities.map(c => c.count)) : 0
 
   const mapBounds = useMemo(() => {
-    if (mapMarkers.length === 0) return null
-    const pts = mapMarkers.map(m => [m.lat, m.lng])
+    if (mapGroups.length === 0) return null
+    const pts = mapGroups.map(g => [g.lat, g.lng])
     if (home) pts.push([home.lat, home.lng])
     return pts
-  }, [mapMarkers, home])
+  }, [mapGroups, home])
+
+  const totalLocatedItems = useMemo(
+    () => mapGroups.reduce((sum, g) => sum + g.count, 0),
+    [mapGroups]
+  )
 
   if (loading) {
     return <div className="centered"><div className="spinner" /></div>
@@ -455,7 +480,7 @@ export default function StatsPage() {
             </section>
           )}
 
-          {mapMarkers.length > 0 && (
+          {mapGroups.length > 0 && (
             <section className="stats-section">
               <h2 className="stats-section-title">acquired around the world</h2>
               <div className="stats-map">
@@ -469,24 +494,48 @@ export default function StatsPage() {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
-                  {home && mapMarkers.map(m => (
+                  {home && mapGroups.map(g => (
                     <Polyline
-                      key={`line-${m.id}`}
-                      positions={[[home.lat, home.lng], [m.lat, m.lng]]}
+                      key={`line-${g.key}`}
+                      positions={[[home.lat, home.lng], [g.lat, g.lng]]}
                       pathOptions={{ color: '#2D2D2D', weight: 1, opacity: 0.35 }}
                     />
                   ))}
-                  {mapMarkers.map(m => (
-                    <Marker key={m.id} position={[m.lat, m.lng]} icon={markerIcon}>
+                  {mapGroups.map(g => (
+                    <Marker key={g.key} position={[g.lat, g.lng]} icon={markerIcon}>
                       <Popup>
-                        <strong>{m.title}</strong>
-                        {m.subtitle && <><br />{m.subtitle}</>}
-                        {m.city && (
-                          <><br /><a
-                            href="#"
-                            onClick={e => { e.preventDefault(); goWith({ city: m.city }) }}
-                          >see all from {m.city}</a></>
-                        )}
+                        <div className="map-popup">
+                          <div className="map-popup-title">{g.city || 'unnamed location'}</div>
+                          <div className="map-popup-sub">
+                            {g.count} object{g.count === 1 ? '' : 's'}
+                            {g.regionLabel ? ` · ${g.regionLabel}` : ''}
+                          </div>
+                          {g.samples.length > 0 && (
+                            <div className="map-popup-thumbs">
+                              {g.samples.map(s => (
+                                <button
+                                  key={s.id}
+                                  type="button"
+                                  className="map-popup-thumb"
+                                  onClick={() => goWith({ item: s.id })}
+                                  title={s.name || ''}
+                                >
+                                  {s.image_url
+                                    ? <img src={s.image_url} alt={s.name || ''} />
+                                    : <div className="map-popup-thumb-placeholder" />
+                                  }
+                                </button>
+                              ))}
+                            </div>
+                          )}
+                          {g.city && (
+                            <a
+                              href="#"
+                              className="map-popup-link"
+                              onClick={e => { e.preventDefault(); goWith({ city: g.city }) }}
+                            >see all from {g.city} →</a>
+                          )}
+                        </div>
                       </Popup>
                     </Marker>
                   ))}
@@ -501,7 +550,7 @@ export default function StatsPage() {
                 </MapContainer>
               </div>
               <p className="stats-map-caption">
-                {mapMarkers.length} object{mapMarkers.length === 1 ? '' : 's'} with a known location
+                {totalLocatedItems} object{totalLocatedItems === 1 ? '' : 's'} across {mapGroups.length} location{mapGroups.length === 1 ? '' : 's'}
                 {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
               </p>
             </section>

@@ -1,7 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useCollection } from '../lib/CollectionProvider';
 import { supabase } from '../lib/supabase';
 
@@ -20,6 +21,12 @@ try {
 }
 
 const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function cityOf(loc) {
+  if (!loc) return null;
+  const c = loc.split(',')[0].trim();
+  return c || null;
+}
 
 function startOfDay(d) { const x = new Date(d); x.setHours(0, 0, 0, 0); return x; }
 function dayKey(d) {
@@ -127,6 +134,7 @@ export default function StatsScreen() {
   const router = useRouter();
   const { items, session } = useCollection();
   const [home, setHome] = useState(null);
+  const [selectedGroup, setSelectedGroup] = useState(null);
 
   useEffect(() => {
     if (!session) return;
@@ -188,22 +196,48 @@ export default function StatsScreen() {
     return { bars, max: maxCount, bucketSize };
   }, [items]);
 
-  const mapMarkers = useMemo(() => {
-    return items
-      .filter(i => i.acquired_lat != null && i.acquired_lng != null)
-      .map(i => ({
-        id: i.id,
-        lat: i.acquired_lat,
-        lng: i.acquired_lng,
-        title: i.name || i.acquired_location?.split(',')[0] || 'item',
-        subtitle: i.acquired_year ? String(i.acquired_year) : (i.acquired_location?.split(',').slice(1, 3).join(',').trim() ?? ''),
-      }));
+  const mapGroups = useMemo(() => {
+    const groups = new Map();
+    for (const i of items) {
+      if (i.acquired_lat == null || i.acquired_lng == null) continue;
+      const city = cityOf(i.acquired_location);
+      const key = city
+        ? `city:${city.toLowerCase()}`
+        : `coord:${Math.round(i.acquired_lat * 10) / 10},${Math.round(i.acquired_lng * 10) / 10}`;
+      let g = groups.get(key);
+      if (!g) {
+        g = { key, city, items: [], latSum: 0, lngSum: 0 };
+        groups.set(key, g);
+      }
+      g.items.push(i);
+      g.latSum += i.acquired_lat;
+      g.lngSum += i.acquired_lng;
+    }
+    return [...groups.values()].map(g => {
+      const withImage = g.items.filter(i => i.image_url);
+      const pool = withImage.length > 0 ? withImage : g.items;
+      const shuffled = [...pool].sort(() => Math.random() - 0.5);
+      return {
+        key: g.key,
+        lat: g.latSum / g.items.length,
+        lng: g.lngSum / g.items.length,
+        city: g.city,
+        count: g.items.length,
+        samples: shuffled.slice(0, 5),
+        regionLabel: g.items[0]?.acquired_location?.split(',').slice(1, 3).join(',').trim() || null,
+      };
+    });
   }, [items]);
 
+  const totalLocatedItems = useMemo(
+    () => mapGroups.reduce((sum, g) => sum + g.count, 0),
+    [mapGroups]
+  );
+
   const mapRegion = useMemo(() => {
-    if (mapMarkers.length === 0) return null;
-    const lats = mapMarkers.map(m => m.lat);
-    const lngs = mapMarkers.map(m => m.lng);
+    if (mapGroups.length === 0) return null;
+    const lats = mapGroups.map(g => g.lat);
+    const lngs = mapGroups.map(g => g.lng);
     if (home) { lats.push(home.lat); lngs.push(home.lng); }
     const minLat = Math.min(...lats), maxLat = Math.max(...lats);
     const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
@@ -215,7 +249,7 @@ export default function StatsScreen() {
       latitudeDelta: latDelta,
       longitudeDelta: lngDelta,
     };
-  }, [mapMarkers, home]);
+  }, [mapGroups, home]);
 
   return (
     <View style={styles.container}>
@@ -284,7 +318,7 @@ export default function StatsScreen() {
               </Section>
             )}
 
-            {MapView && mapMarkers.length > 0 && mapRegion && (
+            {MapView && mapGroups.length > 0 && mapRegion && (
               <Section title="acquired around the world">
                 <View style={styles.mapWrap}>
                   <MapView
@@ -292,23 +326,24 @@ export default function StatsScreen() {
                     provider={PROVIDER_DEFAULT}
                     initialRegion={mapRegion}
                   >
-                    {home && Polyline && mapMarkers.map(m => (
+                    {home && Polyline && mapGroups.map(g => (
                       <Polyline
-                        key={`line-${m.id}`}
+                        key={`line-${g.key}`}
                         coordinates={[
                           { latitude: home.lat, longitude: home.lng },
-                          { latitude: m.lat, longitude: m.lng },
+                          { latitude: g.lat, longitude: g.lng },
                         ]}
                         strokeColor="rgba(45,45,45,0.35)"
                         strokeWidth={1}
                       />
                     ))}
-                    {mapMarkers.map(m => (
+                    {mapGroups.map(g => (
                       <Marker
-                        key={m.id}
-                        coordinate={{ latitude: m.lat, longitude: m.lng }}
-                        title={m.title}
-                        description={m.subtitle}
+                        key={g.key}
+                        coordinate={{ latitude: g.lat, longitude: g.lng }}
+                        title={g.city || 'unnamed location'}
+                        description={`${g.count} object${g.count === 1 ? '' : 's'}`}
+                        onPress={() => setSelectedGroup(g)}
                       />
                     ))}
                     {home && (
@@ -322,7 +357,7 @@ export default function StatsScreen() {
                   </MapView>
                 </View>
                 <Text style={styles.mapCaption}>
-                  {mapMarkers.length} object{mapMarkers.length === 1 ? '' : 's'} with a known location
+                  {totalLocatedItems} object{totalLocatedItems === 1 ? '' : 's'} across {mapGroups.length} location{mapGroups.length === 1 ? '' : 's'}
                   {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
                 </Text>
               </Section>
@@ -330,6 +365,48 @@ export default function StatsScreen() {
           </>
         )}
       </ScrollView>
+
+      <Modal
+        visible={selectedGroup != null}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSelectedGroup(null)}
+      >
+        <Pressable style={styles.sheetBackdrop} onPress={() => setSelectedGroup(null)}>
+          <Pressable style={styles.sheet} onPress={() => {}}>
+            <Text style={styles.sheetTitle}>{selectedGroup?.city || 'unnamed location'}</Text>
+            <Text style={styles.sheetSub}>
+              {selectedGroup?.count} object{selectedGroup?.count === 1 ? '' : 's'}
+              {selectedGroup?.regionLabel ? ` · ${selectedGroup.regionLabel}` : ''}
+            </Text>
+            {selectedGroup?.samples?.length > 0 && (
+              <View style={styles.sheetThumbs}>
+                {selectedGroup.samples.map(s => (
+                  <View key={s.id} style={styles.sheetThumb}>
+                    {s.image_url
+                      ? <Image source={{ uri: s.image_url }} style={styles.sheetThumbImg} contentFit="cover" />
+                      : <View style={styles.sheetThumbPlaceholder} />
+                    }
+                  </View>
+                ))}
+              </View>
+            )}
+            {selectedGroup?.city && (
+              <TouchableOpacity
+                style={styles.sheetSeeAll}
+                onPress={() => {
+                  const city = selectedGroup.city;
+                  setSelectedGroup(null);
+                  router.push({ pathname: '/', params: { city } });
+                }}
+              >
+                <Text style={styles.sheetSeeAllText}>see all from {selectedGroup.city}</Text>
+                <Ionicons name="chevron-forward" size={16} color="#2D2D2D" />
+              </TouchableOpacity>
+            )}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </View>
   );
 }
@@ -483,5 +560,66 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 8,
     textAlign: 'center',
+  },
+  sheetBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.35)',
+    justifyContent: 'flex-end',
+  },
+  sheet: {
+    backgroundColor: '#F5F0EB',
+    paddingHorizontal: 24,
+    paddingTop: 20,
+    paddingBottom: Platform.OS === 'ios' ? 40 : 24,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  sheetTitle: {
+    fontSize: 20,
+    fontWeight: '400',
+    color: '#2D2D2D',
+    fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
+  },
+  sheetSub: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 4,
+  },
+  sheetThumbs: {
+    flexDirection: 'row',
+    gap: 6,
+    marginTop: 16,
+  },
+  sheetThumb: {
+    width: 56,
+    height: 56,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#E8E3DD',
+    overflow: 'hidden',
+  },
+  sheetThumbImg: {
+    width: '100%',
+    height: '100%',
+  },
+  sheetThumbPlaceholder: {
+    flex: 1,
+    backgroundColor: '#E8E3DD',
+  },
+  sheetSeeAll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+    marginTop: 18,
+    paddingVertical: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E8E3DD',
+  },
+  sheetSeeAllText: {
+    fontSize: 14,
+    color: '#2D2D2D',
+    letterSpacing: 0.3,
   },
 });

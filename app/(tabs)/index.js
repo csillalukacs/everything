@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { useState } from 'react';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useEffect, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -24,6 +24,7 @@ const TAB_BAR_HEIGHT = 70;
 
 export default function Collection() {
   const router = useRouter();
+  const params = useLocalSearchParams();
   const insets = useSafeAreaInsets();
   const {
     session,
@@ -48,6 +49,15 @@ export default function Collection() {
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [manageTagSearch, setManageTagSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    if (params.city) {
+      setActiveCity(String(params.city));
+      setActiveTag(null);
+      setActiveYear(null);
+      router.setParams({ city: undefined });
+    }
+  }, [params.city, router]);
 
   function cityOf(loc) {
     if (!loc) return null;
