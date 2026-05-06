@@ -1,16 +1,19 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useCollection } from '../lib/CollectionProvider';
+import { supabase } from '../lib/supabase';
 
 let MapView = null;
 let Marker = null;
+let Polyline = null;
 let PROVIDER_DEFAULT = null;
 try {
   const maps = require('react-native-maps');
   MapView = maps.default;
   Marker = maps.Marker;
+  Polyline = maps.Polyline;
   PROVIDER_DEFAULT = maps.PROVIDER_DEFAULT;
 } catch {
   // react-native-maps native module not registered — map section will be hidden.
@@ -122,7 +125,27 @@ function Card({ label, value, sub }) {
 
 export default function StatsScreen() {
   const router = useRouter();
-  const { items } = useCollection();
+  const { items, session } = useCollection();
+  const [home, setHome] = useState(null);
+
+  useEffect(() => {
+    if (!session) return;
+    let cancelled = false;
+    supabase
+      .from('profiles')
+      .select('home_location, home_lat, home_lng')
+      .eq('user_id', session.user.id)
+      .maybeSingle()
+      .then(({ data }) => {
+        if (cancelled) return;
+        if (data?.home_lat != null && data?.home_lng != null) {
+          setHome({ lat: data.home_lat, lng: data.home_lng, location: data.home_location });
+        } else {
+          setHome(null);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [session]);
 
   const stats = useMemo(() => {
     const byDay = bucketize(items, dayKey);
@@ -181,6 +204,7 @@ export default function StatsScreen() {
     if (mapMarkers.length === 0) return null;
     const lats = mapMarkers.map(m => m.lat);
     const lngs = mapMarkers.map(m => m.lng);
+    if (home) { lats.push(home.lat); lngs.push(home.lng); }
     const minLat = Math.min(...lats), maxLat = Math.max(...lats);
     const minLng = Math.min(...lngs), maxLng = Math.max(...lngs);
     const latDelta = Math.max(0.5, (maxLat - minLat) * 1.4);
@@ -191,7 +215,7 @@ export default function StatsScreen() {
       latitudeDelta: latDelta,
       longitudeDelta: lngDelta,
     };
-  }, [mapMarkers]);
+  }, [mapMarkers, home]);
 
   return (
     <View style={styles.container}>
@@ -268,6 +292,17 @@ export default function StatsScreen() {
                     provider={PROVIDER_DEFAULT}
                     initialRegion={mapRegion}
                   >
+                    {home && Polyline && mapMarkers.map(m => (
+                      <Polyline
+                        key={`line-${m.id}`}
+                        coordinates={[
+                          { latitude: home.lat, longitude: home.lng },
+                          { latitude: m.lat, longitude: m.lng },
+                        ]}
+                        strokeColor="rgba(45,45,45,0.35)"
+                        strokeWidth={1}
+                      />
+                    ))}
                     {mapMarkers.map(m => (
                       <Marker
                         key={m.id}
@@ -276,10 +311,19 @@ export default function StatsScreen() {
                         description={m.subtitle}
                       />
                     ))}
+                    {home && (
+                      <Marker
+                        coordinate={{ latitude: home.lat, longitude: home.lng }}
+                        title="home"
+                        description={home.location?.split(',')[0]}
+                        pinColor="#2D2D2D"
+                      />
+                    )}
                   </MapView>
                 </View>
                 <Text style={styles.mapCaption}>
                   {mapMarkers.length} object{mapMarkers.length === 1 ? '' : 's'} with a known location
+                  {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
                 </Text>
               </Section>
             )}

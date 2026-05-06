@@ -9,6 +9,7 @@ import {
   View,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
+import LocationPicker from './LocationPicker';
 
 const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
 
@@ -21,6 +22,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState(null);
   const [savingUsername, setSavingUsername] = useState(false);
+  const [home, setHome] = useState(null);
   const inputRef = useRef(null);
   const usernameRef = useRef(null);
 
@@ -28,7 +30,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
     if (!visible || !session) return;
     supabase
       .from('profiles')
-      .select('display_name, username')
+      .select('display_name, username, home_location, home_lat, home_lng')
       .eq('user_id', session.user.id)
       .maybeSingle()
       .then(({ data }) => {
@@ -37,8 +39,27 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
         setNameInput(name);
         setUsername(data?.username ?? null);
         setUsernameInput(data?.username ?? '');
+        setHome(data?.home_location
+          ? { location: data.home_location, lat: data.home_lat, lng: data.home_lng }
+          : null);
       });
   }, [visible, session]);
+
+  async function saveHome(next) {
+    setHome(next);
+    await supabase
+      .from('profiles')
+      .update({
+        home_location: next?.location ?? null,
+        home_lat: next?.lat ?? null,
+        home_lng: next?.lng ?? null,
+      })
+      .eq('user_id', session.user.id);
+  }
+
+  function handleHomeChange(next) {
+    if (next) saveHome(next);
+  }
 
   useEffect(() => {
     if (editingName) inputRef.current?.focus();
@@ -170,6 +191,23 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
             </View>
 
             <View style={styles.section}>
+              <View style={styles.homeLabelRow}>
+                <Text style={styles.label}>home city</Text>
+                {home && (
+                  <TouchableOpacity onPress={() => saveHome(null)}>
+                    <Text style={styles.homeRemove}>remove</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+              <LocationPicker
+                value={home}
+                onChange={handleHomeChange}
+                placeholder="set your home city"
+              />
+              <Text style={styles.usernameHint}>shown publicly on your profile</Text>
+            </View>
+
+            <View style={styles.section}>
               <Text style={styles.label}>collection</Text>
               <Text style={styles.countValue}>
                 {itemCount} {itemCount === 1 ? 'object' : 'objects'}
@@ -285,6 +323,18 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#999',
     marginTop: 6,
+  },
+  homeLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  homeRemove: {
+    fontSize: 12,
+    color: '#999',
+    textTransform: 'uppercase',
+    letterSpacing: 0.8,
   },
   countValue: {
     fontSize: 20,

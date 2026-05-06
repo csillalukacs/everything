@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
+import LocationPicker from './LocationPicker'
 
 function cityOf(loc) {
   if (!loc) return null
@@ -86,6 +87,8 @@ export default function ProfilePage() {
   const [usernameInput, setUsernameInput] = useState('')
   const [usernameStatus, setUsernameStatus] = useState(null) // null | 'checking' | 'available' | 'taken' | 'invalid' | 'reserved'
   const [sessionUserId, setSessionUserId] = useState(null)
+  const [home, setHome] = useState(null)
+  const [editingHome, setEditingHome] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [batchEditVisible, setBatchEditVisible] = useState(false)
@@ -137,19 +140,19 @@ export default function ProfilePage() {
         resolvedId = slug
         const { data } = await supabase
           .from('profiles')
-          .select('display_name, username')
+          .select('display_name, username, home_location, home_lat, home_lng')
           .eq('user_id', slug)
           .maybeSingle()
         resolvedProfile = data
       } else {
         const { data } = await supabase
           .from('profiles')
-          .select('user_id, display_name, username')
+          .select('user_id, display_name, username, home_location, home_lat, home_lng')
           .ilike('username', slug)
           .maybeSingle()
         if (data) {
           resolvedId = data.user_id
-          resolvedProfile = { display_name: data.display_name, username: data.username }
+          resolvedProfile = data
         }
       }
 
@@ -168,6 +171,9 @@ export default function ProfilePage() {
         setUsername(resolvedProfile.username)
         setNameInput(resolvedProfile.display_name ?? '')
         setUsernameInput(resolvedProfile.username ?? '')
+        setHome(resolvedProfile.home_location
+          ? { location: resolvedProfile.home_location, lat: resolvedProfile.home_lat, lng: resolvedProfile.home_lng }
+          : null)
       }
 
       let ownerSession = false
@@ -537,6 +543,18 @@ export default function ProfilePage() {
     )
   }
 
+  async function saveHome(next) {
+    setHome(next)
+    await supabase
+      .from('profiles')
+      .update({
+        home_location: next?.location ?? null,
+        home_lat: next?.lat ?? null,
+        home_lng: next?.lng ?? null,
+      })
+      .eq('user_id', userId)
+  }
+
   async function saveUsername() {
     const trimmed = usernameInput.trim().toLowerCase()
     if (trimmed === (username ?? '')) {
@@ -645,6 +663,49 @@ export default function ProfilePage() {
           )}
           {!isOwner && username && (
             <p className="profile-username-readonly">@{username}</p>
+          )}
+          {isOwner ? (
+            editingHome ? (
+              <div className="profile-home-edit">
+                <LocationPicker
+                  value={home}
+                  onChange={async next => {
+                    if (!next) return
+                    await saveHome(next)
+                    setEditingHome(false)
+                  }}
+                  placeholder="set your home city"
+                />
+                <div className="profile-home-edit-actions">
+                  {home && (
+                    <button
+                      className="link-btn"
+                      onClick={async () => { await saveHome(null); setEditingHome(false) }}
+                    >remove</button>
+                  )}
+                  <button className="link-btn" onClick={() => setEditingHome(false)}>done</button>
+                </div>
+              </div>
+            ) : (
+              <button
+                className="profile-home-btn"
+                onClick={() => setEditingHome(true)}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {home?.location ? home.location.split(',')[0] : 'set home city'}
+              </button>
+            )
+          ) : home?.location && (
+            <p className="profile-home-readonly">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                <circle cx="12" cy="10" r="3" />
+              </svg>
+              {home.location.split(',')[0]}
+            </p>
           )}
         </div>
         <div className="header-links" style={{ marginTop: 8 }}>

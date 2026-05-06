@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { supabase } from '../lib/supabase'
@@ -13,6 +13,13 @@ const markerIcon = L.icon({
   iconAnchor: [12, 41],
   popupAnchor: [1, -34],
   shadowSize: [41, 41],
+})
+
+const homeIcon = L.divIcon({
+  className: 'home-marker',
+  html: '<div class="home-marker-dot"></div>',
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
 })
 
 const itemsCacheKey = userId => `cache:items:${userId}`
@@ -180,6 +187,7 @@ export default function StatsPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState(null)
+  const [home, setHome] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -198,10 +206,17 @@ export default function StatsPage() {
         })
       supabase
         .from('profiles')
-        .select('username')
+        .select('username, home_location, home_lat, home_lng')
         .eq('user_id', session.user.id)
         .maybeSingle()
-        .then(({ data }) => setUsername(data?.username ?? null))
+        .then(({ data }) => {
+          setUsername(data?.username ?? null)
+          if (data?.home_lat != null && data?.home_lng != null) {
+            setHome({ lat: data.home_lat, lng: data.home_lng, location: data.home_location })
+          } else {
+            setHome(null)
+          }
+        })
     })
   }, [navigate])
 
@@ -276,8 +291,10 @@ export default function StatsPage() {
 
   const mapBounds = useMemo(() => {
     if (mapMarkers.length === 0) return null
-    return mapMarkers.map(m => [m.lat, m.lng])
-  }, [mapMarkers])
+    const pts = mapMarkers.map(m => [m.lat, m.lng])
+    if (home) pts.push([home.lat, home.lng])
+    return pts
+  }, [mapMarkers, home])
 
   if (loading) {
     return <div className="centered"><div className="spinner" /></div>
@@ -452,6 +469,13 @@ export default function StatsPage() {
                     attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
                     url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
                   />
+                  {home && mapMarkers.map(m => (
+                    <Polyline
+                      key={`line-${m.id}`}
+                      positions={[[home.lat, home.lng], [m.lat, m.lng]]}
+                      pathOptions={{ color: '#2D2D2D', weight: 1, opacity: 0.35 }}
+                    />
+                  ))}
                   {mapMarkers.map(m => (
                     <Marker key={m.id} position={[m.lat, m.lng]} icon={markerIcon}>
                       <Popup>
@@ -466,10 +490,19 @@ export default function StatsPage() {
                       </Popup>
                     </Marker>
                   ))}
+                  {home && (
+                    <Marker position={[home.lat, home.lng]} icon={homeIcon}>
+                      <Popup>
+                        <strong>home</strong>
+                        {home.location && <><br />{home.location.split(',')[0]}</>}
+                      </Popup>
+                    </Marker>
+                  )}
                 </MapContainer>
               </div>
               <p className="stats-map-caption">
                 {mapMarkers.length} object{mapMarkers.length === 1 ? '' : 's'} with a known location
+                {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
               </p>
             </section>
           )}

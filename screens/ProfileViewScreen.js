@@ -48,14 +48,14 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
       if (slugIsUuid) {
         const { data } = await supabase
           .from('profiles')
-          .select('user_id, display_name, username')
+          .select('user_id, display_name, username, home_location, home_lat, home_lng')
           .eq('user_id', slug)
           .maybeSingle();
         if (data) { resolvedId = data.user_id; resolvedProfile = data; }
       } else {
         const { data } = await supabase
           .from('profiles')
-          .select('user_id, display_name, username')
+          .select('user_id, display_name, username, home_location, home_lat, home_lng')
           .ilike('username', slug)
           .maybeSingle();
         if (data) { resolvedId = data.user_id; resolvedProfile = data; }
@@ -123,6 +123,14 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
             <Text style={styles.title} numberOfLines={1}>{headerTitle}</Text>
             {profile?.username && profile?.display_name && (
               <Text style={styles.subtitle}>@{profile.username}</Text>
+            )}
+            {profile?.home_location && (
+              <View style={styles.homeRow}>
+                <Ionicons name="location-outline" size={12} color="#999" />
+                <Text style={styles.homeText} numberOfLines={1}>
+                  {profile.home_location.split(',')[0]}
+                </Text>
+              </View>
             )}
             {!loading && !notFound && (
               <Text style={styles.itemCount}>
@@ -274,6 +282,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     color: '#999',
     marginTop: 2,
+  },
+  homeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 4,
+  },
+  homeText: {
+    fontSize: 13,
+    color: '#999',
+    flexShrink: 1,
   },
   itemCount: {
     fontSize: 13,
