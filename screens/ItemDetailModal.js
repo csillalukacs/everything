@@ -31,6 +31,9 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editPhoto, setEditPhoto] = useState(null);
+  const [editImageAddedAt, setEditImageAddedAt] = useState(null);
+  const [editPreviousImages, setEditPreviousImages] = useState([]);
+  const [displayedIdx, setDisplayedIdx] = useState(0);
   const [editTags, setEditTags] = useState([]);
   const [editPrivate, setEditPrivate] = useState(false);
   const [editYear, setEditYear] = useState('');
@@ -79,6 +82,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     });
 
   useEffect(() => {
+    setDisplayedIdx(0);
     if (!pendingDir.current) return;
     translateX.value = pendingDir.current === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH;
     translateX.value = withTiming(0, { duration: 220 });
@@ -107,6 +111,9 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditName(item.name ?? '');
     setEditDescription(item.description ?? '');
     setEditPhoto(item.image_url);
+    setEditImageAddedAt(item.image_added_at ?? item.created_at);
+    setEditPreviousImages(item.previous_images ?? []);
+    setDisplayedIdx(0);
     setEditTags((item.tags ?? []).map(t => t.name));
     setEditPrivate(item.is_private ?? false);
     setEditYear(item.acquired_year ? String(item.acquired_year) : '');
@@ -122,11 +129,18 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setAddingTag(false);
     setNewTagName('');
     setEditDescription('');
+    setDisplayedIdx(0);
     ocrPromiseRef.current = null;
   }
 
   async function handleCaptured(uri) {
     setCameraVisible(false);
+    if (editPhoto && editPhoto.startsWith('http')) {
+      const kept = { url: editPhoto, added_at: editImageAddedAt ?? item?.created_at };
+      setEditPreviousImages(prev => [kept, ...prev]);
+    }
+    setEditImageAddedAt(new Date().toISOString());
+    setDisplayedIdx(0);
     setEditPhoto(uri);
     setRemovingBg(true);
     ocrPromiseRef.current = ocrImage(uri);
@@ -136,6 +150,16 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     } finally {
       setRemovingBg(false);
     }
+  }
+
+  function removePreviousPhoto(idx) {
+    setEditPreviousImages(prev => prev.filter((_, i) => i !== idx));
+    setDisplayedIdx(curr => {
+      const removedDisplayIdx = idx + 1;
+      if (curr === removedDisplayIdx) return 0;
+      if (curr > removedDisplayIdx) return curr - 1;
+      return curr;
+    });
   }
 
   function toggleTag(tag) {
@@ -169,16 +193,74 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   async function handleSave() {
     setSaving(true);
     const ocrText = ocrPromiseRef.current ? await ocrPromiseRef.current : undefined;
-    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), ocrText);
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), ocrText, editPreviousImages, editImageAddedAt);
     ocrPromiseRef.current = null;
     setSaving(false);
     setEditing(false);
     setEditDescription('');
+    setDisplayedIdx(0);
   }
 
   if (!item) return null;
 
-  const displayPhoto = editing ? editPhoto : item.image_url;
+  const allPhotos = editing
+    ? [{ url: editPhoto, added_at: editImageAddedAt }, ...editPreviousImages]
+    : [
+        { url: item.image_url, added_at: item.image_added_at ?? item.created_at },
+        ...(item.previous_images ?? []),
+      ];
+  const safeDisplayedIdx = Math.min(displayedIdx, allPhotos.length - 1);
+  const displayedEntry = allPhotos[safeDisplayedIdx] ?? {};
+  const displayPhoto = displayedEntry.url;
+  const displayedDate = displayedEntry.added_at;
+
+  function renderPhotoExtras() {
+    const hasMultiple = allPhotos.filter(p => p?.url).length > 1;
+    if (!hasMultiple && !displayedDate) return null;
+    return (
+      <View style={styles.photoExtras}>
+        {displayedDate ? (
+          <Text style={styles.photoDate}>
+            photo from {new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+          </Text>
+        ) : null}
+        {hasMultiple && (
+          <ScrollView
+            horizontal
+            showsHorizontalScrollIndicator={false}
+            style={styles.thumbnailScroll}
+            contentContainerStyle={styles.thumbnailRow}
+          >
+            {allPhotos.map((entry, idx) => {
+              if (!entry?.url) return null;
+              const selected = idx === safeDisplayedIdx;
+              const removable = editing && idx > 0;
+              return (
+                <View key={`${entry.url}-${idx}`} style={styles.thumbnailWrap}>
+                  <TouchableOpacity
+                    onPress={() => setDisplayedIdx(idx)}
+                    style={[styles.thumbnail, selected && styles.thumbnailSelected]}
+                    activeOpacity={0.8}
+                  >
+                    <Image source={{ uri: entry.url }} style={styles.thumbnailImage} cachePolicy="memory-disk" contentFit="cover" />
+                  </TouchableOpacity>
+                  {removable && (
+                    <TouchableOpacity
+                      onPress={() => removePreviousPhoto(idx - 1)}
+                      style={styles.thumbnailRemove}
+                      hitSlop={6}
+                    >
+                      <Ionicons name="close" size={14} color="#fff" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+              );
+            })}
+          </ScrollView>
+        )}
+      </View>
+    );
+  }
   const itemTags = item.tags ?? [];
   const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name));
   const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]));
@@ -255,6 +337,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 />
               </TouchableOpacity>
             </View>
+
+            {renderPhotoExtras()}
 
             <CameraCaptureModal
               visible={cameraVisible}
@@ -358,6 +442,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 : <View style={styles.imagePlaceholder} />
               }
             </View>
+            {renderPhotoExtras()}
             <View style={styles.info}>
               <View style={styles.nameRow}>
                 {item.name ? <Text style={styles.name}>{item.name}</Text> : null}
@@ -607,5 +692,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     lineHeight: 21,
+  },
+  photoExtras: {
+    marginBottom: 16,
+    marginTop: -8,
+  },
+  photoDate: {
+    fontSize: 12,
+    color: '#999',
+    marginBottom: 8,
+  },
+  thumbnailScroll: {
+    flexGrow: 0,
+  },
+  thumbnailRow: {
+    gap: 8,
+    paddingVertical: 4,
+  },
+  thumbnailWrap: {
+    position: 'relative',
+  },
+  thumbnail: {
+    width: 56,
+    height: 56,
+    borderRadius: 10,
+    overflow: 'hidden',
+    backgroundColor: '#E8E3DD',
+    borderWidth: 2,
+    borderColor: 'transparent',
+  },
+  thumbnailSelected: {
+    borderColor: '#2D2D2D',
+  },
+  thumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  thumbnailRemove: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    backgroundColor: '#2D2D2D',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });

@@ -28,9 +28,9 @@ export default function Feed() {
   const dailyItem = getDailyItem(items);
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
 
-  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired) {
+  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls) {
     if (!selectedItem) return;
-    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired);
+    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls);
     if (updated) setSelectedItem(updated);
   }
 

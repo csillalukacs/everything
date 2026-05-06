@@ -72,9 +72,9 @@ export default function Collection() {
     });
   }
 
-  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText) {
+  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls) {
     if (!selectedItem) return;
-    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText);
+    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls);
     if (updated) setSelectedItem(updated);
   }
 

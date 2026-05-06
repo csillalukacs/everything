@@ -742,6 +742,69 @@ input {
   display: block;
 }
 
+.photo-extras {
+  margin-top: 12px;
+}
+
+.photo-date {
+  font-size: 12px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.thumbnail-row {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 4px 2px;
+}
+
+.thumbnail-wrap {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.thumbnail {
+  width: 56px;
+  height: 56px;
+  border-radius: 10px;
+  overflow: hidden;
+  background: #E8E3DD;
+  border: 2px solid transparent;
+  padding: 0;
+  cursor: pointer;
+  display: block;
+}
+
+.thumbnail img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.thumbnail-selected {
+  border-color: #2D2D2D;
+}
+
+.thumbnail-remove {
+  position: absolute;
+  top: -6px;
+  right: -6px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: #2D2D2D;
+  color: #fff;
+  font-size: 14px;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  padding: 0;
+}
+
 .image-overlay {
   position: absolute;
   bottom: 0;

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 
@@ -15,12 +15,17 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [editDescription, setEditDescription] = useState('')
   const [editPhoto, setEditPhoto] = useState(null)
   const [editPreview, setEditPreview] = useState(null)
+  const [editImageAddedAt, setEditImageAddedAt] = useState(null)
+  const [editPreviousImages, setEditPreviousImages] = useState([])
+  const [displayedIdx, setDisplayedIdx] = useState(0)
   const [editTags, setEditTags] = useState([])
   const [editPrivate, setEditPrivate] = useState(false)
   const [editYear, setEditYear] = useState('')
   const [editAcquired, setEditAcquired] = useState(null)
   const [saving, setSaving] = useState(false)
   const fileInputRef = useRef(null)
+
+  useEffect(() => { setDisplayedIdx(0) }, [item?.id])
 
   if (!visible || !item) return null
 
@@ -29,6 +34,9 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setEditDescription(item.description ?? '')
     setEditPhoto(item.image_url)
     setEditPreview(item.image_url)
+    setEditImageAddedAt(item.image_added_at ?? item.created_at)
+    setEditPreviousImages(item.previous_images ?? [])
+    setDisplayedIdx(0)
     setEditTags((item.tags ?? []).map(t => t.name))
     setEditPrivate(item.is_private ?? false)
     setEditYear(item.acquired_year ? String(item.acquired_year) : '')
@@ -43,12 +51,29 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setEditPhoto(null)
     setEditPreview(null)
     setEditDescription('')
+    setDisplayedIdx(0)
   }
 
   function handleImageChange(f) {
     if (!f) return
+    if (typeof editPhoto === 'string' && editPhoto.startsWith('http')) {
+      const kept = { url: editPhoto, added_at: editImageAddedAt ?? item?.created_at }
+      setEditPreviousImages(prev => [kept, ...prev])
+    }
+    setEditImageAddedAt(new Date().toISOString())
+    setDisplayedIdx(0)
     setEditPhoto(f)
     setEditPreview(URL.createObjectURL(f))
+  }
+
+  function removePreviousPhoto(idx) {
+    setEditPreviousImages(prev => prev.filter((_, i) => i !== idx))
+    setDisplayedIdx(curr => {
+      const removedDisplayIdx = idx + 1
+      if (curr === removedDisplayIdx) return 0
+      if (curr > removedDisplayIdx) return curr - 1
+      return curr
+    })
   }
 
   function buildAcquired() {
@@ -65,15 +90,27 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
 
   async function handleSave() {
     setSaving(true)
-    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired())
+    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), editPreviousImages, editImageAddedAt)
     setSaving(false)
     setEditing(false)
     setEditPhoto(null)
     setEditPreview(null)
     setEditDescription('')
+    setDisplayedIdx(0)
   }
 
   const itemTags = item.tags ?? []
+  const allPhotos = editing
+    ? [{ url: editPreview, added_at: editImageAddedAt }, ...editPreviousImages]
+    : [
+        { url: item.image_url, added_at: item.image_added_at ?? item.created_at },
+        ...(item.previous_images ?? []),
+      ]
+  const safeDisplayedIdx = Math.min(displayedIdx, allPhotos.length - 1)
+  const displayedEntry = allPhotos[safeDisplayedIdx] ?? {}
+  const displayedPhoto = displayedEntry.url
+  const displayedDate = displayedEntry.added_at
+  const showThumbnails = allPhotos.filter(p => p?.url).length > 1
 
   return (
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && (editing ? cancelEdit() : onClose())}>
@@ -100,8 +137,8 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
         <div className="detail-layout">
           <div className="detail-image-col">
             <div className="detail-image-wrap">
-              {(editing ? editPreview : item.image_url) && (
-                <img src={editing ? editPreview : item.image_url} alt={item.name || ''} className="detail-image" />
+              {displayedPhoto && (
+                <img src={displayedPhoto} alt={item.name || ''} className="detail-image" />
               )}
               {editing && (
                 <>
@@ -126,6 +163,43 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 </>
               )}
             </div>
+            {(showThumbnails || displayedDate) && (
+              <div className="photo-extras">
+                {displayedDate && (
+                  <p className="photo-date">
+                    photo from {new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  </p>
+                )}
+                {showThumbnails && (
+                  <div className="thumbnail-row">
+                    {allPhotos.map((entry, idx) => {
+                      if (!entry?.url) return null
+                      const selected = idx === safeDisplayedIdx
+                      const removable = editing && idx > 0
+                      return (
+                        <div key={`${idx}-${typeof entry.url === 'string' ? entry.url : 'preview'}`} className="thumbnail-wrap">
+                          <button
+                            type="button"
+                            className={`thumbnail${selected ? ' thumbnail-selected' : ''}`}
+                            onClick={() => setDisplayedIdx(idx)}
+                          >
+                            <img src={entry.url} alt="" />
+                          </button>
+                          {removable && (
+                            <button
+                              type="button"
+                              className="thumbnail-remove"
+                              onClick={() => removePreviousPhoto(idx - 1)}
+                              aria-label="remove photo"
+                            >×</button>
+                          )}
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
           <div className={`detail-info-col${editing ? ' detail-info-col-editing' : ''}`}>

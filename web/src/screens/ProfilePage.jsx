@@ -284,9 +284,10 @@ export default function ProfilePage() {
     setAddModalVisible(false)
   }
 
-  async function handleUpdate(name, photoOrFile, tagNames, isPrivate, description, acquired) {
+  async function handleUpdate(name, photoOrFile, tagNames, isPrivate, description, acquired, previousImages, imageAddedAt) {
     let image_url = typeof photoOrFile === 'string' ? photoOrFile : null
-    if (photoOrFile instanceof File) {
+    const isNewPhoto = photoOrFile instanceof File
+    if (isNewPhoto) {
       image_url = await uploadImage(photoOrFile)
       if (!image_url) return
     }
@@ -298,6 +299,8 @@ export default function ProfilePage() {
         image_url,
         is_private: isPrivate ?? false,
         ...acquiredFields(acquired),
+        ...(previousImages !== undefined ? { previous_images: previousImages } : {}),
+        ...(imageAddedAt !== undefined ? { image_added_at: imageAddedAt } : (isNewPhoto ? { image_added_at: new Date().toISOString() } : {})),
       })
       .eq('id', selectedItem.id)
       .select()
