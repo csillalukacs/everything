@@ -29,6 +29,7 @@ export default function Collection() {
   const {
     session,
     items,
+    itemCount,
     tags,
     profile,
     updateItem,
@@ -170,7 +171,7 @@ export default function Collection() {
           <Text style={styles.title} numberOfLines={1}>{headlineName}</Text>
           <Text style={styles.subtitle}>
             {profile?.username ? `@${profile.username} · ` : ''}
-            {items.length} {items.length === 1 ? 'object' : 'objects'}
+            {itemCount ?? items.length} {(itemCount ?? items.length) === 1 ? 'object' : 'objects'}
           </Text>
         </View>
         <View style={styles.headerActions}>

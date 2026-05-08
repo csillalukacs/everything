@@ -4,6 +4,7 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { supabase } from '../lib/supabase'
+import { fetchAllItems, fetchItemCount } from '../lib/itemsApi'
 
 const markerIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -241,6 +242,7 @@ export default function StatsPage() {
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
   const [items, setItems] = useState([])
+  const [itemCount, setItemCount] = useState(null)
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState(null)
   const [home, setHome] = useState(null)
@@ -252,15 +254,15 @@ export default function StatsPage() {
       setSession(session)
       const cached = readCache(itemsCacheKey(session.user.id))
       if (cached) { setItems(cached); setLoading(false) }
-      supabase
-        .from('items')
-        .select('id, created_at, name, image_url, acquired_year, acquired_location, acquired_lat, acquired_lng, tags(id, name)')
-        .eq('user_id', session.user.id)
-        .order('created_at', { ascending: false })
-        .then(({ data }) => {
-          if (data) setItems(data)
-          setLoading(false)
-        })
+      fetchItemCount(supabase, { userId: session.user.id })
+        .then(setItemCount)
+        .catch(e => console.error('fetchItemCount error:', e))
+      fetchAllItems(supabase, {
+        userId: session.user.id,
+        columns: 'id, created_at, name, image_url, acquired_year, acquired_location, acquired_lat, acquired_lng, tags(id, name)',
+      })
+        .then(data => { setItems(data); setLoading(false) })
+        .catch(e => { console.error('fetchAllItems error:', e); setLoading(false) })
       supabase
         .from('profiles')
         .select('username, home_location, home_lat, home_lng')
@@ -446,8 +448,8 @@ export default function StatsPage() {
           <div className="stats-summary">
             <div className="stats-card">
               <div className="stats-card-label">total</div>
-              <div className="stats-card-value">{items.length}</div>
-              <div className="stats-card-sub">{items.length === 1 ? 'object' : 'objects'}</div>
+              <div className="stats-card-value">{itemCount ?? items.length}</div>
+              <div className="stats-card-sub">{(itemCount ?? items.length) === 1 ? 'object' : 'objects'}</div>
             </div>
             <div className="stats-card">
               <div className="stats-card-label">current streak</div>

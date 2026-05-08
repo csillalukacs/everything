@@ -14,6 +14,7 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { supabase } from '../lib/supabase';
+import { fetchAllItems, fetchItemCount } from '../lib/itemsApi';
 import ItemDetailModal from './ItemDetailModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -26,6 +27,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
   const [notFound, setNotFound] = useState(false);
   const [profile, setProfile] = useState(null);
   const [items, setItems] = useState([]);
+  const [itemCount, setItemCount] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
@@ -37,6 +39,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
     setNotFound(false);
     setProfile(null);
     setItems([]);
+    setItemCount(null);
     setActiveTag(null);
     setSelectedItem(null);
     setSearchQuery('');
@@ -68,14 +71,18 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
       }
       setProfile(resolvedProfile);
 
-      const { data: fetchedItems } = await supabase
-        .from('items')
-        .select('*, tags(id, name, is_private)')
-        .eq('user_id', resolvedId)
-        .eq('is_private', false)
-        .order('created_at', { ascending: false });
+      fetchItemCount(supabase, { userId: resolvedId, publicOnly: true })
+        .then(c => { if (!cancelled) setItemCount(c); })
+        .catch(e => console.error('fetchItemCount error:', e));
+
+      try {
+        const fetchedItems = await fetchAllItems(supabase, { userId: resolvedId, publicOnly: true });
+        if (cancelled) return;
+        setItems(fetchedItems);
+      } catch (e) {
+        console.error('fetchAllItems error:', e);
+      }
       if (cancelled) return;
-      if (fetchedItems) setItems(fetchedItems);
       setLoading(false);
     })();
 
@@ -132,9 +139,9 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
                 </Text>
               </View>
             )}
-            {!loading && !notFound && (
+            {!loading && !notFound && itemCount != null && (
               <Text style={styles.itemCount}>
-                {items.length} {items.length === 1 ? 'object' : 'objects'}
+                {itemCount} {itemCount === 1 ? 'object' : 'objects'}
               </Text>
             )}
           </View>

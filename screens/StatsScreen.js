@@ -171,7 +171,7 @@ function Card({ label, value, sub }) {
 
 export default function StatsScreen() {
   const router = useRouter();
-  const { items, session } = useCollection();
+  const { items, itemCount, session } = useCollection();
   const [home, setHome] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
 
@@ -343,7 +343,7 @@ export default function StatsScreen() {
         ) : (
           <>
             <View style={styles.summary}>
-              <Card label="total" value={items.length} sub={items.length === 1 ? 'object' : 'objects'} />
+              <Card label="total" value={itemCount ?? items.length} sub={(itemCount ?? items.length) === 1 ? 'object' : 'objects'} />
               <Card label="streak" value={stats.streak} sub={stats.streak === 1 ? 'day' : 'days'} />
               <Card label="longest" value={stats.longest} sub={stats.longest === 1 ? 'day' : 'days'} />
               <Card

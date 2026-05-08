@@ -4,13 +4,13 @@ import ProfileScreen from '../screens/ProfileScreen';
 
 export default function SettingsRoute() {
   const router = useRouter();
-  const { session, items } = useCollection();
+  const { session, items, itemCount } = useCollection();
   return (
     <ProfileScreen
       visible
       onClose={() => router.back()}
       session={session}
-      itemCount={items.length}
+      itemCount={itemCount ?? items.length}
     />
   );
 }

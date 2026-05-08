@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
+import { fetchAllItems, fetchItemCount } from '../lib/itemsApi'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
@@ -77,6 +78,7 @@ export default function ProfilePage() {
   const [userId, setUserId] = useState(null)
   const [notFound, setNotFound] = useState(false)
   const [items, setItems] = useState([])
+  const [itemCount, setItemCount] = useState(null)
   const [allTags, setAllTags] = useState([])
   const [profileName, setProfileName] = useState(null)
   const [username, setUsername] = useState(null)
@@ -202,17 +204,17 @@ export default function ProfilePage() {
         }
       }
 
-      let itemsQuery = supabase
-        .from('items')
-        .select('*, tags(id, name, is_private)')
-        .eq('user_id', resolvedId)
-        .order('created_at', { ascending: false })
-      if (!ownerSession) itemsQuery = itemsQuery.eq('is_private', false)
+      const publicOnly = !ownerSession
+      fetchItemCount(supabase, { userId: resolvedId, publicOnly })
+        .then(setItemCount)
+        .catch(e => console.error('fetchItemCount error:', e))
 
-      const { data: fetchedItems } = await itemsQuery
-      if (fetchedItems) {
+      try {
+        const fetchedItems = await fetchAllItems(supabase, { userId: resolvedId, publicOnly })
         setItems(fetchedItems)
         if (ownerSession) writeCache(itemsCacheKey(resolvedId), fetchedItems)
+      } catch (e) {
+        console.error('fetchAllItems error:', e)
       }
       setLoading(false)
     }
@@ -288,6 +290,7 @@ export default function ProfilePage() {
     if (!resolved) return
     await setItemTags(data.id, resolved.map(t => t.id))
     setItems(prev => [{ ...data, tags: resolved }, ...prev])
+    setItemCount(c => (c == null ? null : c + 1))
     setAddModalVisible(false)
   }
 
@@ -324,7 +327,10 @@ export default function ProfilePage() {
     const itemToDelete = selectedItem
     closeItem()
     const { error } = await supabase.from('items').delete().eq('id', itemToDelete.id)
-    if (!error) setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
+    if (!error) {
+      setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
+      setItemCount(c => (c == null ? null : Math.max(0, c - 1)))
+    }
   }
 
   function toggleBatchSelect(itemId) {
@@ -391,7 +397,10 @@ export default function ProfilePage() {
     setSelectedIds(new Set())
     await supabase.from('item_tags').delete().in('item_id', ids)
     const { error } = await supabase.from('items').delete().in('id', ids)
-    if (!error) setItems(prev => prev.filter(i => !ids.includes(i.id)))
+    if (!error) {
+      setItems(prev => prev.filter(i => !ids.includes(i.id)))
+      setItemCount(c => (c == null ? null : Math.max(0, c - ids.length)))
+    }
   }
 
   async function handleBatchTogglePrivacy() {
@@ -625,7 +634,7 @@ export default function ProfilePage() {
             <h1
               className={`profile-name${isOwner ? ' profile-name-editable' : ''}`}
               onClick={() => isOwner && setEditingName(true)}
-            >{profileName ?? username ?? userId.split('-')[0]} : {items.length} {items.length === 1 ? 'object' : 'objects'}</h1>
+            >{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` : ${itemCount} ${itemCount === 1 ? 'object' : 'objects'}` : ''}</h1>
           )}
           {isOwner && (
             editingUsername ? (
