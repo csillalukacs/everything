@@ -849,9 +849,20 @@ export default function ProfilePage() {
       </div>
 
       {isOwner && (
-        batchMode ? (
+        batchMode ? (() => {
+          const allVisibleSelected = filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.id))
+          const toggleSelectAllVisible = () => {
+            setSelectedIds(prev => {
+              const next = new Set(prev)
+              if (allVisibleSelected) filteredItems.forEach(i => next.delete(i.id))
+              else filteredItems.forEach(i => next.add(i.id))
+              return next
+            })
+          }
+          return (
           <div className="batch-bar">
             <button className="batch-cancel" onClick={() => setSelectedIds(new Set())}>cancel</button>
+            <button className="batch-cancel" onClick={toggleSelectAllVisible}>{allVisibleSelected ? 'deselect all' : 'select all'}</button>
             <span className="batch-count">{selectedIds.size} selected</span>
             <div className="batch-actions">
               <button className="batch-icon-btn" onClick={handleBatchTogglePrivacy} title="lock / unlock">
@@ -863,7 +874,8 @@ export default function ProfilePage() {
               <button className="batch-tag-btn" onClick={() => setBatchEditVisible(true)}>edit</button>
             </div>
           </div>
-        ) : (
+          )
+        })() : (
           <button className="fab" onClick={() => setAddModalVisible(true)}>+</button>
         )
       )}

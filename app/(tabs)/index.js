@@ -344,10 +344,23 @@ export default function Collection() {
         }}
       />
 
-      {batchMode && (
+      {batchMode && (() => {
+        const allVisibleSelected = filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.id));
+        const toggleSelectAllVisible = () => {
+          setSelectedIds(prev => {
+            const next = new Set(prev);
+            if (allVisibleSelected) filteredItems.forEach(i => next.delete(i.id));
+            else filteredItems.forEach(i => next.add(i.id));
+            return next;
+          });
+        };
+        return (
         <View style={[styles.batchBar]}>
           <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.batchBarBtn}>
             <Text style={styles.batchBarCancelText}>cancel</Text>
+          </TouchableOpacity>
+          <TouchableOpacity onPress={toggleSelectAllVisible} style={styles.batchBarBtn}>
+            <Text style={styles.batchBarCancelText}>{allVisibleSelected ? 'deselect all' : 'select all'}</Text>
           </TouchableOpacity>
           <Text style={styles.batchBarCount}>{selectedIds.size} selected</Text>
           <View style={styles.batchBarActions}>
@@ -366,7 +379,8 @@ export default function Collection() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
+        );
+      })()}
 
       <ItemDetailModal
         visible={!!selectedItem}
