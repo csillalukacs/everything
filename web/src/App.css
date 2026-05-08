@@ -1447,6 +1447,134 @@ button.stats-bar-col {
   height: 12px;
 }
 
+.stats-row-split {
+  display: flex;
+  gap: 32px;
+  flex-wrap: wrap;
+  margin-bottom: 40px;
+}
+
+.stats-row-split .stats-section {
+  margin-bottom: 0;
+}
+
+.stats-row-pie {
+  flex: 0 1 280px;
+  min-width: 240px;
+}
+
+.stats-row-map {
+  flex: 1 1 360px;
+  min-width: 280px;
+}
+
+.stats-pie-wrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 20px;
+}
+
+.stats-pie-chart {
+  position: relative;
+}
+
+.stats-pie-svg {
+  display: block;
+}
+
+.stats-pie-slice {
+  transition: opacity 0.12s, filter 0.12s;
+  cursor: default;
+}
+
+.stats-pie-chart:hover .stats-pie-slice:not(.stats-pie-slice-hover) {
+  opacity: 0.55;
+}
+
+.stats-pie-slice-hover {
+  filter: brightness(1.08);
+}
+
+.stats-pie-tooltip {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: rgba(45, 45, 45, 0.92);
+  color: #F5F0EB;
+  padding: 8px 14px;
+  border-radius: 8px;
+  pointer-events: none;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.stats-pie-tooltip-label {
+  font-size: 13px;
+  letter-spacing: 0.02em;
+}
+
+.stats-pie-tooltip-value {
+  font-size: 11px;
+  color: rgba(245, 240, 235, 0.7);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats-pie-legend-row-hover .stats-pie-legend-label {
+  color: #000;
+}
+
+.stats-pie-legend {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 100%;
+}
+
+.stats-pie-legend-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 4px 0;
+  background: none;
+  border: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+}
+
+.stats-pie-legend-row-clickable {
+  cursor: pointer;
+}
+
+.stats-pie-legend-row-clickable:hover .stats-pie-legend-label {
+  color: #000;
+}
+
+.stats-pie-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
+  flex: 0 0 auto;
+}
+
+.stats-pie-legend-label {
+  flex: 1;
+  font-size: 13px;
+  color: #2D2D2D;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stats-pie-legend-value {
+  font-size: 12px;
+  color: #999;
+  font-variant-numeric: tabular-nums;
+}
+
 /* ---- Location picker ---- */
 
 .location-picker {

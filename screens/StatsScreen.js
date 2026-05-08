@@ -3,8 +3,16 @@ import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
+import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { useCollection } from '../lib/CollectionProvider';
 import { supabase } from '../lib/supabase';
+
+const PIE_PALETTE = [
+  '#C5705D', '#D4A55C', '#8FA363', '#5C9A8C', '#5A7CA8',
+  '#8A6FA3', '#B5688A', '#8B6F47', '#A89B6E', '#5C5C5C',
+];
+const PIE_MULTIPLE_COLOR = '#2D2D2D';
+const PIE_UNTAGGED_COLOR = '#D5D0C8';
 
 let MapView = null;
 let Marker = null;
@@ -120,6 +128,38 @@ function Bar({ count, max, label }) {
   );
 }
 
+function PieChart({ slices, total, size = 220 }) {
+  const r = size / 2;
+  const cx = size / 2;
+  const cy = size / 2;
+  const paths = useMemo(() => {
+    if (slices.length === 1) {
+      const path = Skia.Path.Make();
+      path.addCircle(cx, cy, r);
+      return [{ path, color: slices[0].color }];
+    }
+    let cumDeg = -90;
+    return slices.map(slice => {
+      const sweep = (slice.count / total) * 360;
+      const startDeg = cumDeg;
+      cumDeg += sweep;
+      const path = Skia.Path.Make();
+      path.moveTo(cx, cy);
+      const startRad = (startDeg * Math.PI) / 180;
+      path.lineTo(cx + r * Math.cos(startRad), cy + r * Math.sin(startRad));
+      const oval = Skia.XYWHRect(cx - r, cy - r, 2 * r, 2 * r);
+      path.arcToOval(oval, startDeg, sweep, false);
+      path.close();
+      return { path, color: slice.color };
+    });
+  }, [slices, total, cx, cy, r]);
+  return (
+    <Canvas style={{ width: size, height: size }}>
+      {paths.map((p, i) => <Path key={i} path={p.path} color={p.color} />)}
+    </Canvas>
+  );
+}
+
 function Card({ label, value, sub }) {
   return (
     <View style={styles.card}>
@@ -173,6 +213,33 @@ export default function StatsScreen() {
   const weekMax = Math.max(0, ...weeks.map(d => stats.byWeek.get(weekKey(d)) ?? 0));
   const monthMax = Math.max(0, ...months.map(d => stats.byMonth.get(monthKey(d)) ?? 0));
   const bestDayDate = stats.bestDayKey ? new Date(stats.bestDayKey) : null;
+
+  const tagDistribution = useMemo(() => {
+    if (items.length === 0) return null;
+    const tagCounts = new Map();
+    let multipleCount = 0;
+    let untaggedCount = 0;
+    for (const item of items) {
+      const tags = item.tags ?? [];
+      if (tags.length === 0) untaggedCount++;
+      else if (tags.length === 1) {
+        const name = tags[0].name;
+        tagCounts.set(name, (tagCounts.get(name) ?? 0) + 1);
+      } else {
+        multipleCount++;
+      }
+    }
+    const tagSlices = [...tagCounts.entries()]
+      .map(([label, count]) => ({ label, count, kind: 'tag' }))
+      .sort((a, b) => b.count - a.count)
+      .map((s, i) => ({ ...s, color: PIE_PALETTE[i % PIE_PALETTE.length] }));
+    const slices = [...tagSlices];
+    if (multipleCount > 0) slices.push({ label: 'multiple tags', count: multipleCount, kind: 'multiple', color: PIE_MULTIPLE_COLOR });
+    if (untaggedCount > 0) slices.push({ label: 'untagged', count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR });
+    if (slices.length === 0) return null;
+    const total = slices.reduce((sum, s) => sum + s.count, 0);
+    return { slices, total };
+  }, [items]);
 
   const yearStats = useMemo(() => {
     const years = items.map(i => i.acquired_year).filter(y => y != null);
@@ -307,6 +374,26 @@ export default function StatsScreen() {
                 })}
               </View>
             </Section>
+
+            {tagDistribution && (
+              <Section title="tags">
+                <View style={styles.pieWrap}>
+                  <PieChart slices={tagDistribution.slices} total={tagDistribution.total} />
+                </View>
+                <View style={styles.legend}>
+                  {tagDistribution.slices.map(s => {
+                    const pct = Math.round((s.count / tagDistribution.total) * 100);
+                    return (
+                      <View key={`${s.kind}:${s.label}`} style={styles.legendRow}>
+                        <View style={[styles.legendSwatch, { backgroundColor: s.color }]} />
+                        <Text style={styles.legendLabel} numberOfLines={1}>{s.label}</Text>
+                        <Text style={styles.legendValue}>{pct}%</Text>
+                      </View>
+                    );
+                  })}
+                </View>
+              </Section>
+            )}
 
             {yearStats && (
               <Section title={`acquisition ${yearStats.bucketSize === 1 ? 'years' : `${yearStats.bucketSize}-year periods`}`}>
@@ -545,6 +632,33 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 4,
     height: 12,
+  },
+  pieWrap: {
+    alignItems: 'center',
+    marginBottom: 18,
+  },
+  legend: {
+    gap: 8,
+  },
+  legendRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+  },
+  legendSwatch: {
+    width: 12,
+    height: 12,
+    borderRadius: 3,
+  },
+  legendLabel: {
+    flex: 1,
+    fontSize: 13,
+    color: '#2D2D2D',
+  },
+  legendValue: {
+    fontSize: 12,
+    color: '#999',
+    fontVariant: ['tabular-nums'],
   },
   mapWrap: {
     height: 320,

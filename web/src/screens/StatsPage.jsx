@@ -181,6 +181,63 @@ function cityOf(loc) {
   return c || null
 }
 
+const PIE_PALETTE = [
+  '#C5705D', '#D4A55C', '#8FA363', '#5C9A8C', '#5A7CA8',
+  '#8A6FA3', '#B5688A', '#8B6F47', '#A89B6E', '#5C5C5C',
+]
+const PIE_MULTIPLE_COLOR = '#2D2D2D'
+const PIE_UNTAGGED_COLOR = '#D5D0C8'
+
+function PieChart({ slices, total, size = 240, hoveredKey, onHover }) {
+  const r = size / 2 - 1
+  const cx = size / 2
+  const cy = size / 2
+  if (slices.length === 1) {
+    const sliceKey = `${slices[0].kind}:${slices[0].label}`
+    return (
+      <svg width={size} height={size} className="stats-pie-svg">
+        <circle
+          cx={cx}
+          cy={cy}
+          r={r}
+          fill={slices[0].color}
+          className={`stats-pie-slice${hoveredKey === sliceKey ? ' stats-pie-slice-hover' : ''}`}
+          onMouseEnter={() => onHover?.(sliceKey)}
+          onMouseLeave={() => onHover?.(null)}
+        />
+      </svg>
+    )
+  }
+  let cumAngle = -Math.PI / 2
+  return (
+    <svg width={size} height={size} className="stats-pie-svg">
+      {slices.map(slice => {
+        const angle = (slice.count / total) * Math.PI * 2
+        const startAngle = cumAngle
+        const endAngle = cumAngle + angle
+        cumAngle = endAngle
+        const x1 = cx + r * Math.cos(startAngle)
+        const y1 = cy + r * Math.sin(startAngle)
+        const x2 = cx + r * Math.cos(endAngle)
+        const y2 = cy + r * Math.sin(endAngle)
+        const largeArc = angle > Math.PI ? 1 : 0
+        const d = `M ${cx},${cy} L ${x1},${y1} A ${r},${r} 0 ${largeArc} 1 ${x2},${y2} Z`
+        const sliceKey = `${slice.kind}:${slice.label}`
+        return (
+          <path
+            key={sliceKey}
+            d={d}
+            fill={slice.color}
+            className={`stats-pie-slice${hoveredKey === sliceKey ? ' stats-pie-slice-hover' : ''}`}
+            onMouseEnter={() => onHover?.(sliceKey)}
+            onMouseLeave={() => onHover?.(null)}
+          />
+        )
+      })}
+    </svg>
+  )
+}
+
 export default function StatsPage() {
   const navigate = useNavigate()
   const [session, setSession] = useState(null)
@@ -188,6 +245,7 @@ export default function StatsPage() {
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState(null)
   const [home, setHome] = useState(null)
+  const [hoveredSliceKey, setHoveredSliceKey] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -197,7 +255,7 @@ export default function StatsPage() {
       if (cached) { setItems(cached); setLoading(false) }
       supabase
         .from('items')
-        .select('id, created_at, name, image_url, acquired_year, acquired_location, acquired_lat, acquired_lng')
+        .select('id, created_at, name, image_url, acquired_year, acquired_location, acquired_lat, acquired_lng, tags(id, name)')
         .eq('user_id', session.user.id)
         .order('created_at', { ascending: false })
         .then(({ data }) => {
@@ -292,6 +350,33 @@ export default function StatsPage() {
         regionLabel: g.items[0]?.acquired_location?.split(',').slice(1, 3).join(',').trim() || null,
       }
     })
+  }, [items])
+
+  const tagDistribution = useMemo(() => {
+    if (items.length === 0) return null
+    const tagCounts = new Map()
+    let multipleCount = 0
+    let untaggedCount = 0
+    for (const item of items) {
+      const tags = item.tags ?? []
+      if (tags.length === 0) untaggedCount++
+      else if (tags.length === 1) {
+        const name = tags[0].name
+        tagCounts.set(name, (tagCounts.get(name) ?? 0) + 1)
+      } else {
+        multipleCount++
+      }
+    }
+    const tagSlices = [...tagCounts.entries()]
+      .map(([label, count]) => ({ label, count, kind: 'tag' }))
+      .sort((a, b) => b.count - a.count)
+      .map((s, i) => ({ ...s, color: PIE_PALETTE[i % PIE_PALETTE.length] }))
+    const slices = [...tagSlices]
+    if (multipleCount > 0) slices.push({ label: 'multiple tags', count: multipleCount, kind: 'multiple', color: PIE_MULTIPLE_COLOR })
+    if (untaggedCount > 0) slices.push({ label: 'untagged', count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR })
+    if (slices.length === 0) return null
+    const total = slices.reduce((sum, s) => sum + s.count, 0)
+    return { slices, total }
   }, [items])
 
   const topCities = useMemo(() => {
@@ -480,11 +565,64 @@ export default function StatsPage() {
             </section>
           )}
 
-          {mapGroups.length > 0 && (
-            <section className="stats-section">
-              <h2 className="stats-section-title">acquired around the world</h2>
-              <div className="stats-map">
-                <MapContainer
+          {(mapGroups.length > 0 || tagDistribution) && (() => {
+            const hoveredSlice = tagDistribution?.slices.find(s => `${s.kind}:${s.label}` === hoveredSliceKey)
+            return (
+              <div className="stats-row-split">
+                {tagDistribution && (
+                  <section className="stats-section stats-row-pie">
+                    <h2 className="stats-section-title">tags</h2>
+                    <div className="stats-pie-wrap">
+                      <div className="stats-pie-chart">
+                        <PieChart
+                          slices={tagDistribution.slices}
+                          total={tagDistribution.total}
+                          hoveredKey={hoveredSliceKey}
+                          onHover={setHoveredSliceKey}
+                        />
+                        {hoveredSlice && (
+                          <div className="stats-pie-tooltip">
+                            <div className="stats-pie-tooltip-label">{hoveredSlice.label}</div>
+                            <div className="stats-pie-tooltip-value">
+                              {hoveredSlice.count} · {Math.round((hoveredSlice.count / tagDistribution.total) * 100)}%
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      <div className="stats-pie-legend">
+                        {tagDistribution.slices.map(s => {
+                          const pct = Math.round((s.count / tagDistribution.total) * 100)
+                          const interactive = s.kind === 'tag' || s.kind === 'untagged'
+                          const sliceKey = `${s.kind}:${s.label}`
+                          const onClick = interactive
+                            ? () => goWith({ tag: s.kind === 'untagged' ? '__untagged__' : s.label })
+                            : undefined
+                          const Tag = interactive ? 'button' : 'div'
+                          return (
+                            <Tag
+                              key={sliceKey}
+                              className={`stats-pie-legend-row${interactive ? ' stats-pie-legend-row-clickable' : ''}${hoveredSliceKey === sliceKey ? ' stats-pie-legend-row-hover' : ''}`}
+                              onClick={onClick}
+                              onMouseEnter={() => setHoveredSliceKey(sliceKey)}
+                              onMouseLeave={() => setHoveredSliceKey(null)}
+                              type={interactive ? 'button' : undefined}
+                              title={`${s.label}: ${s.count} (${pct}%)`}
+                            >
+                              <span className="stats-pie-swatch" style={{ background: s.color }} />
+                              <span className="stats-pie-legend-label">{s.label}</span>
+                              <span className="stats-pie-legend-value">{pct}%</span>
+                            </Tag>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  </section>
+                )}
+                {mapGroups.length > 0 && (
+                  <section className="stats-section stats-row-map">
+                    <h2 className="stats-section-title">acquired around the world</h2>
+                    <div className="stats-map">
+                      <MapContainer
                   bounds={mapBounds}
                   boundsOptions={{ padding: [40, 40] }}
                   scrollWheelZoom={false}
@@ -549,12 +687,15 @@ export default function StatsPage() {
                   )}
                 </MapContainer>
               </div>
-              <p className="stats-map-caption">
-                {totalLocatedItems} object{totalLocatedItems === 1 ? '' : 's'} across {mapGroups.length} location{mapGroups.length === 1 ? '' : 's'}
-                {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
-              </p>
-            </section>
-          )}
+                    <p className="stats-map-caption">
+                      {totalLocatedItems} object{totalLocatedItems === 1 ? '' : 's'} across {mapGroups.length} location{mapGroups.length === 1 ? '' : 's'}
+                      {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
+                    </p>
+                  </section>
+                )}
+              </div>
+            )
+          })()}
         </>
       )}
     </div>
