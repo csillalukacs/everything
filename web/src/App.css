@@ -1447,23 +1447,25 @@ button.stats-bar-col {
   height: 12px;
 }
 
-.stats-row-split {
+.stats-row {
   display: flex;
   gap: 32px;
   flex-wrap: wrap;
   margin-bottom: 40px;
 }
 
-.stats-row-split .stats-section {
+.stats-row > .stats-section {
+  flex: 1 1 280px;
+  min-width: 0;
   margin-bottom: 0;
 }
 
-.stats-row-pie {
+.stats-row > .stats-row-pie {
   flex: 0 1 280px;
   min-width: 240px;
 }
 
-.stats-row-map {
+.stats-row > .stats-row-map {
   flex: 1 1 360px;
   min-width: 280px;
 }

@@ -488,92 +488,98 @@ export default function StatsPage() {
             </div>
           </section>
 
-          <section className="stats-section">
-            <h2 className="stats-section-title">last 12 weeks</h2>
-            <div className="stats-chart">
-              {weeks.map(d => {
-                const k = weekKey(d)
-                const count = stats.byWeek.get(k) ?? 0
-                return (
-                  <Bar
-                    key={k}
-                    count={count}
-                    max={weekMax}
-                    label={formatWeekLabel(d)}
-                    title={`week of ${k}: ${count}`}
-                    onClick={() => goWith({ from: k, to: endOfWeekKey(k) })}
-                  />
-                )
-              })}
-            </div>
-          </section>
-
-          <section className="stats-section">
-            <h2 className="stats-section-title">last 12 months</h2>
-            <div className="stats-chart">
-              {months.map(d => {
-                const k = monthKey(d)
-                const count = stats.byMonth.get(k) ?? 0
-                return (
-                  <Bar
-                    key={k}
-                    count={count}
-                    max={monthMax}
-                    label={formatMonthLabel(d)}
-                    title={`${k}: ${count}`}
-                    onClick={() => goWith({ from: `${k}-01`, to: endOfMonthKey(k) })}
-                  />
-                )
-              })}
-            </div>
-          </section>
-
-          {yearStats && (
+          <div className="stats-row">
             <section className="stats-section">
-              <h2 className="stats-section-title">
-                acquisition {yearStats.bucketSize === 1 ? 'years' : `${yearStats.bucketSize}-year periods`}
-              </h2>
+              <h2 className="stats-section-title">last 12 weeks</h2>
               <div className="stats-chart">
-                {yearStats.bars.map(b => (
-                  <Bar
-                    key={b.key}
-                    count={b.count}
-                    max={yearStats.max}
-                    label={b.label}
-                    title={`${b.label}: ${b.count}`}
-                    onClick={() => goWith(
-                      yearStats.bucketSize === 1
-                        ? { year: b.key }
-                        : { yearMin: b.key, yearMax: b.key + yearStats.bucketSize - 1 }
-                    )}
-                  />
-                ))}
+                {weeks.map(d => {
+                  const k = weekKey(d)
+                  const count = stats.byWeek.get(k) ?? 0
+                  return (
+                    <Bar
+                      key={k}
+                      count={count}
+                      max={weekMax}
+                      label={formatWeekLabel(d)}
+                      title={`week of ${k}: ${count}`}
+                      onClick={() => goWith({ from: k, to: endOfWeekKey(k) })}
+                    />
+                  )
+                })}
               </div>
             </section>
-          )}
 
-          {topCities.length > 0 && (
             <section className="stats-section">
-              <h2 className="stats-section-title">top cities</h2>
+              <h2 className="stats-section-title">last 12 months</h2>
               <div className="stats-chart">
-                {topCities.map(c => (
-                  <Bar
-                    key={c.name}
-                    count={c.count}
-                    max={topCitiesMax}
-                    label={c.name}
-                    title={`${c.name}: ${c.count}`}
-                    onClick={() => goWith({ city: c.name })}
-                  />
-                ))}
+                {months.map(d => {
+                  const k = monthKey(d)
+                  const count = stats.byMonth.get(k) ?? 0
+                  return (
+                    <Bar
+                      key={k}
+                      count={count}
+                      max={monthMax}
+                      label={formatMonthLabel(d)}
+                      title={`${k}: ${count}`}
+                      onClick={() => goWith({ from: `${k}-01`, to: endOfMonthKey(k) })}
+                    />
+                  )
+                })}
               </div>
             </section>
+          </div>
+
+          {(yearStats || topCities.length > 0) && (
+            <div className="stats-row">
+              {yearStats && (
+                <section className="stats-section">
+                  <h2 className="stats-section-title">
+                    acquisition {yearStats.bucketSize === 1 ? 'years' : `${yearStats.bucketSize}-year periods`}
+                  </h2>
+                  <div className="stats-chart">
+                    {yearStats.bars.map(b => (
+                      <Bar
+                        key={b.key}
+                        count={b.count}
+                        max={yearStats.max}
+                        label={b.label}
+                        title={`${b.label}: ${b.count}`}
+                        onClick={() => goWith(
+                          yearStats.bucketSize === 1
+                            ? { year: b.key }
+                            : { yearMin: b.key, yearMax: b.key + yearStats.bucketSize - 1 }
+                        )}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+
+              {topCities.length > 0 && (
+                <section className="stats-section">
+                  <h2 className="stats-section-title">top cities</h2>
+                  <div className="stats-chart">
+                    {topCities.map(c => (
+                      <Bar
+                        key={c.name}
+                        count={c.count}
+                        max={topCitiesMax}
+                        label={c.name}
+                        title={`${c.name}: ${c.count}`}
+                        onClick={() => goWith({ city: c.name })}
+                      />
+                    ))}
+                  </div>
+                </section>
+              )}
+            </div>
           )}
 
           {(mapGroups.length > 0 || tagDistribution) && (() => {
             const hoveredSlice = tagDistribution?.slices.find(s => `${s.kind}:${s.label}` === hoveredSliceKey)
             return (
-              <div className="stats-row-split">
+              <div className="stats-row">
                 {tagDistribution && (
                   <section className="stats-section stats-row-pie">
                     <h2 className="stats-section-title">tags</h2>
