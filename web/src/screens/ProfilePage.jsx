@@ -888,6 +888,8 @@ export default function ProfilePage() {
         onDelete={isOwner ? handleDelete : undefined}
         allTags={allTags}
         onTagPress={tag => updateParams({ tag: tag.name, item: null })}
+        onYearPress={year => updateParams({ year: String(year), yearMin: null, yearMax: null, city: null, tag: null, from: null, to: null, item: null })}
+        onCityPress={city => updateParams({ city, year: null, yearMin: null, yearMax: null, tag: null, from: null, to: null, item: null })}
         onPrev={(() => {
           const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
           return idx > 0 ? () => openItem(filteredItems[idx - 1]) : null

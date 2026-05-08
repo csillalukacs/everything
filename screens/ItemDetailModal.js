@@ -26,7 +26,7 @@ import { ocrImage } from '../lib/ocr';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
-export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress }) {
+export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -468,8 +468,29 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               {(item.acquired_location || item.acquired_year) && (
                 <Text style={styles.acquired}>
-                  acquired{item.acquired_location ? ` in ${item.acquired_location.split(',')[0]}` : ''}
-                  {item.acquired_year ? ` · ${item.acquired_year}` : ''}
+                  acquired
+                  {item.acquired_location ? (
+                    <>
+                      <Text>{' in '}</Text>
+                      {onCityPress ? (
+                        <Text
+                          style={styles.acquiredLink}
+                          onPress={() => onCityPress(item.acquired_location.split(',')[0])}
+                        >{item.acquired_location.split(',')[0]}</Text>
+                      ) : <Text>{item.acquired_location.split(',')[0]}</Text>}
+                    </>
+                  ) : null}
+                  {item.acquired_year ? (
+                    <>
+                      <Text>{' · '}</Text>
+                      {onYearPress ? (
+                        <Text
+                          style={styles.acquiredLink}
+                          onPress={() => onYearPress(item.acquired_year)}
+                        >{item.acquired_year}</Text>
+                      ) : <Text>{item.acquired_year}</Text>}
+                    </>
+                  ) : null}
                 </Text>
               )}
               <Text style={styles.date}>
@@ -616,6 +637,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#2D2D2D',
     fontWeight: '500',
+  },
+  acquiredLink: {
+    textDecorationLine: 'underline',
+    textDecorationColor: '#ccc',
   },
   deleteButton: {
     paddingVertical: 16,

@@ -1016,6 +1016,22 @@ input {
   font-weight: 500;
 }
 
+.detail-acquired-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  text-decoration: underline;
+  text-decoration-color: #ccc;
+  text-underline-offset: 2px;
+}
+
+.detail-acquired-link:hover {
+  text-decoration-color: #2D2D2D;
+}
+
 .delete-btn {
   color: #E74C3C;
   font-size: 15px;

@@ -390,6 +390,8 @@ export default function Collection() {
         onSave={handleUpdate}
         allTags={tags}
         onTagPress={tag => { setActiveTag(tag); setSelectedItem(null); }}
+        onYearPress={year => { setActiveYear(year); setActiveTag(null); setActiveCity(null); setSelectedItem(null); }}
+        onCityPress={city => { setActiveCity(city); setActiveTag(null); setActiveYear(null); setSelectedItem(null); }}
         onPrev={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(filteredItems[idx - 1]) : null; })()}
         onNext={(() => { const idx = filteredItems.findIndex(i => i.id === selectedItem?.id); return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null; })()}
       />

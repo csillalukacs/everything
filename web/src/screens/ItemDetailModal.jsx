@@ -9,7 +9,7 @@ function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
 }
 
-export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], onPrev, onNext, onTagPress }) {
+export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -253,8 +253,29 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 {item.description && <p className="detail-description">{item.description}</p>}
                 {(item.acquired_location || item.acquired_year) && (
                   <p className="detail-acquired">
-                    acquired{item.acquired_location ? ` in ${item.acquired_location.split(',')[0]}` : ''}
-                    {item.acquired_year ? ` · ${item.acquired_year}` : ''}
+                    acquired
+                    {item.acquired_location && (
+                      <>
+                        {' in '}
+                        {onCityPress ? (
+                          <button
+                            className="detail-acquired-link"
+                            onClick={() => onCityPress(item.acquired_location.split(',')[0])}
+                          >{item.acquired_location.split(',')[0]}</button>
+                        ) : item.acquired_location.split(',')[0]}
+                      </>
+                    )}
+                    {item.acquired_year && (
+                      <>
+                        {' · '}
+                        {onYearPress ? (
+                          <button
+                            className="detail-acquired-link"
+                            onClick={() => onYearPress(item.acquired_year)}
+                          >{item.acquired_year}</button>
+                        ) : item.acquired_year}
+                      </>
+                    )}
                   </p>
                 )}
                 <p className="detail-date">
