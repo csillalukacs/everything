@@ -5,6 +5,7 @@ import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
 import LocationPicker from './LocationPicker'
+import FilterDropdown from './FilterDropdown'
 
 function cityOf(loc) {
   if (!loc) return null
@@ -732,42 +733,45 @@ export default function ProfilePage() {
           )}
         </div>
         {(availableYears.length > 0 || hasMissingYear) && (
-          <select
-            className={`filter-select${yearParam ? ' filter-select-active' : ''}`}
+          <FilterDropdown
+            ariaLabel="filter by year"
+            active={!!yearParam}
             value={yearParam ?? ''}
-            onChange={e => updateParams({ year: e.target.value || null, yearMin: null, yearMax: null })}
-            aria-label="filter by year"
-          >
-            <option value="">all years</option>
-            {hasMissingYear && <option value="none">no year</option>}
-            {availableYears.map(y => <option key={y} value={y}>{y}</option>)}
-          </select>
+            onChange={v => updateParams({ year: v || null, yearMin: null, yearMax: null })}
+            options={[
+              { value: '', label: 'all years' },
+              ...(hasMissingYear ? [{ value: 'none', label: 'no year' }] : []),
+              ...availableYears.map(y => ({ value: String(y), label: String(y) })),
+            ]}
+          />
         )}
         {(availableCities.length > 0 || hasMissingCity) && (
-          <select
-            className={`filter-select${cityParam ? ' filter-select-active' : ''}`}
+          <FilterDropdown
+            ariaLabel="filter by city"
+            active={!!cityParam}
             value={cityParam ?? ''}
-            onChange={e => updateParams({ city: e.target.value || null })}
-            aria-label="filter by city"
-          >
-            <option value="">all cities</option>
-            {hasMissingCity && <option value="none">no city</option>}
-            {availableCities.map(c => <option key={c} value={c}>{c}</option>)}
-          </select>
+            onChange={v => updateParams({ city: v || null })}
+            options={[
+              { value: '', label: 'all cities' },
+              ...(hasMissingCity ? [{ value: 'none', label: 'no city' }] : []),
+              ...availableCities.map(c => ({ value: c, label: c })),
+            ]}
+          />
         )}
-        <select
-          className={`filter-select${sortParam !== 'newest' ? ' filter-select-active' : ''}`}
+        <FilterDropdown
+          ariaLabel="sort"
+          active={sortParam !== 'newest'}
           value={sortParam}
-          onChange={e => updateParams({ sort: e.target.value === 'newest' ? null : e.target.value })}
-          aria-label="sort"
-        >
-          <option value="newest">newest</option>
-          <option value="oldest">oldest</option>
-          <option value="name-asc">name a–z</option>
-          <option value="name-desc">name z–a</option>
-          <option value="acquired-desc">acquired (newest)</option>
-          <option value="acquired-asc">acquired (oldest)</option>
-        </select>
+          onChange={v => updateParams({ sort: v === 'newest' ? null : v })}
+          options={[
+            { value: 'newest', label: 'newest' },
+            { value: 'oldest', label: 'oldest' },
+            { value: 'name-asc', label: 'name a–z' },
+            { value: 'name-desc', label: 'name z–a' },
+            { value: 'acquired-desc', label: 'acquired (newest)' },
+            { value: 'acquired-asc', label: 'acquired (oldest)' },
+          ]}
+        />
         {yearRangeLabel && (
           <button
             className="filter-select filter-select-active filter-date-chip"
