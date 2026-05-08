@@ -11,7 +11,6 @@ const PIE_PALETTE = [
   '#C5705D', '#D4A55C', '#8FA363', '#5C9A8C', '#5A7CA8',
   '#8A6FA3', '#B5688A', '#8B6F47', '#A89B6E', '#5C5C5C',
 ];
-const PIE_MULTIPLE_COLOR = '#2D2D2D';
 const PIE_UNTAGGED_COLOR = '#D5D0C8';
 
 let MapView = null;
@@ -216,25 +215,31 @@ export default function StatsScreen() {
 
   const tagDistribution = useMemo(() => {
     if (items.length === 0) return null;
+    const appearances = new Map();
+    for (const item of items) {
+      for (const tag of item.tags ?? []) {
+        appearances.set(tag.name, (appearances.get(tag.name) ?? 0) + 1);
+      }
+    }
     const tagCounts = new Map();
-    let multipleCount = 0;
     let untaggedCount = 0;
     for (const item of items) {
       const tags = item.tags ?? [];
-      if (tags.length === 0) untaggedCount++;
-      else if (tags.length === 1) {
-        const name = tags[0].name;
-        tagCounts.set(name, (tagCounts.get(name) ?? 0) + 1);
-      } else {
-        multipleCount++;
+      if (tags.length === 0) { untaggedCount++; continue; }
+      let chosen = tags[0].name;
+      let chosenCount = appearances.get(chosen) ?? 0;
+      for (let i = 1; i < tags.length; i++) {
+        const n = tags[i].name;
+        const c = appearances.get(n) ?? 0;
+        if (c > chosenCount) { chosen = n; chosenCount = c; }
       }
+      tagCounts.set(chosen, (tagCounts.get(chosen) ?? 0) + 1);
     }
     const tagSlices = [...tagCounts.entries()]
       .map(([label, count]) => ({ label, count, kind: 'tag' }))
       .sort((a, b) => b.count - a.count)
       .map((s, i) => ({ ...s, color: PIE_PALETTE[i % PIE_PALETTE.length] }));
     const slices = [...tagSlices];
-    if (multipleCount > 0) slices.push({ label: 'multiple tags', count: multipleCount, kind: 'multiple', color: PIE_MULTIPLE_COLOR });
     if (untaggedCount > 0) slices.push({ label: 'untagged', count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR });
     if (slices.length === 0) return null;
     const total = slices.reduce((sum, s) => sum + s.count, 0);
