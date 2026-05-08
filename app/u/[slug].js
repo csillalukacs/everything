@@ -4,8 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { supabase } from '../../lib/supabase';
 import { useCollection } from '../../lib/CollectionProvider';
 import ProfileViewScreen from '../../screens/ProfileViewScreen';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_RE } from '../../shared/identifiers';
 
 export default function ProfileSlugRoute() {
   const { slug } = useLocalSearchParams();

@@ -11,6 +11,18 @@ There are **two parallel apps** sharing the same Supabase backend:
 
 Features added to one app usually need to be mirrored in the other. Check both before assuming a feature is missing.
 
+### Shared code ([`shared/`](shared/))
+
+Platform-agnostic JavaScript shared by both apps lives at [`shared/`](shared/). Modules here must have **no React, no React Native, no DOM, no AsyncStorage/localStorage** — pure JS only. Both Metro and Vite resolve relative imports here directly (`../shared/...` from mobile, `../../../shared/...` from `web/src/screens/`).
+
+Current modules:
+- [`shared/itemsApi.js`](shared/itemsApi.js) — `fetchAllItems(client, opts)` and `fetchItemCount(client, opts)`. The fetch helper paginates internally via `.range()` (page size 1000) so it's safe past the PostgREST `db-max-rows` cap. The count helper uses `count: 'exact', head: true` for a cheap count regardless of collection size. Pass a Supabase client; both apps' clients work.
+- [`shared/dates.js`](shared/dates.js) — `MONTH_NAMES`, day/week/month bucketing (`dayKey`, `weekKey`, `monthKey`, `bucketize`), date list generators (`lastNDays`, `lastNWeeks`, `lastNMonths`), streak math (`computeStreak`, `computeLongestStreak`), label formatters, and `formatDateLabel`.
+- [`shared/items.js`](shared/items.js) — `cityOf(loc)` (extracts city from "City, Country"), `acquiredFields(acquired)` (the standard `acquired_year/location/lat/lng` patch).
+- [`shared/identifiers.js`](shared/identifiers.js) — `UUID_RE` and `USERNAME_RE`.
+
+When you find code duplicated across mobile and web that's pure JS, prefer extracting to `shared/` over re-duplicating.
+
 ## Commands
 
 ```bash

@@ -17,6 +17,7 @@ import { Image } from 'expo-image';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
+import { cityOf } from '../../shared/items';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -59,12 +60,6 @@ export default function Collection() {
       router.setParams({ city: undefined });
     }
   }, [params.city, router]);
-
-  function cityOf(loc) {
-    if (!loc) return null;
-    const c = loc.split(',')[0].trim();
-    return c || null;
-  }
 
   const availableYears = [...new Set(items.map(i => i.acquired_year).filter(y => y != null))].sort((a, b) => b - a);
   const availableCities = [...new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))].sort();

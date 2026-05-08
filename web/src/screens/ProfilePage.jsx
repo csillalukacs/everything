@@ -1,25 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { fetchAllItems, fetchItemCount } from '../lib/itemsApi'
+import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
+import { cityOf, acquiredFields } from '../../../shared/items'
+import { UUID_RE, USERNAME_RE } from '../../../shared/identifiers'
+import { formatDateLabel } from '../../../shared/dates'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
 import LocationPicker from './LocationPicker'
 import FilterDropdown from './FilterDropdown'
-
-function cityOf(loc) {
-  if (!loc) return null
-  const c = loc.split(',')[0].trim()
-  return c || null
-}
-
-function formatDateLabel(s) {
-  if (!s) return ''
-  const d = new Date(s)
-  if (Number.isNaN(d.getTime())) return s
-  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase()
-}
 
 const itemsCacheKey = userId => `cache:items:${userId}`
 const tagsCacheKey = userId => `cache:tags:${userId}`
@@ -57,9 +47,6 @@ function TrashIcon({ size = 18, color = 'currentColor' }) {
     </svg>
   )
 }
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
-const USERNAME_RE = /^[a-z0-9_]{3,20}$/
 
 export default function ProfilePage() {
   const { slug } = useParams()
@@ -260,15 +247,6 @@ export default function ProfilePage() {
     await supabase.from('item_tags').delete().eq('item_id', itemId)
     if (tagIds.length > 0)
       await supabase.from('item_tags').insert(tagIds.map(tag_id => ({ item_id: itemId, tag_id })))
-  }
-
-  function acquiredFields(acquired) {
-    return {
-      acquired_year: acquired?.year ?? null,
-      acquired_location: acquired?.location ?? null,
-      acquired_lat: acquired?.lat ?? null,
-      acquired_lng: acquired?.lng ?? null,
-    }
   }
 
   async function handleSave(name, file, tagNames, isPrivate, description, acquired) {

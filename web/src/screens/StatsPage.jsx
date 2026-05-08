@@ -4,7 +4,25 @@ import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { supabase } from '../lib/supabase'
-import { fetchAllItems, fetchItemCount } from '../lib/itemsApi'
+import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
+import {
+  MONTH_NAMES,
+  dayKey,
+  weekKey,
+  monthKey,
+  lastNDays,
+  lastNWeeks,
+  lastNMonths,
+  bucketize,
+  computeStreak,
+  computeLongestStreak,
+  formatDayLabel,
+  formatWeekLabel,
+  formatMonthLabel,
+  endOfWeekKey,
+  endOfMonthKey,
+} from '../../../shared/dates'
+import { cityOf } from '../../../shared/items'
 
 const markerIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -29,114 +47,6 @@ function readCache(key) {
   try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null } catch { return null }
 }
 
-function startOfDay(d) {
-  const x = new Date(d); x.setHours(0, 0, 0, 0); return x
-}
-
-function dayKey(d) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  const dd = String(d.getDate()).padStart(2, '0')
-  return `${y}-${m}-${dd}`
-}
-
-function startOfWeek(d) {
-  const x = startOfDay(d)
-  const diff = (x.getDay() + 6) % 7
-  x.setDate(x.getDate() - diff)
-  return x
-}
-
-function weekKey(d) { return dayKey(startOfWeek(d)) }
-
-function monthKey(d) {
-  const y = d.getFullYear()
-  const m = String(d.getMonth() + 1).padStart(2, '0')
-  return `${y}-${m}`
-}
-
-function lastNDays(n) {
-  const today = startOfDay(new Date())
-  const out = []
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(today); d.setDate(d.getDate() - i)
-    out.push(d)
-  }
-  return out
-}
-
-function lastNWeeks(n) {
-  const start = startOfWeek(new Date())
-  const out = []
-  for (let i = n - 1; i >= 0; i--) {
-    const d = new Date(start); d.setDate(d.getDate() - i * 7)
-    out.push(d)
-  }
-  return out
-}
-
-function lastNMonths(n) {
-  const today = new Date()
-  const out = []
-  for (let i = n - 1; i >= 0; i--) {
-    out.push(new Date(today.getFullYear(), today.getMonth() - i, 1))
-  }
-  return out
-}
-
-function computeStreak(byDay) {
-  if (byDay.size === 0) return 0
-  const cursor = startOfDay(new Date())
-  if (!byDay.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1)
-  let streak = 0
-  while (byDay.has(dayKey(cursor))) {
-    streak++
-    cursor.setDate(cursor.getDate() - 1)
-  }
-  return streak
-}
-
-function computeLongestStreak(byDay) {
-  const keys = [...byDay.keys()].sort()
-  if (keys.length === 0) return 0
-  let longest = 1, current = 1
-  for (let i = 1; i < keys.length; i++) {
-    const prev = new Date(keys[i - 1])
-    const curr = new Date(keys[i])
-    const diffDays = Math.round((curr - prev) / 86400000)
-    if (diffDays === 1) { current++; longest = Math.max(longest, current) }
-    else current = 1
-  }
-  return longest
-}
-
-function bucketize(items, keyFn) {
-  const m = new Map()
-  for (const item of items) {
-    const k = keyFn(new Date(item.created_at))
-    m.set(k, (m.get(k) ?? 0) + 1)
-  }
-  return m
-}
-
-const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-
-function formatDayLabel(d, i, total) {
-  if (total <= 14) return String(d.getDate())
-  if (i === total - 1) return String(d.getDate())
-  if (d.getDate() === 1) return MONTH_NAMES[d.getMonth()].toLowerCase()
-  if (d.getDay() === 1) return String(d.getDate())
-  return ''
-}
-
-function formatWeekLabel(d) {
-  return `${d.getMonth() + 1}/${d.getDate()}`
-}
-
-function formatMonthLabel(d) {
-  return MONTH_NAMES[d.getMonth()].toLowerCase()
-}
-
 function Bar({ count, max, label, title, onClick }) {
   const heightPct = max > 0 ? (count / max) * 100 : 0
   const interactive = !!onClick && count > 0
@@ -158,28 +68,6 @@ function Bar({ count, max, label, title, onClick }) {
       <span className="stats-bar-label">{label}</span>
     </Tag>
   )
-}
-
-function dayKeyToDate(k) {
-  return new Date(k)
-}
-
-function endOfWeekKey(k) {
-  const d = dayKeyToDate(k)
-  d.setDate(d.getDate() + 6)
-  return dayKey(d)
-}
-
-function endOfMonthKey(k) {
-  const [y, m] = k.split('-').map(Number)
-  const d = new Date(y, m, 0)
-  return dayKey(d)
-}
-
-function cityOf(loc) {
-  if (!loc) return null
-  const c = loc.split(',')[0].trim()
-  return c || null
 }
 
 const PIE_PALETTE = [

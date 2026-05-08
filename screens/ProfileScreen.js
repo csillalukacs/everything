@@ -9,9 +9,8 @@ import {
   View,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { USERNAME_RE } from '../shared/identifiers';
 import LocationPicker from './LocationPicker';
-
-const USERNAME_RE = /^[a-z0-9_]{3,20}$/;
 
 export default function ProfileScreen({ visible, onClose, session, itemCount }) {
   const [displayName, setDisplayName] = useState('');

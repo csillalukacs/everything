@@ -1,0 +1,128 @@
+export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+export function startOfDay(d) {
+  const x = new Date(d);
+  x.setHours(0, 0, 0, 0);
+  return x;
+}
+
+export function dayKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${dd}`;
+}
+
+export function startOfWeek(d) {
+  const x = startOfDay(d);
+  const diff = (x.getDay() + 6) % 7;
+  x.setDate(x.getDate() - diff);
+  return x;
+}
+
+export function weekKey(d) { return dayKey(startOfWeek(d)); }
+
+export function monthKey(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  return `${y}-${m}`;
+}
+
+export function lastNDays(n) {
+  const today = startOfDay(new Date());
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(today);
+    d.setDate(d.getDate() - i);
+    out.push(d);
+  }
+  return out;
+}
+
+export function lastNWeeks(n) {
+  const start = startOfWeek(new Date());
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date(start);
+    d.setDate(d.getDate() - i * 7);
+    out.push(d);
+  }
+  return out;
+}
+
+export function lastNMonths(n) {
+  const today = new Date();
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    out.push(new Date(today.getFullYear(), today.getMonth() - i, 1));
+  }
+  return out;
+}
+
+export function bucketize(items, keyFn) {
+  const m = new Map();
+  for (const item of items) {
+    const k = keyFn(new Date(item.created_at));
+    m.set(k, (m.get(k) ?? 0) + 1);
+  }
+  return m;
+}
+
+export function computeStreak(byDay) {
+  if (byDay.size === 0) return 0;
+  const cursor = startOfDay(new Date());
+  if (!byDay.has(dayKey(cursor))) cursor.setDate(cursor.getDate() - 1);
+  let streak = 0;
+  while (byDay.has(dayKey(cursor))) {
+    streak++;
+    cursor.setDate(cursor.getDate() - 1);
+  }
+  return streak;
+}
+
+export function computeLongestStreak(byDay) {
+  const keys = [...byDay.keys()].sort();
+  if (keys.length === 0) return 0;
+  let longest = 1, current = 1;
+  for (let i = 1; i < keys.length; i++) {
+    const prev = new Date(keys[i - 1]);
+    const curr = new Date(keys[i]);
+    const diffDays = Math.round((curr - prev) / 86400000);
+    if (diffDays === 1) { current++; longest = Math.max(longest, current); }
+    else current = 1;
+  }
+  return longest;
+}
+
+export function formatDayLabel(d, i, total) {
+  if (total <= 14) return String(d.getDate());
+  if (i === total - 1) return String(d.getDate());
+  if (d.getDate() === 1) return MONTH_NAMES[d.getMonth()].toLowerCase();
+  if (d.getDay() === 1) return String(d.getDate());
+  return '';
+}
+
+export function formatWeekLabel(d) { return `${d.getMonth() + 1}/${d.getDate()}`; }
+
+export function formatMonthLabel(d) { return MONTH_NAMES[d.getMonth()].toLowerCase(); }
+
+export function dayKeyToDate(k) { return new Date(k); }
+
+export function endOfWeekKey(k) {
+  const d = dayKeyToDate(k);
+  d.setDate(d.getDate() + 6);
+  return dayKey(d);
+}
+
+export function endOfMonthKey(k) {
+  const [y, m] = k.split('-').map(Number);
+  const d = new Date(y, m, 0);
+  return dayKey(d);
+}
+
+export function formatDateLabel(s) {
+  if (!s) return '';
+  const d = new Date(s);
+  if (Number.isNaN(d.getTime())) return s;
+  return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase();
+}

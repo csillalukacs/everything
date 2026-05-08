@@ -14,13 +14,12 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { supabase } from '../lib/supabase';
-import { fetchAllItems, fetchItemCount } from '../lib/itemsApi';
+import { fetchAllItems, fetchItemCount } from '../shared/itemsApi';
+import { UUID_RE } from '../shared/identifiers';
 import ItemDetailModal from './ItemDetailModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 export default function ProfileViewScreen({ visible, slug, onClose }) {
   const [loading, setLoading] = useState(true);
