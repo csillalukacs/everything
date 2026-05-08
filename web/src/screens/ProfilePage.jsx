@@ -875,7 +875,7 @@ export default function ProfilePage() {
         onSave={isOwner ? handleUpdate : undefined}
         onDelete={isOwner ? handleDelete : undefined}
         allTags={allTags}
-        onTagPress={tag => { setActiveTag(tag); closeItem(); }}
+        onTagPress={tag => updateParams({ tag: tag.name, item: null })}
         onPrev={(() => {
           const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
           return idx > 0 ? () => openItem(filteredItems[idx - 1]) : null
