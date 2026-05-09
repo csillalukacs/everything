@@ -91,7 +91,7 @@ export const S = {
     homeCityPublicHint: 'shown publicly on your profile',
     collection: 'collection',
     account: 'account',
-    objectCount: (n) => `${n} ${plural(n, 'object')}`,
+    objectCount: (n) => `${n} ${plural(n, 'thing')}`,
     edit: 'edit profile',                                // web edit-profile dialog title
     displayName: 'display name',
     displayNamePlaceholder: 'your name',
@@ -193,15 +193,15 @@ export const S = {
     acquisitionTitle: (bucketSize) =>
       `acquisition ${bucketSize === 1 ? 'years' : `${bucketSize}-year periods`}`,
     mapCaption: (objects, locations) =>
-      `${objects} ${plural(objects, 'object')} across ${locations} ${plural(locations, 'location')}`,
+      `${objects} ${plural(objects, 'thing')} across ${locations} ${plural(locations, 'location')}`,
     connectedTo: (city) => ` · connected to ${city}`,
     seeAllFromMobile: (city) => `see all from ${city}`,
     seeAllFromWeb: (city) => `see all from ${city} →`,
-    objectsLabel: (n) => plural(n, 'object'),
+    objectsLabel: (n) => plural(n, 'thing'),
     daysLabel: (n) => plural(n, 'day'),
-    objectCount: (n) => `${n} ${plural(n, 'object')}`,
+    objectCount: (n) => `${n} ${plural(n, 'thing')}`,
     objectCountWithRegion: (n, region) =>
-      `${n} ${plural(n, 'object')}${region ? ` · ${region}` : ''}`,
+      `${n} ${plural(n, 'thing')}${region ? ` · ${region}` : ''}`,
   },
 
   // Canvas (mobile only)
