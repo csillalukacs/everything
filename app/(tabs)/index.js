@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
   FlatList,
@@ -18,6 +18,7 @@ import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
 import { cityOf } from '../../shared/items';
+import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -52,6 +53,7 @@ export default function Collection() {
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [manageTagSearch, setManageTagSearch] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [searchHelpVisible, setSearchHelpVisible] = useState(false);
 
   useEffect(() => {
     if (params.city) {
@@ -109,15 +111,9 @@ export default function Collection() {
     await batchTogglePrivacy([...selectedIds]);
   }
 
-  const query = searchQuery.trim().toLowerCase();
+  const queryAst = useMemo(() => parseQuery(searchQuery), [searchQuery]);
   const searchedItems = items.filter(i => {
-    if (query) {
-      const name = (i.name ?? '').toLowerCase();
-      const desc = (i.description ?? '').toLowerCase();
-      const ocr = (i.ocr_text ?? '').toLowerCase();
-      const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase());
-      if (!(name.includes(query) || desc.includes(query) || ocr.includes(query) || tagNames.some(n => n.includes(query)))) return false;
-    }
+    if (!matchItem(i, queryAst)) return false;
     if (activeYear === 'none') {
       if (i.acquired_year != null) return false;
     } else if (activeYear != null && i.acquired_year !== activeYear) return false;
@@ -197,7 +193,48 @@ export default function Collection() {
             <Ionicons name="close-circle" size={16} color="#999" />
           </TouchableOpacity>
         )}
+        <TouchableOpacity
+          style={styles.searchHelpButton}
+          onPress={() => setSearchHelpVisible(true)}
+          accessibilityLabel={S.a11y.searchHelp}
+          hitSlop={8}
+        >
+          <Text style={styles.searchHelpButtonText}>?</Text>
+        </TouchableOpacity>
       </View>
+
+      <Modal
+        visible={searchHelpVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSearchHelpVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.searchHelpBackdrop}
+          activeOpacity={1}
+          onPress={() => setSearchHelpVisible(false)}
+        >
+          <TouchableOpacity activeOpacity={1} style={styles.searchHelpCard} onPress={() => {}}>
+            <Text style={styles.searchHelpTitle}>{S.searchHelp.title}</Text>
+            <Text style={styles.searchHelpIntro}>{S.searchHelp.intro}</Text>
+            <ScrollView style={styles.searchHelpList}>
+              {S.searchHelp.examples.map(ex => (
+                <TouchableOpacity
+                  key={ex.code}
+                  style={styles.searchHelpRow}
+                  onPress={() => {
+                    setSearchQuery(ex.code);
+                    setSearchHelpVisible(false);
+                  }}
+                >
+                  <Text style={styles.searchHelpCode}>{ex.code}</Text>
+                  <Text style={styles.searchHelpDesc}>{ex.desc}</Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
 
       {(availableYears.length > 0 || availableCities.length > 0 || hasMissingYear || hasMissingCity) && (
         <ScrollView
@@ -530,6 +567,65 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2D2D2D',
     paddingVertical: 0,
+  },
+  searchHelpButton: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  searchHelpButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#999',
+    lineHeight: 14,
+  },
+  searchHelpBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 24,
+  },
+  searchHelpCard: {
+    width: '100%',
+    maxWidth: 420,
+    maxHeight: '80%',
+    backgroundColor: '#fff',
+    borderRadius: 16,
+    padding: 20,
+  },
+  searchHelpTitle: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#2D2D2D',
+    marginBottom: 4,
+  },
+  searchHelpIntro: {
+    fontSize: 13,
+    color: '#999',
+    marginBottom: 12,
+  },
+  searchHelpList: {
+    flexGrow: 0,
+  },
+  searchHelpRow: {
+    paddingVertical: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F0EBE5',
+  },
+  searchHelpCode: {
+    fontFamily: 'Menlo',
+    fontSize: 13,
+    color: '#2D2D2D',
+    marginBottom: 2,
+  },
+  searchHelpDesc: {
+    fontSize: 12,
+    color: '#666',
   },
   filterRow: {
     flexDirection: 'row',

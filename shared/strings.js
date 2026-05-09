@@ -122,6 +122,25 @@ export const S = {
     searchTags: 'search tags',
   },
 
+  // Advanced search syntax help (popover anchored to the search bar)
+  searchHelp: {
+    title: 'search syntax',
+    intro: 'combine terms with spaces (and), OR, or - to exclude',
+    examples: [
+      { code: 'tag:books', desc: 'exact tag match' },
+      { code: 'tag:"tea and coffee"', desc: 'quote multi-word values' },
+      { code: '-tag:fiction', desc: 'exclude (works with any field)' },
+      { code: 'tag:books OR tag:kitchen', desc: 'either tag' },
+      { code: 'acquired:2024', desc: 'year acquired (alias: year:)' },
+      { code: 'acquired:>2020', desc: 'comparisons: >, <, >=, <=' },
+      { code: 'acquired:2020..2024', desc: 'range' },
+      { code: 'added:>2026-01-01', desc: 'date added (YYYY, YYYY-MM, YYYY-MM-DD)' },
+      { code: 'city:Berlin', desc: 'city acquired' },
+      { code: 'name:camera', desc: 'fields: name, desc, ocr' },
+      { code: 'acquired:none', desc: 'items missing the field' },
+    ],
+  },
+
   // Filters / sorting (web)
   filters: {
     allYears: 'all years',
@@ -223,6 +242,7 @@ export const S = {
     // web
     removePhoto: 'remove photo',
     clearSearch: 'clear search',
+    searchHelp: 'search syntax help',
     clear: 'clear',
     filterByYear: 'filter by year',
     filterByCity: 'filter by city',

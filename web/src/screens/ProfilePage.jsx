@@ -1,8 +1,9 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
 import { cityOf, acquiredFields } from '../../../shared/items'
+import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { UUID_RE, USERNAME_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -86,6 +87,24 @@ export default function ProfilePage() {
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [manageTagSearch, setManageTagSearch] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
+  const [searchHelpOpen, setSearchHelpOpen] = useState(false)
+  const searchHelpRef = useRef(null)
+
+  useEffect(() => {
+    if (!searchHelpOpen) return
+    function onDocClick(e) {
+      if (searchHelpRef.current && !searchHelpRef.current.contains(e.target)) {
+        setSearchHelpOpen(false)
+      }
+    }
+    function onKey(e) { if (e.key === 'Escape') setSearchHelpOpen(false) }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('keydown', onKey)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKey)
+    }
+  }, [searchHelpOpen])
 
   const batchMode = selectedIds.size > 0
 
@@ -424,18 +443,12 @@ export default function ProfilePage() {
     }
   }, [items, sortParam])
 
-  const query = searchQuery.trim().toLowerCase()
+  const queryAst = useMemo(() => parseQuery(searchQuery), [searchQuery])
   const fromDate = fromParam ? new Date(fromParam) : null
   const toDate = toParam ? new Date(toParam + 'T23:59:59') : null
   const cityParamLower = cityParam?.toLowerCase() ?? null
   const searchedItems = sortedItems.filter(i => {
-    if (query) {
-      const name = (i.name ?? '').toLowerCase()
-      const desc = (i.description ?? '').toLowerCase()
-      const ocr = (i.ocr_text ?? '').toLowerCase()
-      const tagNames = (i.tags ?? []).map(t => t.name.toLowerCase())
-      if (!(name.includes(query) || desc.includes(query) || ocr.includes(query) || tagNames.some(n => n.includes(query)))) return false
-    }
+    if (!matchItem(i, queryAst)) return false
     if (yearParam === 'none') {
       if (i.acquired_year != null) return false
     } else if (yearParam) {
@@ -704,7 +717,7 @@ export default function ProfilePage() {
       </header>
 
       <div className="search-row">
-        <div className="search-container">
+        <div className="search-container" ref={searchHelpRef}>
           <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
             <circle cx="11" cy="11" r="7" />
             <line x1="21" y1="21" x2="16.65" y2="16.65" />
@@ -718,6 +731,34 @@ export default function ProfilePage() {
           />
           {searchQuery && (
             <button className="search-clear" onClick={() => setSearchQuery('')} aria-label={S.a11y.clearSearch}>×</button>
+          )}
+          <button
+            type="button"
+            className={`search-help-button${searchHelpOpen ? ' search-help-button-active' : ''}`}
+            onClick={() => setSearchHelpOpen(v => !v)}
+            aria-label={S.a11y.searchHelp}
+            aria-expanded={searchHelpOpen}
+          >?</button>
+          {searchHelpOpen && (
+            <div className="search-help-popover" role="dialog" aria-label={S.searchHelp.title}>
+              <div className="search-help-title">{S.searchHelp.title}</div>
+              <div className="search-help-intro">{S.searchHelp.intro}</div>
+              <ul className="search-help-list">
+                {S.searchHelp.examples.map(ex => (
+                  <li key={ex.code}>
+                    <button
+                      type="button"
+                      className="search-help-code"
+                      onClick={() => {
+                        setSearchQuery(ex.code)
+                        setSearchHelpOpen(false)
+                      }}
+                    >{ex.code}</button>
+                    <span className="search-help-desc">{ex.desc}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
           )}
         </div>
         {(availableYears.length > 0 || hasMissingYear) && (
