@@ -11,6 +11,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { S } from '../shared/strings';
 
 export default function CameraCaptureModal({ visible, onCapture, onCancel }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -53,9 +54,9 @@ export default function CameraCaptureModal({ visible, onCapture, onCancel }) {
     if (!permission.granted) {
       return (
         <View style={styles.permissionContainer}>
-          <Text style={styles.permissionText}>camera access needed</Text>
+          <Text style={styles.permissionText}>{S.camera.permissionMessage}</Text>
           <TouchableOpacity style={styles.permissionButton} onPress={requestPermission}>
-            <Text style={styles.permissionButtonText}>allow camera</Text>
+            <Text style={styles.permissionButtonText}>{S.camera.allowCamera}</Text>
           </TouchableOpacity>
         </View>
       );
@@ -66,7 +67,7 @@ export default function CameraCaptureModal({ visible, onCapture, onCancel }) {
         <CameraView ref={cameraRef} style={styles.camera} facing="back" />
 
         <TouchableOpacity style={styles.cancelOverlay} onPress={onCancel}>
-          <Text style={styles.cancelText}>cancel</Text>
+          <Text style={styles.cancelText}>{S.common.cancel}</Text>
         </TouchableOpacity>
 
         <View style={styles.cameraControls}>

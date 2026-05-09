@@ -23,6 +23,7 @@ import {
   endOfMonthKey,
 } from '../../../shared/dates'
 import { cityOf } from '../../../shared/items'
+import { S } from '../../../shared/strings'
 
 const markerIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -268,7 +269,7 @@ export default function StatsPage() {
       .sort((a, b) => b.count - a.count)
       .map((s, i) => ({ ...s, color: PIE_PALETTE[i % PIE_PALETTE.length] }))
     const slices = [...tagSlices]
-    if (untaggedCount > 0) slices.push({ label: 'untagged', count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR })
+    if (untaggedCount > 0) slices.push({ label: S.collection.untagged, count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR })
     if (slices.length === 0) return null
     const total = slices.reduce((sum, s) => sum + s.count, 0)
     return { slices, total }
@@ -318,39 +319,39 @@ export default function StatsPage() {
     <div className="app">
       <header className="header">
         <div>
-          <h1 className="profile-name">stats</h1>
-          <p className="profile-username-readonly">your collection over time</p>
+          <h1 className="profile-name">{S.stats.title}</h1>
+          <p className="profile-username-readonly">{S.stats.subtitle}</p>
         </div>
         <div className="header-links" style={{ marginTop: 8 }}>
-          <Link to={`/u/${targetSlug}`} className="link-btn">my collection</Link>
-          <Link to="/" className="link-btn">things</Link>
+          <Link to={`/u/${targetSlug}`} className="link-btn">{S.feed.myCollection}</Link>
+          <Link to="/" className="link-btn">{S.appName}</Link>
         </div>
       </header>
 
       {items.length === 0 ? (
         <div className="centered" style={{ flexDirection: 'column', gap: 16, height: 'auto', padding: '80px 0' }}>
-          <p style={{ color: '#999' }}>nothing to show yet</p>
+          <p style={{ color: '#999' }}>{S.stats.empty}</p>
         </div>
       ) : (
         <>
           <div className="stats-summary">
             <div className="stats-card">
-              <div className="stats-card-label">total</div>
+              <div className="stats-card-label">{S.stats.total}</div>
               <div className="stats-card-value">{itemCount ?? items.length}</div>
-              <div className="stats-card-sub">{(itemCount ?? items.length) === 1 ? 'object' : 'objects'}</div>
+              <div className="stats-card-sub">{S.stats.objectsLabel(itemCount ?? items.length)}</div>
             </div>
             <div className="stats-card">
-              <div className="stats-card-label">current streak</div>
+              <div className="stats-card-label">{S.stats.streakWeb}</div>
               <div className="stats-card-value">{stats.streak}</div>
-              <div className="stats-card-sub">{stats.streak === 1 ? 'day' : 'days'}</div>
+              <div className="stats-card-sub">{S.stats.daysLabel(stats.streak)}</div>
             </div>
             <div className="stats-card">
-              <div className="stats-card-label">longest streak</div>
+              <div className="stats-card-label">{S.stats.longestWeb}</div>
               <div className="stats-card-value">{stats.longest}</div>
-              <div className="stats-card-sub">{stats.longest === 1 ? 'day' : 'days'}</div>
+              <div className="stats-card-sub">{S.stats.daysLabel(stats.longest)}</div>
             </div>
             <div className="stats-card">
-              <div className="stats-card-label">best day</div>
+              <div className="stats-card-label">{S.stats.bestDay}</div>
               <div className="stats-card-value">{stats.bestDayCount}</div>
               <div className="stats-card-sub">
                 {bestDayDate ? `${MONTH_NAMES[bestDayDate.getMonth()].toLowerCase()} ${bestDayDate.getDate()}, ${bestDayDate.getFullYear()}` : '—'}
@@ -359,7 +360,7 @@ export default function StatsPage() {
           </div>
 
           <section className="stats-section">
-            <h2 className="stats-section-title">last 30 days</h2>
+            <h2 className="stats-section-title">{S.stats.last30Days}</h2>
             <div className="stats-chart">
               {days.map((d, i) => {
                 const k = dayKey(d)
@@ -380,7 +381,7 @@ export default function StatsPage() {
 
           <div className="stats-row">
             <section className="stats-section">
-              <h2 className="stats-section-title">last 12 weeks</h2>
+              <h2 className="stats-section-title">{S.stats.last12Weeks}</h2>
               <div className="stats-chart">
                 {weeks.map(d => {
                   const k = weekKey(d)
@@ -400,7 +401,7 @@ export default function StatsPage() {
             </section>
 
             <section className="stats-section">
-              <h2 className="stats-section-title">last 12 months</h2>
+              <h2 className="stats-section-title">{S.stats.last12Months}</h2>
               <div className="stats-chart">
                 {months.map(d => {
                   const k = monthKey(d)
@@ -424,9 +425,7 @@ export default function StatsPage() {
             <div className="stats-row">
               {yearStats && (
                 <section className="stats-section">
-                  <h2 className="stats-section-title">
-                    acquisition {yearStats.bucketSize === 1 ? 'years' : `${yearStats.bucketSize}-year periods`}
-                  </h2>
+                  <h2 className="stats-section-title">{S.stats.acquisitionTitle(yearStats.bucketSize)}</h2>
                   <div className="stats-chart">
                     {yearStats.bars.map(b => (
                       <Bar
@@ -448,7 +447,7 @@ export default function StatsPage() {
 
               {topCities.length > 0 && (
                 <section className="stats-section">
-                  <h2 className="stats-section-title">top cities</h2>
+                  <h2 className="stats-section-title">{S.stats.topCities}</h2>
                   <div className="stats-chart">
                     {topCities.map(c => (
                       <Bar
@@ -472,7 +471,7 @@ export default function StatsPage() {
               <div className="stats-row">
                 {tagDistribution && (
                   <section className="stats-section stats-row-pie">
-                    <h2 className="stats-section-title">tags</h2>
+                    <h2 className="stats-section-title">{S.stats.tags}</h2>
                     <div className="stats-pie-wrap">
                       <div className="stats-pie-chart">
                         <PieChart
@@ -521,7 +520,7 @@ export default function StatsPage() {
                 )}
                 {mapGroups.length > 0 && (
                   <section className="stats-section stats-row-map">
-                    <h2 className="stats-section-title">acquired around the world</h2>
+                    <h2 className="stats-section-title">{S.stats.acquiredAroundWorld}</h2>
                     <div className="stats-map">
                       <MapContainer
                   bounds={mapBounds}
@@ -544,10 +543,9 @@ export default function StatsPage() {
                     <Marker key={g.key} position={[g.lat, g.lng]} icon={markerIcon}>
                       <Popup>
                         <div className="map-popup">
-                          <div className="map-popup-title">{g.city || 'unnamed location'}</div>
+                          <div className="map-popup-title">{g.city || S.stats.unnamedLocation}</div>
                           <div className="map-popup-sub">
-                            {g.count} object{g.count === 1 ? '' : 's'}
-                            {g.regionLabel ? ` · ${g.regionLabel}` : ''}
+                            {S.stats.objectCountWithRegion(g.count, g.regionLabel)}
                           </div>
                           {g.samples.length > 0 && (
                             <div className="map-popup-thumbs">
@@ -572,7 +570,7 @@ export default function StatsPage() {
                               href="#"
                               className="map-popup-link"
                               onClick={e => { e.preventDefault(); goWith({ city: g.city }) }}
-                            >see all from {g.city} →</a>
+                            >{S.stats.seeAllFromWeb(g.city)}</a>
                           )}
                         </div>
                       </Popup>
@@ -581,7 +579,7 @@ export default function StatsPage() {
                   {home && (
                     <Marker position={[home.lat, home.lng]} icon={homeIcon}>
                       <Popup>
-                        <strong>home</strong>
+                        <strong>{S.stats.home}</strong>
                         {home.location && <><br />{home.location.split(',')[0]}</>}
                       </Popup>
                     </Marker>
@@ -589,8 +587,8 @@ export default function StatsPage() {
                 </MapContainer>
               </div>
                     <p className="stats-map-caption">
-                      {totalLocatedItems} object{totalLocatedItems === 1 ? '' : 's'} across {mapGroups.length} location{mapGroups.length === 1 ? '' : 's'}
-                      {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
+                      {S.stats.mapCaption(totalLocatedItems, mapGroups.length)}
+                      {home ? S.stats.connectedTo(home.location?.split(',')[0]) : ''}
                     </p>
                   </section>
                 )}

@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { S } from '../../../shared/strings'
 import LocationPicker from './LocationPicker'
 
 export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
@@ -55,12 +56,10 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>
       <div className="sheet sheet-batch-edit">
-        <p className="sheet-title">
-          edit {selectedCount} item{selectedCount !== 1 ? 's' : ''}
-        </p>
+        <p className="sheet-title">{S.batchEdit.title(selectedCount)}</p>
 
         <div>
-          <p className="batch-section-label">add tags</p>
+          <p className="batch-section-label">{S.batchEdit.addTags}</p>
           <div className="tag-scroll">
             {tagOptions.map(tag => {
               const active = pendingTags.includes(tag)
@@ -76,7 +75,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
               <div className="new-tag-row">
                 <input
                   className="new-tag-input"
-                  placeholder="tag"
+                  placeholder={S.itemForm.tagPlaceholder}
                   value={newTagInput}
                   onChange={e => setNewTagInput(e.target.value)}
                   autoFocus
@@ -92,10 +91,10 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
         </div>
 
         <div>
-          <p className="batch-section-label">set year</p>
+          <p className="batch-section-label">{S.batchEdit.setYear}</p>
           <input
             className="name-input"
-            placeholder="leave blank to skip"
+            placeholder={S.batchEdit.leaveBlankToSkip}
             inputMode="numeric"
             maxLength={4}
             value={year}
@@ -104,15 +103,15 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
         </div>
 
         <div>
-          <p className="batch-section-label">set location</p>
-          <LocationPicker value={acquired} onChange={setAcquired} placeholder="leave blank to skip" />
+          <p className="batch-section-label">{S.batchEdit.setLocation}</p>
+          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
         </div>
 
         <button
           className="btn-primary"
           onClick={handleApply}
           disabled={!hasChanges || loading}
-        >{loading ? '...' : 'apply'}</button>
+        >{loading ? '...' : S.common.apply}</button>
       </div>
     </div>
   )

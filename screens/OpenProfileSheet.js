@@ -9,6 +9,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { S } from '../shared/strings';
 
 function parseSlug(input) {
   const trimmed = input.trim();
@@ -46,12 +47,12 @@ export default function OpenProfileSheet({ visible, onClose, onOpen }) {
         >
           <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
             <View style={styles.header}>
-              <Text style={styles.title}>open profile</Text>
+              <Text style={styles.title}>{S.openProfile.title}</Text>
               <TouchableOpacity onPress={onClose}>
-                <Text style={styles.cancel}>cancel</Text>
+                <Text style={styles.cancel}>{S.common.cancel}</Text>
               </TouchableOpacity>
             </View>
-            <Text style={styles.label}>username</Text>
+            <Text style={styles.label}>{S.profile.username}</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', gap: 3 }}>
               <Text style={{fontSize: 22, color: '#999'}}>@</Text>
               <TextInput
@@ -59,7 +60,7 @@ export default function OpenProfileSheet({ visible, onClose, onOpen }) {
                 style={[styles.input, { flex: 1 }]}
                 value={input}
                 onChangeText={setInput}
-                placeholder="alice"
+                placeholder={S.profile.usernameExample}
                 placeholderTextColor="#bbb"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -72,7 +73,7 @@ export default function OpenProfileSheet({ visible, onClose, onOpen }) {
               onPress={submit}
               disabled={!parseSlug(input)}
             >
-              <Text style={styles.goBtnText}>go</Text>
+              <Text style={styles.goBtnText}>{S.common.go}</Text>
             </TouchableOpacity>
           </TouchableOpacity>
         </KeyboardAvoidingView>

@@ -23,6 +23,7 @@ import { runOnJS } from 'react-native-worklets';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 import { cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
+import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
@@ -221,7 +222,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       <View style={styles.photoExtras}>
         {displayedDate ? (
           <Text style={styles.photoDate}>
-            photo from {new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+            {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
           </Text>
         ) : null}
         {hasMultiple && (
@@ -276,7 +277,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         <View style={styles.header}>
           <TouchableOpacity onPress={editing ? cancelEdit : onClose} style={styles.headerButton}>
             {editing
-              ? <Text style={styles.headerButtonText}>cancel</Text>
+              ? <Text style={styles.headerButtonText}>{S.common.cancel}</Text>
               : <Ionicons name="chevron-down" size={28} color="#2D2D2D" />
             }
           </TouchableOpacity>
@@ -293,7 +294,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           {onSave ? (
             <TouchableOpacity onPress={editing ? handleSave : enterEdit} style={styles.headerButton} disabled={saving}>
               <Text style={[styles.headerButtonText, editing && styles.saveText]}>
-                {editing ? (saving ? 'saving...' : 'save') : 'edit'}
+                {editing ? (saving ? S.common.saving : S.common.save) : S.common.edit}
               </Text>
             </TouchableOpacity>
           ) : (
@@ -316,13 +317,13 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               {removingBg ? (
                 <View style={styles.photoOverlay}>
                   <ActivityIndicator color="#fff" />
-                  <Text style={styles.photoActionText}>removing background...</Text>
+                  <Text style={styles.photoActionText}>{S.common.removingBackground}</Text>
                 </View>
               ) : (
                 <TouchableOpacity style={styles.photoOverlay} onPress={() => setCameraVisible(true)}>
                   <View style={styles.photoAction}>
                     <Ionicons name="camera-outline" size={22} color="#fff" />
-                    <Text style={styles.photoActionText}>change photo</Text>
+                    <Text style={styles.photoActionText}>{S.common.changePhoto}</Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -371,7 +372,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   <View style={styles.newTagRow}>
                     <TextInput
                       style={styles.newTagInput}
-                      placeholder="tag"
+                      placeholder={S.itemForm.tagPlaceholder}
                       placeholderTextColor="#bbb"
                       value={newTagName}
                       onChangeText={setNewTagName}
@@ -400,7 +401,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   style={styles.nameInput}
                   value={editName}
                   onChangeText={setEditName}
-                  placeholder="name (optional)"
+                  placeholder={S.itemForm.namePlaceholder}
                   placeholderTextColor="#bbb"
                   editable={nameEditable}
                   pointerEvents={nameEditable ? 'auto' : 'none'}
@@ -412,7 +413,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 style={styles.nameInput}
                 value={editDescription}
                 onChangeText={setEditDescription}
-                placeholder="description (optional)"
+                placeholder={S.itemForm.descriptionPlaceholder}
                 placeholderTextColor="#bbb"
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
@@ -420,7 +421,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
               <TextInput
                 style={styles.nameInput}
-                placeholder="year acquired (optional)"
+                placeholder={S.itemForm.yearPlaceholder}
                 placeholderTextColor="#bbb"
                 value={editYear}
                 onChangeText={t => setEditYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
@@ -430,7 +431,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 onSubmitEditing={Keyboard.dismiss}
               />
 
-              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder="city acquired (optional)" />
+              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
             </View>
           </ScrollView>
         ) : (
@@ -468,10 +469,10 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               {(item.acquired_location || item.acquired_year) && (
                 <Text style={styles.acquired}>
-                  acquired
+                  {S.itemForm.acquired}
                   {item.acquired_location ? (
                     <>
-                      <Text>{' in '}</Text>
+                      <Text>{S.itemForm.acquiredIn}</Text>
                       {onCityPress ? (
                         <Text
                           style={styles.acquiredLink}
@@ -482,7 +483,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   ) : null}
                   {item.acquired_year ? (
                     <>
-                      <Text>{' · '}</Text>
+                      <Text>{S.itemForm.acquiredSeparator}</Text>
                       {onYearPress ? (
                         <Text
                           style={styles.acquiredLink}
@@ -494,12 +495,12 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 </Text>
               )}
               <Text style={styles.date}>
-                added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                {S.itemForm.addedOn(new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
               </Text>
             </View>
             {onDelete && (
               <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-                <Text style={styles.deleteText}>delete item</Text>
+                <Text style={styles.deleteText}>{S.itemForm.deleteItem}</Text>
               </TouchableOpacity>
             )}
           </Animated.View>

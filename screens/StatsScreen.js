@@ -22,6 +22,7 @@ import {
   formatMonthLabel,
 } from '../shared/dates';
 import { cityOf } from '../shared/items';
+import { S } from '../shared/strings';
 
 const PIE_PALETTE = [
   '#C5705D', '#D4A55C', '#8FA363', '#5C9A8C', '#5A7CA8',
@@ -172,7 +173,7 @@ export default function StatsScreen() {
       .sort((a, b) => b.count - a.count)
       .map((s, i) => ({ ...s, color: PIE_PALETTE[i % PIE_PALETTE.length] }));
     const slices = [...tagSlices];
-    if (untaggedCount > 0) slices.push({ label: 'untagged', count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR });
+    if (untaggedCount > 0) slices.push({ label: S.collection.untagged, count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR });
     if (slices.length === 0) return null;
     const total = slices.reduce((sum, s) => sum + s.count, 0);
     return { slices, total };
@@ -262,30 +263,30 @@ export default function StatsScreen() {
           <Ionicons name="chevron-back" size={28} color="#2D2D2D" />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
-          <Text style={styles.title}>stats</Text>
-          <Text style={styles.subtitle}>your collection over time</Text>
+          <Text style={styles.title}>{S.stats.title}</Text>
+          <Text style={styles.subtitle}>{S.stats.subtitle}</Text>
         </View>
       </View>
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
         {items.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>nothing to show yet</Text>
+            <Text style={styles.emptyText}>{S.stats.empty}</Text>
           </View>
         ) : (
           <>
             <View style={styles.summary}>
-              <Card label="total" value={itemCount ?? items.length} sub={(itemCount ?? items.length) === 1 ? 'object' : 'objects'} />
-              <Card label="streak" value={stats.streak} sub={stats.streak === 1 ? 'day' : 'days'} />
-              <Card label="longest" value={stats.longest} sub={stats.longest === 1 ? 'day' : 'days'} />
+              <Card label={S.stats.total} value={itemCount ?? items.length} sub={S.stats.objectsLabel(itemCount ?? items.length)} />
+              <Card label={S.stats.streakMobile} value={stats.streak} sub={S.stats.daysLabel(stats.streak)} />
+              <Card label={S.stats.longestMobile} value={stats.longest} sub={S.stats.daysLabel(stats.longest)} />
               <Card
-                label="best day"
+                label={S.stats.bestDay}
                 value={stats.bestDayCount}
                 sub={bestDayDate ? `${MONTH_NAMES[bestDayDate.getMonth()].toLowerCase()} ${bestDayDate.getDate()}` : '—'}
               />
             </View>
 
-            <Section title="last 30 days">
+            <Section title={S.stats.last30Days}>
               <View style={styles.chart}>
                 {days.map((d, i) => {
                   const k = dayKey(d);
@@ -294,7 +295,7 @@ export default function StatsScreen() {
               </View>
             </Section>
 
-            <Section title="last 12 weeks">
+            <Section title={S.stats.last12Weeks}>
               <View style={styles.chart}>
                 {weeks.map(d => {
                   const k = weekKey(d);
@@ -303,7 +304,7 @@ export default function StatsScreen() {
               </View>
             </Section>
 
-            <Section title="last 12 months">
+            <Section title={S.stats.last12Months}>
               <View style={styles.chart}>
                 {months.map(d => {
                   const k = monthKey(d);
@@ -313,7 +314,7 @@ export default function StatsScreen() {
             </Section>
 
             {tagDistribution && (
-              <Section title="tags">
+              <Section title={S.stats.tags}>
                 <View style={styles.pieWrap}>
                   <PieChart slices={tagDistribution.slices} total={tagDistribution.total} />
                 </View>
@@ -333,7 +334,7 @@ export default function StatsScreen() {
             )}
 
             {yearStats && (
-              <Section title={`acquisition ${yearStats.bucketSize === 1 ? 'years' : `${yearStats.bucketSize}-year periods`}`}>
+              <Section title={S.stats.acquisitionTitle(yearStats.bucketSize)}>
                 <View style={styles.chart}>
                   {yearStats.bars.map(b => (
                     <Bar key={b.key} count={b.count} max={yearStats.max} label={b.label} />
@@ -343,7 +344,7 @@ export default function StatsScreen() {
             )}
 
             {MapView && mapGroups.length > 0 && mapRegion && (
-              <Section title="acquired around the world">
+              <Section title={S.stats.acquiredAroundWorld}>
                 <View style={styles.mapWrap}>
                   <MapView
                     style={styles.map}
@@ -365,15 +366,15 @@ export default function StatsScreen() {
                       <Marker
                         key={g.key}
                         coordinate={{ latitude: g.lat, longitude: g.lng }}
-                        title={g.city || 'unnamed location'}
-                        description={`${g.count} object${g.count === 1 ? '' : 's'}`}
+                        title={g.city || S.stats.unnamedLocation}
+                        description={S.stats.objectCount(g.count)}
                         onPress={() => setSelectedGroup(g)}
                       />
                     ))}
                     {home && (
                       <Marker
                         coordinate={{ latitude: home.lat, longitude: home.lng }}
-                        title="home"
+                        title={S.stats.home}
                         description={home.location?.split(',')[0]}
                         pinColor="#2D2D2D"
                       />
@@ -381,8 +382,8 @@ export default function StatsScreen() {
                   </MapView>
                 </View>
                 <Text style={styles.mapCaption}>
-                  {totalLocatedItems} object{totalLocatedItems === 1 ? '' : 's'} across {mapGroups.length} location{mapGroups.length === 1 ? '' : 's'}
-                  {home ? ` · connected to ${home.location?.split(',')[0]}` : ''}
+                  {S.stats.mapCaption(totalLocatedItems, mapGroups.length)}
+                  {home ? S.stats.connectedTo(home.location?.split(',')[0]) : ''}
                 </Text>
               </Section>
             )}
@@ -398,10 +399,9 @@ export default function StatsScreen() {
       >
         <Pressable style={styles.sheetBackdrop} onPress={() => setSelectedGroup(null)}>
           <Pressable style={styles.sheet} onPress={() => {}}>
-            <Text style={styles.sheetTitle}>{selectedGroup?.city || 'unnamed location'}</Text>
+            <Text style={styles.sheetTitle}>{selectedGroup?.city || S.stats.unnamedLocation}</Text>
             <Text style={styles.sheetSub}>
-              {selectedGroup?.count} object{selectedGroup?.count === 1 ? '' : 's'}
-              {selectedGroup?.regionLabel ? ` · ${selectedGroup.regionLabel}` : ''}
+              {S.stats.objectCountWithRegion(selectedGroup?.count ?? 0, selectedGroup?.regionLabel)}
             </Text>
             {selectedGroup?.samples?.length > 0 && (
               <View style={styles.sheetThumbs}>
@@ -424,7 +424,7 @@ export default function StatsScreen() {
                   router.push({ pathname: '/', params: { city } });
                 }}
               >
-                <Text style={styles.sheetSeeAllText}>see all from {selectedGroup.city}</Text>
+                <Text style={styles.sheetSeeAllText}>{S.stats.seeAllFromMobile(selectedGroup.city)}</Text>
                 <Ionicons name="chevron-forward" size={16} color="#2D2D2D" />
               </TouchableOpacity>
             )}

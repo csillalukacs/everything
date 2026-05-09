@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { S } from '../../shared/strings';
 
 function CustomTabBar({ state, navigation }) {
   const router = useRouter();
@@ -17,7 +18,7 @@ function CustomTabBar({ state, navigation }) {
       <TouchableOpacity
         style={styles.sideBtn}
         onPress={() => go('feed')}
-        accessibilityLabel="feed"
+        accessibilityLabel={S.a11y.feed}
       >
         <Ionicons
           name={currentRoute === 'feed' ? 'home' : 'home-outline'}
@@ -30,7 +31,7 @@ function CustomTabBar({ state, navigation }) {
         <TouchableOpacity
           style={styles.plusBtn}
           onPress={() => router.push('/add')}
-          accessibilityLabel="add item"
+          accessibilityLabel={S.a11y.addItem}
         >
           <Ionicons name="add" size={32} color="#fff" />
         </TouchableOpacity>
@@ -39,7 +40,7 @@ function CustomTabBar({ state, navigation }) {
       <TouchableOpacity
         style={styles.sideBtn}
         onPress={() => go('index')}
-        accessibilityLabel="your collection"
+        accessibilityLabel={S.a11y.yourCollection}
       >
         <Ionicons
           name={currentRoute === 'index' ? 'person-circle' : 'person-circle-outline'}

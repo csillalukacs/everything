@@ -2,6 +2,7 @@ import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { S } from '../shared/strings';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -36,11 +37,11 @@ export default function AuthScreen() {
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>things</Text>
-      <Text style={styles.subtitle}>a home for your stuff</Text>
+      <Text style={styles.title}>{S.appName}</Text>
+      <Text style={styles.subtitle}>{S.appTagline}</Text>
 
       <TouchableOpacity style={styles.button} onPress={signInWithGoogle}>
-        <Text style={styles.buttonText}>continue with google</Text>
+        <Text style={styles.buttonText}>{S.auth.continueWithGoogle}</Text>
       </TouchableOpacity>
     </View>
   );

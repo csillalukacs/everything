@@ -27,6 +27,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
+import { S } from '../shared/strings';
 
 const INITIAL_SIZE = 120;
 const SCAN_SIZE = 64;
@@ -225,26 +226,26 @@ export default function CanvasScreen({ visible, onClose, items }) {
   async function handleExport() {
     try {
       if (!canvasRef.current) {
-        Alert.alert('Error', 'Canvas not ready');
+        Alert.alert(S.canvas.error, S.canvas.canvasNotReady);
         return;
       }
       const { status } = await MediaLibrary.requestPermissionsAsync();
       if (status !== 'granted') {
-        Alert.alert('Permission needed', 'Allow photo library access to save the canvas.');
+        Alert.alert(S.canvas.permissionNeeded, S.canvas.permissionMessage);
         return;
       }
       const snapshot = canvasRef.current.makeImageSnapshot();
       if (!snapshot) {
-        Alert.alert('Error', 'Failed to snapshot canvas');
+        Alert.alert(S.canvas.error, S.canvas.failedSnapshot);
         return;
       }
       const base64 = snapshot.encodeToBase64(ImageFormat.PNG, 100);
       const uri = FileSystem.cacheDirectory + `canvas_${Date.now()}.png`;
       await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
       await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert('Saved', 'Canvas saved to your photo library.');
+      Alert.alert(S.canvas.saved, S.canvas.savedMessage);
     } catch (e) {
-      Alert.alert('Export failed', e.message);
+      Alert.alert(S.canvas.exportFailed, e.message);
     }
   }
 
@@ -258,11 +259,11 @@ export default function CanvasScreen({ visible, onClose, items }) {
           {/* Header */}
           <View style={styles.header}>
             <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
-              <Text style={styles.headerBtnText}>cancel</Text>
+              <Text style={styles.headerBtnText}>{S.common.cancel}</Text>
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>canvas</Text>
+            <Text style={styles.headerTitle}>{S.canvas.title}</Text>
             <TouchableOpacity onPress={handleExport} style={styles.headerBtn}>
-              <Text style={[styles.headerBtnText, styles.exportText]}>export</Text>
+              <Text style={[styles.headerBtnText, styles.exportText]}>{S.canvas.export}</Text>
             </TouchableOpacity>
           </View>
 
@@ -336,10 +337,10 @@ export default function CanvasScreen({ visible, onClose, items }) {
                     setSelectedId(null);
                   }}
                 >
-                  <Text style={styles.removeBtnText}>remove</Text>
+                  <Text style={styles.removeBtnText}>{S.common.remove}</Text>
                 </TouchableOpacity>
                 <TouchableOpacity onPress={() => setSelectedId(null)} style={styles.doneBtn}>
-                  <Text style={styles.doneBtnText}>done</Text>
+                  <Text style={styles.doneBtnText}>{S.common.done}</Text>
                 </TouchableOpacity>
               </View>
             ) : (

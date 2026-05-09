@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { S } from '../../shared/strings'
 import AuthScreen from './screens/AuthScreen'
 
 const itemsCacheKey = userId => `cache:items:${userId}`
@@ -72,28 +73,28 @@ export default function App() {
     <div className="app">
       <header className="header">
         <div>
-          <h1 className="title">things</h1>
-          <p className="subtitle">a home for your stuff</p>
+          <h1 className="title">{S.appName}</h1>
+          <p className="subtitle">{S.appTagline}</p>
         </div>
         <div className="header-right">
           <div className="header-links">
-            <Link to={`/u/${username ?? session.user.id}`} className="link-btn">my collection</Link>
-            <button className="link-btn" onClick={() => supabase.auth.signOut()}>log out</button>
+            <Link to={`/u/${username ?? session.user.id}`} className="link-btn">{S.feed.myCollection}</Link>
+            <button className="link-btn" onClick={() => supabase.auth.signOut()}>{S.common.logOut}</button>
           </div>
         </div>
       </header>
 
       {items.length === 0 ? (
         <div className="centered" style={{ flexDirection: 'column', gap: 16 }}>
-          <p style={{ color: '#999' }}>you haven't added anything yet</p>
-          <Link to={`/u/${username ?? session.user.id}`} className="link-btn link-btn-dark">add your first item</Link>
+          <p style={{ color: '#999' }}>{S.feed.emptyWeb}</p>
+          <Link to={`/u/${username ?? session.user.id}`} className="link-btn link-btn-dark">{S.feed.addFirstItem}</Link>
         </div>
       ) : dailyItem && (
         <Link
           to={`/u/${username ?? session.user.id}?item=${dailyItem.id}`}
           className="daily-item daily-item-link"
         >
-          <p className="daily-label">item of the day</p>
+          <p className="daily-label">{S.feed.itemOfTheDay}</p>
           {dailyItem.image_url && (
             <div className="daily-image-wrap">
               <img src={dailyItem.image_url} alt={dailyItem.name || ''} className="daily-image" />

@@ -5,6 +5,7 @@ import { Image } from 'expo-image';
 import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../../lib/CollectionProvider';
+import { S } from '../../shared/strings';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
 
@@ -47,7 +48,7 @@ export default function Feed() {
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 80, paddingBottom: tabBarOffset + 24 }}
       >
         <View style={styles.header}>
-          <Text style={styles.title}>things</Text>
+          <Text style={styles.title}>{S.appName}</Text>
           <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
             <Ionicons name="search" size={22} color="#999" />
           </TouchableOpacity>
@@ -55,7 +56,7 @@ export default function Feed() {
 
         {!dailyItem ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>nothing yet — add your first item</Text>
+            <Text style={styles.emptyText}>{S.feed.emptyMobile}</Text>
           </View>
         ) : (
           <TouchableOpacity
@@ -63,7 +64,7 @@ export default function Feed() {
             activeOpacity={0.85}
             onPress={() => setSelectedItem(dailyItem)}
           >
-            <Text style={styles.dailyLabel}>item of the day</Text>
+            <Text style={styles.dailyLabel}>{S.feed.itemOfTheDay}</Text>
             {dailyItem.image_url && (
               <View style={styles.dailyImageWrap}>
                 <Image

@@ -1,4 +1,5 @@
 import { useRef, useState } from 'react'
+import { S } from '../../../shared/strings'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 
@@ -71,13 +72,13 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     <div className="modal-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>
       <div className="modal">
         <div className="modal-header">
-          <button className="link-btn" onClick={handleClose}>cancel</button>
-          <span className="modal-title">add item</span>
+          <button className="link-btn" onClick={handleClose}>{S.common.cancel}</button>
+          <span className="modal-title">{S.addItem.title}</span>
           <button
             className="link-btn link-btn-dark"
             onClick={handleSave}
             disabled={!file || saving}
-          >{saving ? 'saving...' : 'save'}</button>
+          >{saving ? S.common.saving : S.common.save}</button>
         </div>
 
         {preview ? (
@@ -87,11 +88,11 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
               type="button"
               className={`privacy-corner${isPrivate ? ' privacy-corner-on' : ''}`}
               onClick={() => setIsPrivate(prev => !prev)}
-              title={isPrivate ? 'private — click to make public' : 'public — click to make private'}
+              title={isPrivate ? S.a11y.privateClickPublic : S.a11y.publicClickPrivate}
             >
               <LockIcon size={14} color="#fff" open={!isPrivate} />
             </button>
-            <div className="image-overlay" onClick={() => { setFile(null); setPreview(null) }}>retake</div>
+            <div className="image-overlay" onClick={() => { setFile(null); setPreview(null) }}>{S.common.retake}</div>
           </div>
         ) : (
           <div
@@ -101,7 +102,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
             onDrop={handleDrop}
           >
             <span className="drop-zone-icon">+</span>
-            <span className="drop-zone-text">click or drag to add a photo</span>
+            <span className="drop-zone-text">{S.addItem.clickOrDragToAddPhoto}</span>
             <input
               ref={fileInputRef}
               type="file"
@@ -116,26 +117,26 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           <TagInput value={tags} onChange={setTags} allTags={allTags} />
           <input
             className="name-input"
-            placeholder="name (optional)"
+            placeholder={S.itemForm.namePlaceholder}
             value={name}
             onChange={e => setName(e.target.value)}
           />
           <textarea
             className="description-input"
-            placeholder="description (optional)"
+            placeholder={S.itemForm.descriptionPlaceholder}
             value={description}
             onChange={e => setDescription(e.target.value)}
           />
           <input
             className="name-input year-input-full"
             type="number"
-            placeholder="year acquired (optional)"
+            placeholder={S.itemForm.yearPlaceholder}
             min={1800}
             max={2100}
             value={year}
             onChange={e => setYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
           />
-          <LocationPicker value={acquired} onChange={setAcquired} placeholder="city acquired (optional)" />
+          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.itemForm.cityPlaceholder} />
         </div>
       </div>
     </div>

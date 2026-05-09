@@ -17,6 +17,7 @@ import {
 } from 'react-native';
 import { cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
+import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
@@ -128,7 +129,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           showsVerticalScrollIndicator={false}
         >
         <TouchableOpacity style={styles.cancel} onPress={handleClose}>
-          <Text style={styles.cancelText}>cancel</Text>
+          <Text style={styles.cancelText}>{S.common.cancel}</Text>
         </TouchableOpacity>
 
         <View style={styles.imageContainer}>
@@ -137,11 +138,11 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
             {removingBg ? (
               <View style={styles.retakeOverlay}>
                 <ActivityIndicator color="#fff" />
-                <Text style={styles.retakeText}>removing background...</Text>
+                <Text style={styles.retakeText}>{S.common.removingBackground}</Text>
               </View>
             ) : (
               <View style={styles.retakeOverlay}>
-                <Text style={styles.retakeText}>retake</Text>
+                <Text style={styles.retakeText}>{S.common.retake}</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -184,7 +185,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
             <View style={styles.newTagRow}>
               <TextInput
                 style={styles.newTagInput}
-                placeholder="tag"
+                placeholder={S.itemForm.tagPlaceholder}
                 placeholderTextColor="#bbb"
                 value={newTagName}
                 onChangeText={setNewTagName}
@@ -209,7 +210,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
 
         <TextInput
           style={styles.input}
-          placeholder="name (optional)"
+          placeholder={S.itemForm.namePlaceholder}
           placeholderTextColor="#bbb"
           value={name}
           onChangeText={setName}
@@ -218,7 +219,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         />
         <TextInput
           style={styles.input}
-          placeholder="description (optional)"
+          placeholder={S.itemForm.descriptionPlaceholder}
           placeholderTextColor="#bbb"
           value={description}
           onChangeText={setDescription}
@@ -228,7 +229,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
 
         <TextInput
           style={styles.input}
-          placeholder="year acquired (optional)"
+          placeholder={S.itemForm.yearPlaceholder}
           placeholderTextColor="#bbb"
           value={year}
           onChangeText={t => setYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
@@ -242,7 +243,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           <LocationPicker
             value={acquired}
             onChange={setAcquired}
-            placeholder="city acquired (optional)"
+            placeholder={S.itemForm.cityPlaceholder}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)}
           />
         </View>
@@ -252,7 +253,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           onPress={handleSave}
           disabled={saving}
         >
-          <Text style={styles.buttonText}>{saving ? 'saving...' : 'save'}</Text>
+          <Text style={styles.buttonText}>{saving ? S.common.saving : S.common.save}</Text>
         </TouchableOpacity>
         </ScrollView>
       </KeyboardAvoidingView>

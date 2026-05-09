@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { S } from '../../../shared/strings'
 
 function LockIcon({ size = 10, color = 'currentColor' }) {
   return (
@@ -8,7 +9,7 @@ function LockIcon({ size = 10, color = 'currentColor' }) {
   )
 }
 
-export default function TagInput({ value = [], onChange, allTags = [], placeholder = 'add tag…' }) {
+export default function TagInput({ value = [], onChange, allTags = [], placeholder = S.tagInput.defaultPlaceholder }) {
   const [query, setQuery] = useState('')
   const [focused, setFocused] = useState(false)
   const [highlight, setHighlight] = useState(0)
@@ -85,7 +86,7 @@ export default function TagInput({ value = [], onChange, allTags = [], placehold
                 className="tag-input-chip-x"
                 onMouseDown={e => e.preventDefault()}
                 onClick={() => remove(tag)}
-                aria-label={`remove ${tag}`}
+                aria-label={S.tagInput.removeTag(tag)}
               >×</button>
             </span>
           )
@@ -127,7 +128,7 @@ export default function TagInput({ value = [], onChange, allTags = [], placehold
               onClick={() => add(trimmedQuery)}
               onMouseEnter={() => setHighlight(matches.length)}
             >
-              + create "{trimmedQuery}"
+              {S.tagInput.createTag(trimmedQuery)}
             </button>
           )}
         </div>

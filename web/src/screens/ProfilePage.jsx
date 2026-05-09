@@ -5,6 +5,7 @@ import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
 import { cityOf, acquiredFields } from '../../../shared/items'
 import { UUID_RE, USERNAME_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
+import { S } from '../../../shared/strings'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
@@ -473,8 +474,8 @@ export default function ProfilePage() {
 
   const dateRangeLabel = fromParam || toParam
     ? (fromParam && toParam && fromParam === toParam
-        ? `added ${formatDateLabel(fromParam)}`
-        : `added ${fromParam ? formatDateLabel(fromParam) : '…'} – ${toParam ? formatDateLabel(toParam) : '…'}`)
+        ? S.filters.addedOn(formatDateLabel(fromParam))
+        : S.filters.addedRange(fromParam ? formatDateLabel(fromParam) : null, toParam ? formatDateLabel(toParam) : null))
     : null
 
   const yearRangeLabel = !yearParam && (yearMinParam || yearMaxParam)
@@ -525,8 +526,8 @@ export default function ProfilePage() {
   if (notFound) {
     return (
       <div className="centered" style={{ flexDirection: 'column', gap: 12 }}>
-        <p style={{ color: '#999' }}>no profile at /u/{slug}</p>
-        <Link to="/" className="link-btn">things</Link>
+        <p style={{ color: '#999' }}>{S.profileView.notFound(slug)}</p>
+        <Link to="/" className="link-btn">{S.appName}</Link>
       </div>
     )
   }
@@ -612,7 +613,7 @@ export default function ProfilePage() {
             <h1
               className={`profile-name${isOwner ? ' profile-name-editable' : ''}`}
               onClick={() => isOwner && setEditingName(true)}
-            >{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` : ${itemCount} ${itemCount === 1 ? 'object' : 'objects'}` : ''}</h1>
+            >{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` : ${S.profile.objectCount(itemCount)}` : ''}</h1>
           )}
           {isOwner && (
             editingUsername ? (
@@ -634,19 +635,19 @@ export default function ProfilePage() {
                       setEditingUsername(false)
                     }
                   }}
-                  placeholder="username"
+                  placeholder={S.profile.usernamePlaceholder}
                   maxLength={20}
                   autoFocus
                 />
-                {usernameStatus === 'invalid' && <span className="profile-username-msg profile-username-error">3–20 chars, a–z 0–9 _</span>}
-                {usernameStatus === 'taken' && <span className="profile-username-msg profile-username-error">taken</span>}
-                {usernameStatus === 'reserved' && <span className="profile-username-msg profile-username-error">reserved</span>}
+                {usernameStatus === 'invalid' && <span className="profile-username-msg profile-username-error">{S.profile.usernameInvalidWeb}</span>}
+                {usernameStatus === 'taken' && <span className="profile-username-msg profile-username-error">{S.profile.usernameTakenShort}</span>}
+                {usernameStatus === 'reserved' && <span className="profile-username-msg profile-username-error">{S.profile.usernameReservedShort}</span>}
               </div>
             ) : (
               <button
                 className="profile-username-btn"
                 onClick={() => { setUsernameInput(username ?? ''); setEditingUsername(true) }}
-              >{username ? `@${username}` : 'set username'}</button>
+              >{username ? `@${username}` : S.profile.setUsername}</button>
             )
           )}
           {!isOwner && username && (
@@ -662,16 +663,16 @@ export default function ProfilePage() {
                     await saveHome(next)
                     setEditingHome(false)
                   }}
-                  placeholder="set your home city"
+                  placeholder={S.profile.setHomeCity}
                 />
                 <div className="profile-home-edit-actions">
                   {home && (
                     <button
                       className="link-btn"
                       onClick={async () => { await saveHome(null); setEditingHome(false) }}
-                    >remove</button>
+                    >{S.common.remove}</button>
                   )}
-                  <button className="link-btn" onClick={() => setEditingHome(false)}>done</button>
+                  <button className="link-btn" onClick={() => setEditingHome(false)}>{S.common.done}</button>
                 </div>
               </div>
             ) : (
@@ -683,7 +684,7 @@ export default function ProfilePage() {
                   <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
                   <circle cx="12" cy="10" r="3" />
                 </svg>
-                {home?.location ? home.location.split(',')[0] : 'set home city'}
+                {home?.location ? home.location.split(',')[0] : S.profile.setHomeCityShort}
               </button>
             )
           ) : home?.location && (
@@ -697,8 +698,8 @@ export default function ProfilePage() {
           )}
         </div>
         <div className="header-links" style={{ marginTop: 8 }}>
-          {isOwner && <Link to="/stats" className="link-btn">stats</Link>}
-          <Link to="/" className="link-btn">things</Link>
+          {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
+          <Link to="/" className="link-btn">{S.appName}</Link>
         </div>
       </header>
 
@@ -711,66 +712,66 @@ export default function ProfilePage() {
           <input
             type="text"
             className="search-input"
-            placeholder="search"
+            placeholder={S.common.search}
             value={searchQuery}
             onChange={e => setSearchQuery(e.target.value)}
           />
           {searchQuery && (
-            <button className="search-clear" onClick={() => setSearchQuery('')} aria-label="clear search">×</button>
+            <button className="search-clear" onClick={() => setSearchQuery('')} aria-label={S.a11y.clearSearch}>×</button>
           )}
         </div>
         {(availableYears.length > 0 || hasMissingYear) && (
           <FilterDropdown
-            ariaLabel="filter by year"
+            ariaLabel={S.a11y.filterByYear}
             active={!!yearParam}
             value={yearParam ?? ''}
             onChange={v => updateParams({ year: v || null, yearMin: null, yearMax: null })}
             options={[
-              { value: '', label: 'all years' },
-              ...(hasMissingYear ? [{ value: 'none', label: 'no year' }] : []),
+              { value: '', label: S.filters.allYears },
+              ...(hasMissingYear ? [{ value: 'none', label: S.collection.noYear }] : []),
               ...availableYears.map(y => ({ value: String(y), label: String(y) })),
             ]}
           />
         )}
         {(availableCities.length > 0 || hasMissingCity) && (
           <FilterDropdown
-            ariaLabel="filter by city"
+            ariaLabel={S.a11y.filterByCity}
             active={!!cityParam}
             value={cityParam ?? ''}
             onChange={v => updateParams({ city: v || null })}
             options={[
-              { value: '', label: 'all cities' },
-              ...(hasMissingCity ? [{ value: 'none', label: 'no city' }] : []),
+              { value: '', label: S.filters.allCities },
+              ...(hasMissingCity ? [{ value: 'none', label: S.collection.noCity }] : []),
               ...availableCities.map(c => ({ value: c, label: c })),
             ]}
           />
         )}
         <FilterDropdown
-          ariaLabel="sort"
+          ariaLabel={S.a11y.sort}
           active={sortParam !== 'newest'}
           value={sortParam}
           onChange={v => updateParams({ sort: v === 'newest' ? null : v })}
           options={[
-            { value: 'newest', label: 'newest' },
-            { value: 'oldest', label: 'oldest' },
-            { value: 'name-asc', label: 'name a–z' },
-            { value: 'name-desc', label: 'name z–a' },
-            { value: 'acquired-desc', label: 'acquired (newest)' },
-            { value: 'acquired-asc', label: 'acquired (oldest)' },
+            { value: 'newest', label: S.filters.sort.newest },
+            { value: 'oldest', label: S.filters.sort.oldest },
+            { value: 'name-asc', label: S.filters.sort.nameAZ },
+            { value: 'name-desc', label: S.filters.sort.nameZA },
+            { value: 'acquired-desc', label: S.filters.sort.acquiredNewest },
+            { value: 'acquired-asc', label: S.filters.sort.acquiredOldest },
           ]}
         />
         {yearRangeLabel && (
           <button
             className="filter-select filter-select-active filter-date-chip"
             onClick={() => updateParams({ yearMin: null, yearMax: null })}
-            title="clear year range"
+            title={S.a11y.clearYearRange}
           >{yearRangeLabel} ×</button>
         )}
         {dateRangeLabel && (
           <button
             className="filter-select filter-select-active filter-date-chip"
             onClick={() => updateParams({ from: null, to: null })}
-            title="clear date filter"
+            title={S.a11y.clearDateFilter}
           >{dateRangeLabel} ×</button>
         )}
       </div>
@@ -779,11 +780,11 @@ export default function ProfilePage() {
         allTags.length > 0 && (
           <div className="filter-row">
             <div className="filter-scroll">
-              <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all<span className="chip-count">{searchedItems.length}</span></button>
+              <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>{S.common.all}<span className="chip-count">{searchedItems.length}</span></button>
               <button
                 className={`chip${activeTag?.id === '__untagged__' ? ' chip-active' : ''}`}
                 onClick={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
-              >untagged<span className="chip-count">{untaggedCount}</span></button>
+              >{S.collection.untagged}<span className="chip-count">{untaggedCount}</span></button>
               {allTags.map(tag => (
                 <button
                   key={tag.id}
@@ -792,13 +793,13 @@ export default function ProfilePage() {
                 >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
               ))}
             </div>
-            <button className="chip chip-dashed filter-manage-btn" onClick={() => setManageTagsVisible(true)}>manage</button>
+            <button className="chip chip-dashed filter-manage-btn" onClick={() => setManageTagsVisible(true)}>{S.common.manage}</button>
           </div>
         )
       ) : (
         visibleTags.length > 0 && (
           <div className="filter-scroll">
-            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>all<span className="chip-count">{searchedItems.length}</span></button>
+            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>{S.common.all}<span className="chip-count">{searchedItems.length}</span></button>
             {visibleTags.map(tag => (
               <button
                 key={tag.id}
@@ -848,17 +849,17 @@ export default function ProfilePage() {
           }
           return (
           <div className="batch-bar">
-            <button className="batch-cancel" onClick={() => setSelectedIds(new Set())}>cancel</button>
-            <button className="batch-cancel" onClick={toggleSelectAllVisible}>{allVisibleSelected ? 'deselect all' : 'select all'}</button>
-            <span className="batch-count">{selectedIds.size} selected</span>
+            <button className="batch-cancel" onClick={() => setSelectedIds(new Set())}>{S.common.cancel}</button>
+            <button className="batch-cancel" onClick={toggleSelectAllVisible}>{allVisibleSelected ? S.common.deselectAll : S.common.selectAll}</button>
+            <span className="batch-count">{S.batchEdit.selectedCount(selectedIds.size)}</span>
             <div className="batch-actions">
-              <button className="batch-icon-btn" onClick={handleBatchTogglePrivacy} title="lock / unlock">
+              <button className="batch-icon-btn" onClick={handleBatchTogglePrivacy} title={S.a11y.lockUnlock}>
                 <BatchLockIcon open={![...selectedIds].every(id => items.find(i => i.id === id)?.is_private)} />
               </button>
-              <button className="batch-icon-btn batch-delete-btn" onClick={handleBatchDelete} title="delete">
+              <button className="batch-icon-btn batch-delete-btn" onClick={handleBatchDelete} title={S.common.delete}>
                 <TrashIcon size={18} color="#ff6b6b" />
               </button>
-              <button className="batch-tag-btn" onClick={() => setBatchEditVisible(true)}>edit</button>
+              <button className="batch-tag-btn" onClick={() => setBatchEditVisible(true)}>{S.common.edit}</button>
             </div>
           </div>
           )
@@ -908,8 +909,8 @@ export default function ProfilePage() {
             <div className="sheet-overlay" onClick={closeManageTags}>
               <div className="sheet sheet-manage-tags" onClick={e => e.stopPropagation()}>
                 <div className="modal-header">
-                  <span className="sheet-title">manage tags · {allTags.length}</span>
-                  <button className="link-btn" onClick={closeManageTags}>done</button>
+                  <span className="sheet-title">{S.collection.manageTags(allTags.length)}</span>
+                  <button className="link-btn" onClick={closeManageTags}>{S.common.done}</button>
                 </div>
                 <div className="search-container manage-tag-search">
                   <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -919,18 +920,18 @@ export default function ProfilePage() {
                   <input
                     type="text"
                     className="search-input"
-                    placeholder="search tags"
+                    placeholder={S.collection.searchTags}
                     value={manageTagSearch}
                     onChange={e => setManageTagSearch(e.target.value)}
                     autoFocus
                   />
                   {manageTagSearch && (
-                    <button className="search-clear" onClick={() => setManageTagSearch('')} aria-label="clear search">×</button>
+                    <button className="search-clear" onClick={() => setManageTagSearch('')} aria-label={S.a11y.clearSearch}>×</button>
                   )}
                 </div>
                 <div className="manage-tag-list">
                   {manageTagsList.length === 0
-                    ? <p className="manage-tags-empty">{allTags.length === 0 ? 'no tags yet' : 'no matches'}</p>
+                    ? <p className="manage-tags-empty">{allTags.length === 0 ? S.collection.noTagsYet : S.common.noMatches}</p>
                     : manageTagsList.map(tag => (
                       <div key={tag.id} className="manage-tag-row">
                         <div className="manage-tag-info">
@@ -941,11 +942,11 @@ export default function ProfilePage() {
                           <button
                             className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
                             onClick={() => handleToggleTagPrivacy(tag)}
-                            title={tag.is_private ? 'make public' : 'make private'}
+                            title={tag.is_private ? S.a11y.makePublic : S.a11y.makePrivate}
                           >
                             <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
                           </button>
-                          <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>delete</button>
+                          <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>{S.common.delete}</button>
                         </div>
                       </div>
                     ))

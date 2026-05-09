@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { S } from '../../../shared/strings'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 
@@ -117,7 +118,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
       <div className="modal modal-detail">
         <div className="modal-header">
           <button className="link-btn" onClick={editing ? cancelEdit : onClose}>
-            {editing ? 'cancel' : '✕'}
+            {editing ? S.common.cancel : '✕'}
           </button>
           {!editing && (
             <div className="nav-buttons">
@@ -130,7 +131,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               className="link-btn link-btn-dark"
               onClick={editing ? handleSave : enterEdit}
               disabled={saving}
-            >{editing ? (saving ? 'saving...' : 'save') : 'edit'}</button>
+            >{editing ? (saving ? S.common.saving : S.common.save) : S.common.edit}</button>
           )}
         </div>
 
@@ -146,12 +147,12 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                     type="button"
                     className={`privacy-corner${editPrivate ? ' privacy-corner-on' : ''}`}
                     onClick={() => setEditPrivate(prev => !prev)}
-                    title={editPrivate ? 'private — click to make public' : 'public — click to make private'}
+                    title={editPrivate ? S.a11y.privateClickPublic : S.a11y.publicClickPrivate}
                   >
                     <LockIcon size={14} color="#fff" open={!editPrivate} />
                   </button>
                   <div className="image-overlay" onClick={() => fileInputRef.current?.click()}>
-                    change image
+                    {S.common.changeImage}
                     <input
                       ref={fileInputRef}
                       type="file"
@@ -167,7 +168,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               <div className="photo-extras">
                 {displayedDate && (
                   <p className="photo-date">
-                    photo from {new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                    {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
                   </p>
                 )}
                 {showThumbnails && (
@@ -190,7 +191,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                               type="button"
                               className="thumbnail-remove"
                               onClick={() => removePreviousPhoto(idx - 1)}
-                              aria-label="remove photo"
+                              aria-label={S.a11y.removePhoto}
                             >×</button>
                           )}
                         </div>
@@ -208,26 +209,26 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 <TagInput value={editTags} onChange={setEditTags} allTags={allTags} />
                 <input
                   className="name-input"
-                  placeholder="name (optional)"
+                  placeholder={S.itemForm.namePlaceholder}
                   value={editName}
                   onChange={e => setEditName(e.target.value)}
                 />
                 <textarea
                   className="description-input"
-                  placeholder="description (optional)"
+                  placeholder={S.itemForm.descriptionPlaceholder}
                   value={editDescription}
                   onChange={e => setEditDescription(e.target.value)}
                 />
                 <input
                   className="name-input year-input-full"
                   type="number"
-                  placeholder="year acquired (optional)"
+                  placeholder={S.itemForm.yearPlaceholder}
                   min={1800}
                   max={2100}
                   value={editYear}
                   onChange={e => setEditYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                 />
-                <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder="city acquired (optional)" />
+                <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
               </>
             ) : (
               <>
@@ -253,10 +254,10 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 {item.description && <p className="detail-description">{item.description}</p>}
                 {(item.acquired_location || item.acquired_year) && (
                   <p className="detail-acquired">
-                    acquired
+                    {S.itemForm.acquired}
                     {item.acquired_location && (
                       <>
-                        {' in '}
+                        {S.itemForm.acquiredIn}
                         {onCityPress ? (
                           <button
                             className="detail-acquired-link"
@@ -267,7 +268,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                     )}
                     {item.acquired_year && (
                       <>
-                        {' · '}
+                        {S.itemForm.acquiredSeparator}
                         {onYearPress ? (
                           <button
                             className="detail-acquired-link"
@@ -279,9 +280,9 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   </p>
                 )}
                 <p className="detail-date">
-                  added {new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}
+                  {S.itemForm.addedOn(new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
                 </p>
-                {onDelete && <button className="delete-btn" onClick={onDelete}>delete item</button>}
+                {onDelete && <button className="delete-btn" onClick={onDelete}>{S.itemForm.deleteItem}</button>}
               </>
             )}
           </div>

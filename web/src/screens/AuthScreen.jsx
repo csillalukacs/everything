@@ -1,4 +1,5 @@
 import { supabase } from '../lib/supabase'
+import { S } from '../../../shared/strings'
 
 export default function AuthScreen() {
   async function signInWithGoogle() {
@@ -10,10 +11,10 @@ export default function AuthScreen() {
 
   return (
     <div className="auth">
-      <h1 className="title">things</h1>
-      <p className="subtitle">a home for your stuff</p>
+      <h1 className="title">{S.appName}</h1>
+      <p className="subtitle">{S.appTagline}</p>
       <button className="btn-primary" onClick={signInWithGoogle}>
-        continue with google
+        {S.auth.continueWithGoogle}
       </button>
     </div>
   )

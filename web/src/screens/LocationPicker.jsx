@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { searchPlaces } from '../lib/geocode'
+import { S } from '../../../shared/strings'
 
-export default function LocationPicker({ value, onChange, placeholder = 'city (optional)' }) {
+export default function LocationPicker({ value, onChange, placeholder = S.location.defaultPlaceholder }) {
   const [query, setQuery] = useState(value?.location ?? '')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -69,7 +70,7 @@ export default function LocationPicker({ value, onChange, placeholder = 'city (o
         {loading
           ? <div className="spinner" style={{ width: 14, height: 14, borderWidth: 1.5 }} />
           : query.length > 0 && (
-            <button type="button" className="location-picker-clear" onClick={clear} aria-label="clear">×</button>
+            <button type="button" className="location-picker-clear" onClick={clear} aria-label={S.a11y.clear}>×</button>
           )}
       </div>
       {showResults && (

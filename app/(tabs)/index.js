@@ -18,6 +18,7 @@ import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
 import { cityOf } from '../../shared/items';
+import { S } from '../../shared/strings';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -166,7 +167,7 @@ export default function Collection() {
           <Text style={styles.title} numberOfLines={1}>{headlineName}</Text>
           <Text style={styles.subtitle}>
             {profile?.username ? `@${profile.username} · ` : ''}
-            {itemCount ?? items.length} {(itemCount ?? items.length) === 1 ? 'object' : 'objects'}
+            {S.profile.objectCount(itemCount ?? items.length)}
           </Text>
         </View>
         <View style={styles.headerActions}>
@@ -183,7 +184,7 @@ export default function Collection() {
         <Ionicons name="search" size={16} color="#999" />
         <TextInput
           style={styles.searchInput}
-          placeholder="search"
+          placeholder={S.common.search}
           placeholderTextColor="#999"
           value={searchQuery}
           onChangeText={setSearchQuery}
@@ -213,7 +214,7 @@ export default function Collection() {
                 style={[styles.filterChip, active && styles.filterChipActive]}
                 onPress={() => setActiveYear(active ? null : 'none')}
               >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>no year</Text>
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{S.collection.noYear}</Text>
               </TouchableOpacity>
             );
           })()}
@@ -238,7 +239,7 @@ export default function Collection() {
                 onPress={() => setActiveCity(active ? null : 'none')}
               >
                 <Ionicons name="location-outline" size={11} color={active ? '#fff' : '#999'} />
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>no city</Text>
+                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{S.collection.noCity}</Text>
               </TouchableOpacity>
             );
           })()}
@@ -270,14 +271,14 @@ export default function Collection() {
               style={[styles.filterChip, !activeTag && styles.filterChipActive]}
               onPress={() => setActiveTag(null)}
             >
-              <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>all</Text>
+              <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>{S.common.all}</Text>
               <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
             </TouchableOpacity>
             <TouchableOpacity
               style={[styles.filterChip, activeTag?.id === '__untagged__' && styles.filterChipActive]}
               onPress={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
             >
-              <Text style={[styles.filterChipText, activeTag?.id === '__untagged__' && styles.filterChipTextActive]}>untagged</Text>
+              <Text style={[styles.filterChipText, activeTag?.id === '__untagged__' && styles.filterChipTextActive]}>{S.collection.untagged}</Text>
               <Text style={[styles.filterChipCount, activeTag?.id === '__untagged__' && styles.filterChipCountActive]}>{untaggedCount}</Text>
             </TouchableOpacity>
             {tags.map(tag => {
@@ -299,7 +300,7 @@ export default function Collection() {
             style={[styles.filterChip, styles.filterChipDashed, styles.filterManageBtn]}
             onPress={() => setManageTagsVisible(true)}
           >
-            <Text style={styles.filterChipText}>manage</Text>
+            <Text style={styles.filterChipText}>{S.common.manage}</Text>
           </TouchableOpacity>
         </View>
       )}
@@ -353,12 +354,12 @@ export default function Collection() {
         return (
         <View style={[styles.batchBar]}>
           <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.batchBarBtn}>
-            <Text style={styles.batchBarCancelText}>cancel</Text>
+            <Text style={styles.batchBarCancelText}>{S.common.cancel}</Text>
           </TouchableOpacity>
           <TouchableOpacity onPress={toggleSelectAllVisible} style={styles.batchBarBtn}>
-            <Text style={styles.batchBarCancelText}>{allVisibleSelected ? 'deselect all' : 'select all'}</Text>
+            <Text style={styles.batchBarCancelText}>{allVisibleSelected ? S.common.deselectAll : S.common.selectAll}</Text>
           </TouchableOpacity>
-          <Text style={styles.batchBarCount}>{selectedIds.size} selected</Text>
+          <Text style={styles.batchBarCount}>{S.batchEdit.selectedCount(selectedIds.size)}</Text>
           <View style={styles.batchBarActions}>
             <TouchableOpacity onPress={handleBatchTogglePrivacy} style={styles.batchBarIcon}>
               <Ionicons
@@ -371,7 +372,7 @@ export default function Collection() {
               <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setBatchEditVisible(true)} style={styles.batchBarBtn}>
-              <Text style={styles.batchBarTagText}>edit</Text>
+              <Text style={styles.batchBarTagText}>{S.common.edit}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -410,16 +411,16 @@ export default function Collection() {
           <TouchableOpacity style={styles.manageOverlayTop} activeOpacity={1} onPress={() => { setManageTagsVisible(false); setManageTagSearch(''); }} />
           <View style={styles.manageSheet}>
             <View style={styles.manageHeader}>
-              <Text style={styles.manageTitle}>manage tags · {tags.length}</Text>
+              <Text style={styles.manageTitle}>{S.collection.manageTags(tags.length)}</Text>
               <TouchableOpacity onPress={() => { setManageTagsVisible(false); setManageTagSearch(''); }}>
-                <Text style={styles.manageDone}>done</Text>
+                <Text style={styles.manageDone}>{S.common.done}</Text>
               </TouchableOpacity>
             </View>
             <View style={styles.manageSearchContainer}>
               <Ionicons name="search" size={16} color="#999" />
               <TextInput
                 style={styles.manageSearchInput}
-                placeholder="search tags"
+                placeholder={S.collection.searchTags}
                 placeholderTextColor="#999"
                 value={manageTagSearch}
                 onChangeText={setManageTagSearch}
@@ -439,7 +440,7 @@ export default function Collection() {
               keyboardShouldPersistTaps="handled"
               ListEmptyComponent={
                 <Text style={styles.manageEmpty}>
-                  {tags.length === 0 ? 'no tags yet' : 'no matches'}
+                  {tags.length === 0 ? S.collection.noTagsYet : S.common.noMatches}
                 </Text>
               }
               renderItem={({ item: tag, index }) => (
@@ -460,7 +461,7 @@ export default function Collection() {
                       deleteTag(tag.id);
                       if (activeTag?.id === tag.id) setActiveTag(null);
                     }}>
-                      <Text style={styles.manageDeleteBtn}>delete</Text>
+                      <Text style={styles.manageDeleteBtn}>{S.common.delete}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>

@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 
 export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
@@ -68,12 +69,10 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
 
   const sheetContent = (
     <>
-      <Text style={styles.title}>
-        edit {selectedCount} item{selectedCount !== 1 ? 's' : ''}
-      </Text>
+      <Text style={styles.title}>{S.batchEdit.title(selectedCount)}</Text>
 
       <View>
-        <Text style={styles.sectionLabel}>add tags</Text>
+        <Text style={styles.sectionLabel}>{S.batchEdit.addTags}</Text>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -96,7 +95,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
             <View style={styles.newTagRow}>
               <TextInput
                 style={styles.newTagInput}
-                placeholder="tag"
+                placeholder={S.itemForm.tagPlaceholder}
                 placeholderTextColor="#bbb"
                 value={newTagInput}
                 onChangeText={setNewTagInput}
@@ -121,10 +120,10 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
       </View>
 
       <View>
-        <Text style={styles.sectionLabel}>set year</Text>
+        <Text style={styles.sectionLabel}>{S.batchEdit.setYear}</Text>
         <TextInput
           style={styles.input}
-          placeholder="leave blank to skip"
+          placeholder={S.batchEdit.leaveBlankToSkip}
           placeholderTextColor="#bbb"
           value={year}
           onChangeText={t => setYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
@@ -134,8 +133,8 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
       </View>
 
       <View>
-        <Text style={styles.sectionLabel}>set location</Text>
-        <LocationPicker value={acquired} onChange={setAcquired} placeholder="leave blank to skip" />
+        <Text style={styles.sectionLabel}>{S.batchEdit.setLocation}</Text>
+        <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
       </View>
 
       <TouchableOpacity
@@ -145,7 +144,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
       >
         {loading
           ? <ActivityIndicator color="#fff" />
-          : <Text style={styles.applyBtnText}>apply</Text>
+          : <Text style={styles.applyBtnText}>{S.common.apply}</Text>
         }
       </TouchableOpacity>
     </>

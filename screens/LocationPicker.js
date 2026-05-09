@@ -2,8 +2,9 @@ import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { searchPlaces } from '../lib/geocode';
+import { S } from '../shared/strings';
 
-export default function LocationPicker({ value, onChange, placeholder = 'city (optional)', onFocus: onFocusProp }) {
+export default function LocationPicker({ value, onChange, placeholder = S.location.defaultPlaceholder, onFocus: onFocusProp }) {
   const [query, setQuery] = useState(value?.location ?? '');
   const [results, setResults] = useState([]);
   const [loading, setLoading] = useState(false);

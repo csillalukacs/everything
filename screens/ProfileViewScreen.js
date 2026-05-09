@@ -16,6 +16,7 @@ import { Image } from 'expo-image';
 import { supabase } from '../lib/supabase';
 import { fetchAllItems, fetchItemCount } from '../shared/itemsApi';
 import { UUID_RE } from '../shared/identifiers';
+import { S } from '../shared/strings';
 import ItemDetailModal from './ItemDetailModal';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -139,9 +140,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
               </View>
             )}
             {!loading && !notFound && itemCount != null && (
-              <Text style={styles.itemCount}>
-                {itemCount} {itemCount === 1 ? 'object' : 'objects'}
-              </Text>
+              <Text style={styles.itemCount}>{S.profile.objectCount(itemCount)}</Text>
             )}
           </View>
         </View>
@@ -152,7 +151,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
           </View>
         ) : notFound ? (
           <View style={styles.centered}>
-            <Text style={styles.emptyText}>no profile at /u/{slug}</Text>
+            <Text style={styles.emptyText}>{S.profileView.notFound(slug)}</Text>
           </View>
         ) : (
           <>
@@ -160,7 +159,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
               <Ionicons name="search" size={16} color="#999" />
               <TextInput
                 style={styles.searchInput}
-                placeholder="search"
+                placeholder={S.common.search}
                 placeholderTextColor="#999"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -186,7 +185,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
                   style={[styles.filterChip, !activeTag && styles.filterChipActive]}
                   onPress={() => setActiveTag(null)}
                 >
-                  <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>all</Text>
+                  <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>{S.common.all}</Text>
                   <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
                 </TouchableOpacity>
                 {visibleTags.map(tag => {
@@ -207,7 +206,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
 
             {items.length === 0 ? (
               <View style={styles.centered}>
-                <Text style={styles.emptyText}>nothing public yet</Text>
+                <Text style={styles.emptyText}>{S.profileView.nothingPublic}</Text>
               </View>
             ) : (
               <FlatList

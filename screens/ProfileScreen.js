@@ -10,6 +10,7 @@ import {
 } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { USERNAME_RE } from '../shared/identifiers';
+import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 
 export default function ProfileScreen({ visible, onClose, session, itemCount }) {
@@ -97,7 +98,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       return;
     }
     if (!USERNAME_RE.test(trimmed)) {
-      setUsernameError('3–20 chars: a–z, 0–9, _');
+      setUsernameError(S.profile.usernameInvalidMobile);
       setSavingUsername(false);
       return;
     }
@@ -107,7 +108,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       .ilike('username', trimmed)
       .maybeSingle();
     if (existing && existing.user_id !== session.user.id) {
-      setUsernameError('username taken');
+      setUsernameError(S.profile.usernameTaken);
       setSavingUsername(false);
       return;
     }
@@ -117,7 +118,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       .eq('user_id', session.user.id);
     setSavingUsername(false);
     if (error) {
-      setUsernameError(/reserved/i.test(error.message) ? 'username reserved' : 'username taken');
+      setUsernameError(/reserved/i.test(error.message) ? S.profile.usernameReserved : S.profile.usernameTaken);
       return;
     }
     setUsername(trimmed);
@@ -130,15 +131,15 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
         <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
           <View style={styles.header}>
-            <Text style={styles.title}>profile</Text>
+            <Text style={styles.title}>{S.profile.title}</Text>
             <TouchableOpacity onPress={onClose}>
-              <Text style={styles.done}>done</Text>
+              <Text style={styles.done}>{S.common.done}</Text>
             </TouchableOpacity>
           </View>
 
           <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.section}>
-              <Text style={styles.label}>name</Text>
+              <Text style={styles.label}>{S.profile.name}</Text>
               {editingName ? (
                 <TextInput
                   ref={inputRef}
@@ -157,7 +158,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>username</Text>
+              <Text style={styles.label}>{S.profile.username}</Text>
               {editingUsername ? (
                 <>
                   <View style={styles.usernameRow}>
@@ -170,7 +171,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
                       autoCapitalize="none"
                       autoCorrect={false}
                       maxLength={20}
-                      placeholder="username"
+                      placeholder={S.profile.usernamePlaceholder}
                       placeholderTextColor="#bbb"
                       returnKeyType="done"
                       onSubmitEditing={saveUsername}
@@ -178,12 +179,12 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
                     />
                   </View>
                   {usernameError && <Text style={styles.usernameError}>{usernameError}</Text>}
-                  <Text style={styles.usernameHint}>your profile will live at /u/{usernameInput || 'username'}</Text>
+                  <Text style={styles.usernameHint}>{S.profile.usernameHint(usernameInput)}</Text>
                 </>
               ) : (
                 <TouchableOpacity onPress={() => setEditingUsername(true)}>
                   <Text style={username ? styles.nameValue : styles.usernamePlaceholder}>
-                    {username ? `@${username}` : 'set username'}
+                    {username ? `@${username}` : S.profile.setUsername}
                   </Text>
                 </TouchableOpacity>
               )}
@@ -191,30 +192,28 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
 
             <View style={styles.section}>
               <View style={styles.homeLabelRow}>
-                <Text style={styles.label}>home city</Text>
+                <Text style={styles.label}>{S.profile.homeCity}</Text>
                 {home && (
                   <TouchableOpacity onPress={() => saveHome(null)}>
-                    <Text style={styles.homeRemove}>remove</Text>
+                    <Text style={styles.homeRemove}>{S.common.remove}</Text>
                   </TouchableOpacity>
                 )}
               </View>
               <LocationPicker
                 value={home}
                 onChange={handleHomeChange}
-                placeholder="set your home city"
+                placeholder={S.profile.setHomeCity}
               />
-              <Text style={styles.usernameHint}>shown publicly on your profile</Text>
+              <Text style={styles.usernameHint}>{S.profile.homeCityPublicHint}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>collection</Text>
-              <Text style={styles.countValue}>
-                {itemCount} {itemCount === 1 ? 'object' : 'objects'}
-              </Text>
+              <Text style={styles.label}>{S.profile.collection}</Text>
+              <Text style={styles.countValue}>{S.profile.objectCount(itemCount)}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>account</Text>
+              <Text style={styles.label}>{S.profile.account}</Text>
               <Text style={styles.email}>{session?.user.email}</Text>
             </View>
 
@@ -222,7 +221,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
               style={styles.logoutBtn}
               onPress={() => { onClose(); supabase.auth.signOut(); }}
             >
-              <Text style={styles.logoutText}>log out</Text>
+              <Text style={styles.logoutText}>{S.common.logOut}</Text>
             </TouchableOpacity>
           </ScrollView>
         </TouchableOpacity>
