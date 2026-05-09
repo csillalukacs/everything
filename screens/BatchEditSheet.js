@@ -120,6 +120,11 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
       </View>
 
       <View>
+        <Text style={styles.sectionLabel}>{S.batchEdit.setLocation}</Text>
+        <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
+      </View>
+
+      <View>
         <Text style={styles.sectionLabel}>{S.batchEdit.setYear}</Text>
         <TextInput
           style={styles.input}
@@ -130,11 +135,6 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
           keyboardType="number-pad"
           maxLength={4}
         />
-      </View>
-
-      <View>
-        <Text style={styles.sectionLabel}>{S.batchEdit.setLocation}</Text>
-        <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
       </View>
 
       <TouchableOpacity

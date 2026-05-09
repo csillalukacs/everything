@@ -91,6 +91,11 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
         </div>
 
         <div>
+          <p className="batch-section-label">{S.batchEdit.setLocation}</p>
+          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
+        </div>
+
+        <div>
           <p className="batch-section-label">{S.batchEdit.setYear}</p>
           <input
             className="name-input"
@@ -100,11 +105,6 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
             value={year}
             onChange={e => setYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
           />
-        </div>
-
-        <div>
-          <p className="batch-section-label">{S.batchEdit.setLocation}</p>
-          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
         </div>
 
         <button
