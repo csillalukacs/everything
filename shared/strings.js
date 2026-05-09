@@ -48,10 +48,10 @@ export const S = {
   // Item form fields (used by add + edit on both apps)
   itemForm: {
     tagPlaceholder: 'tag',
-    namePlaceholder: 'name (optional)',
-    descriptionPlaceholder: 'description (optional)',
-    yearPlaceholder: 'year acquired (optional)',
-    cityPlaceholder: 'city acquired (optional)',
+    namePlaceholder: 'name',
+    descriptionPlaceholder: 'description',
+    yearPlaceholder: 'year acquired',
+    cityPlaceholder: 'city acquired',
     acquired: 'acquired',
     acquiredIn: ' in ',
     acquiredSeparator: ' · ',
@@ -204,7 +204,7 @@ export const S = {
 
   // Location picker
   location: {
-    defaultPlaceholder: 'city (optional)',
+    defaultPlaceholder: 'city',
   },
 
   // Tag input (web)

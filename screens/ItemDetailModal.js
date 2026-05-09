@@ -419,6 +419,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 onSubmitEditing={Keyboard.dismiss}
               />
 
+              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
+
               <TextInput
                 style={styles.nameInput}
                 placeholder={S.itemForm.yearPlaceholder}
@@ -430,8 +432,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 returnKeyType="done"
                 onSubmitEditing={Keyboard.dismiss}
               />
-
-              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
             </View>
           </ScrollView>
         ) : (

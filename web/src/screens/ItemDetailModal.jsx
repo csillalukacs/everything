@@ -206,7 +206,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
           <div className={`detail-info-col${editing ? ' detail-info-col-editing' : ''}`}>
             {editing ? (
               <>
-                <TagInput value={editTags} onChange={setEditTags} allTags={allTags} />
                 <input
                   className="name-input"
                   placeholder={S.itemForm.namePlaceholder}
@@ -219,6 +218,8 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   value={editDescription}
                   onChange={e => setEditDescription(e.target.value)}
                 />
+                <TagInput value={editTags} onChange={setEditTags} allTags={allTags} />
+                <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
                 <input
                   className="name-input year-input-full"
                   type="number"
@@ -228,7 +229,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   value={editYear}
                   onChange={e => setEditYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                 />
-                <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
               </>
             ) : (
               <>
