@@ -1,44 +1,41 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useCollection } from '../../lib/CollectionProvider';
+import { supabase } from '../../lib/supabase';
+import { fetchPublicFeed } from '../../shared/itemsApi';
+import { relativeTime } from '../../shared/dates';
 import { S } from '../../shared/strings';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
 
 const TAB_BAR_HEIGHT = 70;
 
-function getDailyItem(items) {
-  if (!items.length) return null;
-  const dateStr = new Date().toISOString().slice(0, 10);
-  let hash = 0;
-  for (const ch of dateStr) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
-  return items[hash % items.length];
-}
-
 export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, tags, updateItem, deleteItem } = useCollection();
+  const [feedItems, setFeedItems] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [selectedItem, setSelectedItem] = useState(null);
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
-  const dailyItem = getDailyItem(items);
+  useEffect(() => {
+    let cancelled = false;
+    setLoading(true);
+    fetchPublicFeed(supabase, { limit: 50 })
+      .then(rows => { if (!cancelled) setFeedItems(rows); })
+      .catch(e => console.error('fetchPublicFeed error:', e))
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
 
-  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls) {
-    if (!selectedItem) return;
-    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls);
-    if (updated) setSelectedItem(updated);
-  }
-
-  async function handleDelete() {
-    const item = selectedItem;
-    setSelectedItem(null);
-    if (item) await deleteItem(item.id);
+  function openProfile(item) {
+    const slug = item.profile?.username || item.user_id;
+    router.push(`/u/${slug}`);
   }
 
   return (
@@ -54,41 +51,55 @@ export default function Feed() {
           </TouchableOpacity>
         </View>
 
-        {!dailyItem ? (
+        {loading ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>{S.feed.emptyMobile}</Text>
+            <ActivityIndicator color="#999" />
+          </View>
+        ) : feedItems.length === 0 ? (
+          <View style={styles.empty}>
+            <Text style={styles.emptyText}>{S.feed.feedEmpty}</Text>
           </View>
         ) : (
-          <TouchableOpacity
-            style={styles.dailyCard}
-            activeOpacity={0.85}
-            onPress={() => setSelectedItem(dailyItem)}
-          >
-            <Text style={styles.dailyLabel}>{S.feed.itemOfTheDay}</Text>
-            {dailyItem.image_url && (
-              <View style={styles.dailyImageWrap}>
-                <Image
-                  source={{ uri: dailyItem.image_url }}
-                  style={styles.dailyImage}
-                  contentFit="contain"
-                  cachePolicy="memory-disk"
-                />
-              </View>
-            )}
-            {dailyItem.name && <Text style={styles.dailyName}>{dailyItem.name}</Text>}
-            {dailyItem.description && (
-              <Text style={styles.dailyDescription} numberOfLines={6}>{dailyItem.description}</Text>
-            )}
-            {(dailyItem.tags ?? []).length > 0 && (
-              <View style={styles.tagRow}>
-                {(dailyItem.tags ?? []).map(tag => (
-                  <View key={tag.id} style={styles.tagBadge}>
-                    <Text style={styles.tagBadgeText}>{tag.name}</Text>
+          <View style={styles.feedList}>
+            {feedItems.map(item => {
+              const name = item.profile?.display_name || item.profile?.username || 'someone';
+              const time = relativeTime(item.created_at);
+              return (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.feedRow}
+                  activeOpacity={0.7}
+                  onPress={() => setSelectedItem(item)}
+                >
+                  <View style={styles.feedRowText}>
+                    <Text style={styles.posterRow}>
+                      <Text
+                        style={styles.posterName}
+                        onPress={() => openProfile(item)}
+                        suppressHighlighting
+                      >{name}</Text>
+                      <Text style={styles.posterAction}> {S.feed.addedNewItem}</Text>
+                      {time && <Text style={styles.posterTime}> · {time}</Text>}
+                    </Text>
+                    {item.name && <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>}
+                    {item.description && (
+                      <Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
+                    )}
                   </View>
-                ))}
-              </View>
-            )}
-          </TouchableOpacity>
+                  {item.image_url && (
+                    <View style={styles.thumbWrap}>
+                      <Image
+                        source={{ uri: item.image_url }}
+                        style={styles.thumbImage}
+                        contentFit="contain"
+                        cachePolicy="memory-disk"
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
         )}
       </ScrollView>
 
@@ -96,9 +107,6 @@ export default function Feed() {
         visible={!!selectedItem}
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
-        onSave={handleUpdate}
-        onDelete={handleDelete}
-        allTags={tags}
       />
 
       <OpenProfileSheet
@@ -139,57 +147,53 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 14,
   },
-  dailyCard: {
-    alignItems: 'center',
-    gap: 14,
-    paddingVertical: 8,
+  feedList: {
+    gap: 20,
   },
-  dailyLabel: {
-    fontSize: 11,
-    textTransform: 'uppercase',
-    letterSpacing: 1,
+  feedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  feedRowText: {
+    flex: 1,
+    gap: 4,
+  },
+  posterRow: {
+    fontSize: 13,
+    color: '#777',
+    lineHeight: 18,
+  },
+  posterName: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#2D2D2D',
+  },
+  posterAction: {
+    color: '#777',
+  },
+  posterTime: {
     color: '#999',
   },
-  dailyImageWrap: {
-    width: '100%',
-    aspectRatio: 1,
-    maxWidth: 420,
-    borderRadius: 16,
+  itemName: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2D2D2D',
+  },
+  itemDescription: {
+    fontSize: 13,
+    color: '#777',
+    lineHeight: 18,
+  },
+  thumbWrap: {
+    width: 72,
+    height: 72,
+    borderRadius: 12,
     overflow: 'hidden',
     backgroundColor: '#E8E3DD',
   },
-  dailyImage: {
+  thumbImage: {
     width: '100%',
     height: '100%',
-  },
-  dailyName: {
-    fontSize: 22,
-    fontWeight: '500',
-    color: '#2D2D2D',
-    textAlign: 'center',
-  },
-  dailyDescription: {
-    fontSize: 14,
-    color: '#555',
-    lineHeight: 22,
-    textAlign: 'center',
-    maxWidth: 420,
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 6,
-    justifyContent: 'center',
-  },
-  tagBadge: {
-    paddingHorizontal: 10,
-    height: 24,
-    borderRadius: 12,
-    backgroundColor: '#E8E3DD',
-    justifyContent: 'center',
-  },
-  tagBadgeText: {
-    fontSize: 12,
-    color: '#2D2D2D',
   },
 });

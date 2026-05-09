@@ -1,5 +1,26 @@
 export const MONTH_NAMES = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+export function relativeTime(s, now = new Date()) {
+  if (!s) return '';
+  const then = typeof s === 'string' ? new Date(s) : s;
+  const diff = now.getTime() - then.getTime();
+  if (Number.isNaN(diff)) return '';
+  const sec = Math.floor(diff / 1000);
+  if (sec < 60) return 'just now';
+  const min = Math.floor(sec / 60);
+  if (min < 60) return `${min}m`;
+  const hr = Math.floor(min / 60);
+  if (hr < 24) return `${hr}h`;
+  const days = Math.floor(hr / 24);
+  if (days < 7) return `${days}d`;
+  const weeks = Math.floor(days / 7);
+  if (weeks < 4) return `${weeks}w`;
+  const sameYear = then.getFullYear() === now.getFullYear();
+  return sameYear
+    ? `${MONTH_NAMES[then.getMonth()]} ${then.getDate()}`
+    : `${MONTH_NAMES[then.getMonth()]} ${then.getDate()}, ${then.getFullYear()}`;
+}
+
 export function startOfDay(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);

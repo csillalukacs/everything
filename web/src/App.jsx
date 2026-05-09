@@ -1,31 +1,19 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
+import { fetchPublicFeed } from '../../shared/itemsApi'
+import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
 import AuthScreen from './screens/AuthScreen'
-
-const itemsCacheKey = userId => `cache:items:${userId}`
-
-function readCache(key) {
-  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null } catch { return null }
-}
-function writeCache(key, value) {
-  try { localStorage.setItem(key, JSON.stringify(value)) } catch { /* ignore */ }
-}
-
-function getDailyItem(items) {
-  if (!items.length) return null
-  const dateStr = new Date().toISOString().slice(0, 10)
-  let hash = 0
-  for (const ch of dateStr) hash = (hash * 31 + ch.charCodeAt(0)) >>> 0
-  return items[hash % items.length]
-}
+import ItemDetailModal from './screens/ItemDetailModal'
 
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
-  const [items, setItems] = useState([])
   const [username, setUsername] = useState(null)
+  const [feedItems, setFeedItems] = useState([])
+  const [feedLoading, setFeedLoading] = useState(true)
+  const [selectedItem, setSelectedItem] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -39,26 +27,21 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!session) { setItems([]); setUsername(null); return }
-    const cached = readCache(itemsCacheKey(session.user.id))
-    if (cached) setItems(cached)
-    supabase
-      .from('items')
-      .select('*, tags(id, name, is_private)')
-      .eq('user_id', session.user.id)
-      .order('created_at', { ascending: false })
-      .then(({ data }) => {
-        if (data) {
-          setItems(data)
-          writeCache(itemsCacheKey(session.user.id), data)
-        }
-      })
+    if (!session) { setUsername(null); setFeedItems([]); return }
     supabase
       .from('profiles')
       .select('username')
       .eq('user_id', session.user.id)
       .maybeSingle()
       .then(({ data }) => setUsername(data?.username ?? null))
+
+    let cancelled = false
+    setFeedLoading(true)
+    fetchPublicFeed(supabase, { limit: 50 })
+      .then(rows => { if (!cancelled) setFeedItems(rows) })
+      .catch(e => console.error('fetchPublicFeed error:', e))
+      .finally(() => { if (!cancelled) setFeedLoading(false) })
+    return () => { cancelled = true }
   }, [session])
 
   if (loading) return (
@@ -66,8 +49,6 @@ export default function App() {
   )
 
   if (!session) return <AuthScreen />
-
-  const dailyItem = getDailyItem(items)
 
   return (
     <div className="app">
@@ -84,33 +65,60 @@ export default function App() {
         </div>
       </header>
 
-      {items.length === 0 ? (
-        <div className="centered" style={{ flexDirection: 'column', gap: 16 }}>
-          <p style={{ color: '#999' }}>{S.feed.emptyWeb}</p>
-          <Link to={`/u/${username ?? session.user.id}`} className="link-btn link-btn-dark">{S.feed.addFirstItem}</Link>
+      {feedLoading ? (
+        <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
+          <div className="spinner" />
         </div>
-      ) : dailyItem && (
-        <Link
-          to={`/u/${username ?? session.user.id}?item=${dailyItem.id}`}
-          className="daily-item daily-item-link"
-        >
-          <p className="daily-label">{S.feed.itemOfTheDay}</p>
-          {dailyItem.image_url && (
-            <div className="daily-image-wrap">
-              <img src={dailyItem.image_url} alt={dailyItem.name || ''} className="daily-image" />
-            </div>
-          )}
-          {dailyItem.name && <h2 className="daily-name">{dailyItem.name}</h2>}
-          {dailyItem.description && <p className="daily-description">{dailyItem.description}</p>}
-          {(dailyItem.tags ?? []).length > 0 && (
-            <div className="tag-row" style={{ justifyContent: 'center' }}>
-              {(dailyItem.tags ?? []).map(tag => (
-                <span key={tag.id} className="tag-badge">{tag.name}</span>
-              ))}
-            </div>
-          )}
-        </Link>
+      ) : feedItems.length === 0 ? (
+        <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
+          <p style={{ color: '#999' }}>{S.feed.feedEmpty}</p>
+        </div>
+      ) : (
+        <div className="feed-list">
+          {feedItems.map(item => {
+            const slug = item.profile?.username || item.user_id
+            const name = item.profile?.display_name || item.profile?.username || 'someone'
+            const time = relativeTime(item.created_at)
+            return (
+              <article
+                key={item.id}
+                className="feed-row"
+                onClick={() => setSelectedItem(item)}
+                role="button"
+                tabIndex={0}
+                onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(item) } }}
+              >
+                <div className="feed-row-text">
+                  <p className="feed-poster-line">
+                    <Link
+                      to={`/u/${slug}`}
+                      className="feed-poster-name"
+                      onClick={e => e.stopPropagation()}
+                    >{name}</Link>
+                    <span className="feed-poster-action"> {S.feed.addedNewItem}</span>
+                    {time && <span className="feed-poster-time"> · {time}</span>}
+                  </p>
+                  {item.name && <h2 className="feed-item-name">{item.name}</h2>}
+                  {item.description && (
+                    <p className="feed-item-description">{item.description}</p>
+                  )}
+                </div>
+                {item.image_url && (
+                  <div className="feed-thumb-wrap">
+                    <img src={item.image_url} alt={item.name || ''} className="feed-thumb" />
+                  </div>
+                )}
+              </article>
+            )
+          })}
+        </div>
       )}
+
+      <ItemDetailModal
+        visible={!!selectedItem}
+        item={selectedItem}
+        onClose={() => setSelectedItem(null)}
+      />
     </div>
   )
 }

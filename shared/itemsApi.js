@@ -20,6 +20,30 @@ export async function fetchAllItems(client, { userId, publicOnly = false, column
   return all;
 }
 
+export async function fetchPublicFeed(client, { limit = 50 } = {}) {
+  const { data: items, error } = await client
+    .from('items')
+    .select('*, tags(id, name, is_private)')
+    .eq('is_private', false)
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
+  if (!items?.length) return [];
+
+  const userIds = [...new Set(items.map(i => i.user_id))];
+  const { data: profiles, error: pErr } = await client
+    .from('profiles')
+    .select('user_id, display_name, username')
+    .in('user_id', userIds);
+  if (pErr) throw pErr;
+
+  const profileMap = new Map((profiles ?? []).map(p => [p.user_id, p]));
+  return items.map(item => ({
+    ...item,
+    profile: profileMap.get(item.user_id) ?? null,
+  }));
+}
+
 export async function fetchItemCount(client, { userId, publicOnly = false } = {}) {
   let query = client
     .from('items')

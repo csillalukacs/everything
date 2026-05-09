@@ -58,18 +58,18 @@ export const S = {
     acquiredSeparator: ' · ',
     addedOn: (date) => `added ${date}`,
     photoFrom: (date) => `photo from ${date}`,
-    deleteItem: 'delete item',
+    deleteItem: 'delete thing',
   },
 
   // Add-item flow
   addItem: {
-    title: 'add item',                                  // web modal header
+    title: 'add thing',                                  // web modal header
     clickOrDragToAddPhoto: 'click or drag to add a photo', // web drop zone
   },
 
   // Batch edit
   batchEdit: {
-    title: (n) => `edit ${n} ${plural(n, 'item')}`,
+    title: (n) => `edit ${n} ${plural(n, 'thing')}`,
     addTags: 'add tags',
     setYear: 'set year',
     setLocation: 'set location',
@@ -142,7 +142,7 @@ export const S = {
       { code: 'added:>2026-01-01', desc: 'date added (YYYY, YYYY-MM, YYYY-MM-DD)' },
       { code: 'city:Berlin', desc: 'city acquired' },
       { code: 'name:camera', desc: 'fields: name, desc, ocr' },
-      { code: 'acquired:none', desc: 'items missing the field' },
+      { code: 'acquired:none', desc: 'things missing the field' },
     ],
   },
 
@@ -166,11 +166,14 @@ export const S = {
 
   // Feed (mobile) and home page (web)
   feed: {
-    emptyMobile: 'nothing yet — add your first item',
+    emptyMobile: 'nothing yet — add your first thing',
     emptyWeb: "you haven't added anything yet",
-    addFirstItem: 'add your first item',
+    addFirstItem: 'add your first thing',
     myCollection: 'my collection',
-    itemOfTheDay: 'item of the day',
+    itemOfTheDay: 'thing of the day',
+    feedEmpty: 'nothing here yet',
+    loading: 'loading…',
+    addedNewItem: 'added a new thing',
   },
 
   // Stats
@@ -242,7 +245,7 @@ export const S = {
   a11y: {
     // mobile tab bar
     feed: 'feed',
-    addItem: 'add item',
+    addItem: 'add thing',
     yourCollection: 'your collection',
     // web
     removePhoto: 'remove photo',
