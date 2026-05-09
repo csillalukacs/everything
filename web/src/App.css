@@ -512,8 +512,12 @@ input {
   min-width: 0;
 }
 
-.filter-manage-btn {
+.chip.filter-manage-btn,
+.chip.filter-manage-btn:hover {
   flex-shrink: 0;
+  border: none;
+  background: transparent;
+  padding: 0 6px;
 }
 
 .filter-scroll {

@@ -334,10 +334,11 @@ export default function Collection() {
             })}
           </ScrollView>
           <TouchableOpacity
-            style={[styles.filterChip, styles.filterChipDashed, styles.filterManageBtn]}
+            style={[styles.filterChip, styles.filterManageBtn]}
             onPress={() => setManageTagsVisible(true)}
+            accessibilityLabel={S.common.manage}
           >
-            <Text style={styles.filterChipText}>{S.common.manage}</Text>
+            <Ionicons name="settings-outline" size={18} color="#999" />
           </TouchableOpacity>
         </View>
       )}
@@ -648,6 +649,9 @@ const styles = StyleSheet.create({
   },
   filterManageBtn: {
     flexShrink: 0,
+    borderWidth: 0,
+    backgroundColor: 'transparent',
+    paddingHorizontal: 6,
   },
   filterChip: {
     flexDirection: 'row',
