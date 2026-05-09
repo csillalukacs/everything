@@ -42,6 +42,7 @@ export default function Collection() {
     batchTogglePrivacy,
     deleteTag,
     toggleTagPrivacy,
+    renameTag,
   } = useCollection();
 
   const [activeTag, setActiveTag] = useState(null);
@@ -52,6 +53,9 @@ export default function Collection() {
   const [batchEditVisible, setBatchEditVisible] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [manageTagSearch, setManageTagSearch] = useState('');
+  const [renamingTagId, setRenamingTagId] = useState(null);
+  const [renameDraft, setRenameDraft] = useState('');
+  const [renameError, setRenameError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHelpVisible, setSearchHelpVisible] = useState(false);
 
@@ -109,6 +113,32 @@ export default function Collection() {
 
   async function handleBatchTogglePrivacy() {
     await batchTogglePrivacy([...selectedIds]);
+  }
+
+  function startRenameTag(tag) {
+    setRenamingTagId(tag.id);
+    setRenameDraft(tag.name);
+    setRenameError(null);
+  }
+
+  function cancelRenameTag() {
+    setRenamingTagId(null);
+    setRenameDraft('');
+    setRenameError(null);
+  }
+
+  async function commitRenameTag(tag) {
+    const trimmed = renameDraft.trim();
+    if (!trimmed || trimmed.toLowerCase() === tag.name) { cancelRenameTag(); return; }
+    const result = await renameTag(tag.id, trimmed);
+    if (result?.error) { setRenameError(S.collection.tagNameTaken); return; }
+    cancelRenameTag();
+  }
+
+  function closeManageTags() {
+    setManageTagsVisible(false);
+    setManageTagSearch('');
+    cancelRenameTag();
   }
 
   const queryAst = useMemo(() => parseQuery(searchQuery), [searchQuery]);
@@ -443,14 +473,14 @@ export default function Collection() {
         visible={manageTagsVisible}
         animationType="slide"
         transparent
-        onRequestClose={() => { setManageTagsVisible(false); setManageTagSearch(''); }}
+        onRequestClose={closeManageTags}
       >
         <View style={styles.manageOverlay}>
-          <TouchableOpacity style={styles.manageOverlayTop} activeOpacity={1} onPress={() => { setManageTagsVisible(false); setManageTagSearch(''); }} />
+          <TouchableOpacity style={styles.manageOverlayTop} activeOpacity={1} onPress={closeManageTags} />
           <View style={styles.manageSheet}>
             <View style={styles.manageHeader}>
               <Text style={styles.manageTitle}>{S.collection.manageTags(tags.length)}</Text>
-              <TouchableOpacity onPress={() => { setManageTagsVisible(false); setManageTagSearch(''); }}>
+              <TouchableOpacity onPress={closeManageTags}>
                 <Text style={styles.manageDone}>{S.common.done}</Text>
               </TouchableOpacity>
             </View>
@@ -481,29 +511,62 @@ export default function Collection() {
                   {tags.length === 0 ? S.collection.noTagsYet : S.common.noMatches}
                 </Text>
               }
-              renderItem={({ item: tag, index }) => (
-                <View style={[styles.manageRow, index < manageTagsList.length - 1 && styles.manageRowBorder]}>
-                  <View style={styles.manageTagInfo}>
-                    <Text style={styles.manageTagName} numberOfLines={1}>{tag.name}</Text>
-                    <Text style={styles.manageTagCount}>{totalTagCounts.get(tag.id) ?? 0}</Text>
+              renderItem={({ item: tag, index }) => {
+                const isRenaming = renamingTagId === tag.id;
+                return (
+                  <View style={[styles.manageRow, index < manageTagsList.length - 1 && styles.manageRowBorder]}>
+                    <View style={styles.manageTagInfo}>
+                      {isRenaming ? (
+                        <TextInput
+                          style={[styles.manageTagName, styles.manageTagRenameInput, renameError && styles.manageTagRenameInputError]}
+                          value={renameDraft}
+                          onChangeText={(v) => { setRenameDraft(v); if (renameError) setRenameError(null); }}
+                          onSubmitEditing={() => commitRenameTag(tag)}
+                          onBlur={() => commitRenameTag(tag)}
+                          autoFocus
+                          autoCorrect={false}
+                          autoCapitalize="none"
+                          returnKeyType="done"
+                        />
+                      ) : (
+                        <Text style={styles.manageTagName} numberOfLines={1}>{tag.name}</Text>
+                      )}
+                      {!isRenaming && (
+                        <Text style={styles.manageTagCount}>{totalTagCounts.get(tag.id) ?? 0}</Text>
+                      )}
+                      {isRenaming && renameError && (
+                        <Text style={styles.manageTagRenameError} numberOfLines={1}>{renameError}</Text>
+                      )}
+                    </View>
+                    <View style={styles.manageActions}>
+                      {isRenaming ? (
+                        <TouchableOpacity onPress={cancelRenameTag}>
+                          <Text style={styles.manageDone}>{S.common.cancel}</Text>
+                        </TouchableOpacity>
+                      ) : (
+                        <>
+                          <TouchableOpacity onPress={() => startRenameTag(tag)} style={styles.manageLockBtn}>
+                            <Ionicons name="pencil-outline" size={16} color="#999" />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => toggleTagPrivacy(tag)} style={styles.manageLockBtn}>
+                            <Ionicons
+                              name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
+                              size={16}
+                              color={tag.is_private ? '#2D2D2D' : '#ccc'}
+                            />
+                          </TouchableOpacity>
+                          <TouchableOpacity onPress={() => {
+                            deleteTag(tag.id);
+                            if (activeTag?.id === tag.id) setActiveTag(null);
+                          }}>
+                            <Text style={styles.manageDeleteBtn}>{S.common.delete}</Text>
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </View>
                   </View>
-                  <View style={styles.manageActions}>
-                    <TouchableOpacity onPress={() => toggleTagPrivacy(tag)} style={styles.manageLockBtn}>
-                      <Ionicons
-                        name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
-                        size={16}
-                        color={tag.is_private ? '#2D2D2D' : '#ccc'}
-                      />
-                    </TouchableOpacity>
-                    <TouchableOpacity onPress={() => {
-                      deleteTag(tag.id);
-                      if (activeTag?.id === tag.id) setActiveTag(null);
-                    }}>
-                      <Text style={styles.manageDeleteBtn}>{S.common.delete}</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
+                );
+              }}
             />
           </View>
         </View>
@@ -770,6 +833,22 @@ const styles = StyleSheet.create({
   manageTagName: {
     fontSize: 15,
     color: '#2D2D2D',
+  },
+  manageTagRenameInput: {
+    flex: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  manageTagRenameInputError: {
+    borderColor: '#E74C3C',
+  },
+  manageTagRenameError: {
+    fontSize: 11,
+    color: '#E74C3C',
   },
   manageActions: {
     flexDirection: 'row',

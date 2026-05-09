@@ -667,6 +667,34 @@ input {
   color: #c0392b;
 }
 
+.manage-tag-rename-input {
+  flex: 1;
+  min-width: 0;
+  font-size: 15px;
+  color: #2D2D2D;
+  padding: 4px 8px;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 8px;
+  background: #fff;
+  font-family: inherit;
+}
+
+.manage-tag-rename-input:focus {
+  outline: none;
+  border-color: #2D2D2D;
+}
+
+.manage-tag-rename-input-error,
+.manage-tag-rename-input-error:focus {
+  border-color: #E74C3C;
+}
+
+.manage-tag-rename-error {
+  font-size: 11px;
+  color: #E74C3C;
+  flex-shrink: 0;
+}
+
 /* ---- Grid ---- */
 
 .grid {

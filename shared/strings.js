@@ -24,6 +24,7 @@ export const S = {
     done: 'done',
     delete: 'delete',
     edit: 'edit',
+    rename: 'rename',
     remove: 'remove',
     apply: 'apply',
     search: 'search',
@@ -123,6 +124,7 @@ export const S = {
     manageTags: (n) => `manage tags · ${n}`,
     noTagsYet: 'no tags yet',
     searchTags: 'search tags',
+    tagNameTaken: 'tag name already exists',
   },
 
   // Advanced search syntax help (popover anchored to the search bar)

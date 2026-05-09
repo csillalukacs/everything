@@ -48,6 +48,15 @@ function BatchLockIcon({ size = 18, color = '#fff', open = false }) {
   )
 }
 
+function PencilIcon({ size = 14, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+      <path d="M12 20h9" />
+      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
+    </svg>
+  )
+}
+
 function TrashIcon({ size = 18, color = 'currentColor' }) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
@@ -90,6 +99,9 @@ export default function ProfilePage() {
   const [batchEditVisible, setBatchEditVisible] = useState(false)
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [manageTagSearch, setManageTagSearch] = useState('')
+  const [renamingTagId, setRenamingTagId] = useState(null)
+  const [renameDraft, setRenameDraft] = useState('')
+  const [renameError, setRenameError] = useState(null)
   const [searchQuery, setSearchQuery] = useState('')
   const [searchHelpOpen, setSearchHelpOpen] = useState(false)
   const searchHelpRef = useRef(null)
@@ -525,9 +537,39 @@ export default function ProfilePage() {
     : allTags
   ).slice().sort((a, b) => a.name.localeCompare(b.name))
 
+  function cancelRenameTag() {
+    setRenamingTagId(null)
+    setRenameDraft('')
+    setRenameError(null)
+  }
+
+  function startRenameTag(tag) {
+    setRenamingTagId(tag.id)
+    setRenameDraft(tag.name)
+    setRenameError(null)
+  }
+
+  async function commitRenameTag(tag) {
+    const normalized = renameDraft.trim().toLowerCase()
+    if (!normalized || normalized === tag.name) { cancelRenameTag(); return }
+    if (allTags.some(t => t.id !== tag.id && t.name === normalized)) {
+      setRenameError(S.collection.tagNameTaken)
+      return
+    }
+    const { error } = await supabase.from('tags').update({ name: normalized }).eq('id', tag.id)
+    if (error) { setRenameError(S.collection.tagNameTaken); return }
+    setAllTags(prev => prev.map(t => t.id === tag.id ? { ...t, name: normalized } : t))
+    setItems(prev => prev.map(i => ({
+      ...i,
+      tags: (i.tags ?? []).map(t => t.id === tag.id ? { ...t, name: normalized } : t),
+    })))
+    cancelRenameTag()
+  }
+
   function closeManageTags() {
     setManageTagsVisible(false)
     setManageTagSearch('')
+    cancelRenameTag()
   }
 
   if (loading) {
@@ -896,24 +938,60 @@ export default function ProfilePage() {
                 <div className="manage-tag-list">
                   {manageTagsList.length === 0
                     ? <p className="manage-tags-empty">{allTags.length === 0 ? S.collection.noTagsYet : S.common.noMatches}</p>
-                    : manageTagsList.map(tag => (
-                      <div key={tag.id} className="manage-tag-row">
-                        <div className="manage-tag-info">
-                          <span className="manage-tag-name">{tag.name}</span>
-                          <span className="manage-tag-count">{totalTagCounts.get(tag.id) ?? 0}</span>
+                    : manageTagsList.map(tag => {
+                      const isRenaming = renamingTagId === tag.id
+                      return (
+                        <div key={tag.id} className="manage-tag-row">
+                          <div className="manage-tag-info">
+                            {isRenaming ? (
+                              <input
+                                type="text"
+                                className={`manage-tag-rename-input${renameError ? ' manage-tag-rename-input-error' : ''}`}
+                                value={renameDraft}
+                                onChange={e => { setRenameDraft(e.target.value); if (renameError) setRenameError(null) }}
+                                onKeyDown={e => {
+                                  if (e.key === 'Enter') commitRenameTag(tag)
+                                  else if (e.key === 'Escape') cancelRenameTag()
+                                }}
+                                onBlur={() => commitRenameTag(tag)}
+                                autoFocus
+                              />
+                            ) : (
+                              <span className="manage-tag-name">{tag.name}</span>
+                            )}
+                            {!isRenaming && (
+                              <span className="manage-tag-count">{totalTagCounts.get(tag.id) ?? 0}</span>
+                            )}
+                            {isRenaming && renameError && (
+                              <span className="manage-tag-rename-error">{renameError}</span>
+                            )}
+                          </div>
+                          <div className="manage-tag-actions">
+                            {isRenaming ? (
+                              <button className="link-btn" onMouseDown={e => e.preventDefault()} onClick={cancelRenameTag}>{S.common.cancel}</button>
+                            ) : (
+                              <>
+                                <button
+                                  className="manage-tag-lock"
+                                  onClick={() => startRenameTag(tag)}
+                                  title={S.common.rename}
+                                >
+                                  <PencilIcon size={14} color="#2D2D2D" />
+                                </button>
+                                <button
+                                  className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
+                                  onClick={() => handleToggleTagPrivacy(tag)}
+                                  title={tag.is_private ? S.a11y.makePublic : S.a11y.makePrivate}
+                                >
+                                  <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
+                                </button>
+                                <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>{S.common.delete}</button>
+                              </>
+                            )}
+                          </div>
                         </div>
-                        <div className="manage-tag-actions">
-                          <button
-                            className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
-                            onClick={() => handleToggleTagPrivacy(tag)}
-                            title={tag.is_private ? S.a11y.makePublic : S.a11y.makePrivate}
-                          >
-                            <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
-                          </button>
-                          <button className="manage-tag-delete" onClick={() => handleDeleteTag(tag)}>{S.common.delete}</button>
-                        </div>
-                      </div>
-                    ))
+                      )
+                    })
                   }
                 </div>
               </div>
