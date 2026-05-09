@@ -10,7 +10,7 @@ import { S } from '../../../shared/strings'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
-import LocationPicker from './LocationPicker'
+import EditProfileSheet from './EditProfileSheet'
 import FilterDropdown from './FilterDropdown'
 
 const itemsCacheKey = userId => `cache:items:${userId}`
@@ -73,14 +73,9 @@ export default function ProfilePage() {
   const [username, setUsername] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
-  const [editingName, setEditingName] = useState(false)
-  const [nameInput, setNameInput] = useState('')
-  const [editingUsername, setEditingUsername] = useState(false)
-  const [usernameInput, setUsernameInput] = useState('')
-  const [usernameStatus, setUsernameStatus] = useState(null) // null | 'checking' | 'available' | 'taken' | 'invalid' | 'reserved'
+  const [editProfileVisible, setEditProfileVisible] = useState(false)
   const [sessionUserId, setSessionUserId] = useState(null)
   const [home, setHome] = useState(null)
-  const [editingHome, setEditingHome] = useState(false)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [addModalVisible, setAddModalVisible] = useState(false)
   const [batchEditVisible, setBatchEditVisible] = useState(false)
@@ -179,8 +174,6 @@ export default function ProfilePage() {
       if (resolvedProfile) {
         setProfileName(resolvedProfile.display_name)
         setUsername(resolvedProfile.username)
-        setNameInput(resolvedProfile.display_name ?? '')
-        setUsernameInput(resolvedProfile.username ?? '')
         setHome(resolvedProfile.home_location
           ? { location: resolvedProfile.home_location, lat: resolvedProfile.home_lat, lng: resolvedProfile.home_lng }
           : null)
@@ -557,150 +550,60 @@ export default function ProfilePage() {
       .eq('user_id', userId)
   }
 
-  async function saveUsername() {
-    const trimmed = usernameInput.trim().toLowerCase()
-    if (trimmed === (username ?? '')) {
-      setEditingUsername(false)
-      setUsernameStatus(null)
-      return
-    }
+  async function saveName(trimmed) {
+    if (!trimmed) return
+    await supabase.from('profiles').upsert({ user_id: userId, display_name: trimmed })
+    setProfileName(trimmed)
+  }
+
+  async function saveUsername(trimmed) {
+    if (trimmed === (username ?? '').toLowerCase()) return null
     if (trimmed === '') {
-      // Clear username
       const { error } = await supabase.from('profiles').update({ username: null }).eq('user_id', userId)
       if (!error) setUsername(null)
-      setEditingUsername(false)
-      setUsernameStatus(null)
-      return
+      return null
     }
-    if (!USERNAME_RE.test(trimmed)) {
-      setUsernameStatus('invalid')
-      return
-    }
+    if (!USERNAME_RE.test(trimmed)) return 'invalid'
     const { data: existing } = await supabase
       .from('profiles')
       .select('user_id')
       .ilike('username', trimmed)
       .maybeSingle()
-    if (existing && existing.user_id !== userId) {
-      setUsernameStatus('taken')
-      return
-    }
+    if (existing && existing.user_id !== userId) return 'taken'
     const { error } = await supabase
       .from('profiles')
       .update({ username: trimmed })
       .eq('user_id', userId)
     if (error) {
-      // The reserved-word trigger raises an exception that surfaces here.
-      setUsernameStatus(/reserved/i.test(error.message) ? 'reserved' : 'taken')
-      return
+      return /reserved/i.test(error.message) ? 'reserved' : 'taken'
     }
     setUsername(trimmed)
-    setEditingUsername(false)
-    setUsernameStatus(null)
     if (UUID_RE.test(slug)) navigate(`/u/${trimmed}`, { replace: true })
+    return null
   }
 
   return (
     <div className="app">
       <header className="header">
         <div>
-          {isOwner && editingName ? (
-            <input
-              className="profile-name-input"
-              value={nameInput}
-              onChange={e => setNameInput(e.target.value)}
-              onBlur={async () => {
-                const trimmed = nameInput.trim()
-                if (trimmed && trimmed !== profileName) {
-                  await supabase.from('profiles').upsert({ user_id: userId, display_name: trimmed })
-                  setProfileName(trimmed)
-                } else {
-                  setNameInput(profileName ?? '')
-                }
-                setEditingName(false)
-              }}
-              onKeyDown={e => { if (e.key === 'Enter') e.target.blur() }}
-              autoFocus
-            />
-          ) : (
-            <h1
-              className={`profile-name${isOwner ? ' profile-name-editable' : ''}`}
-              onClick={() => isOwner && setEditingName(true)}
-            >{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` : ${S.profile.objectCount(itemCount)}` : ''}</h1>
-          )}
-          {isOwner && (
-            editingUsername ? (
-              <div className="profile-username-edit">
-                <span className="profile-username-at">@</span>
-                <input
-                  className="profile-username-input"
-                  value={usernameInput}
-                  onChange={e => {
-                    setUsernameInput(e.target.value.toLowerCase())
-                    setUsernameStatus(null)
-                  }}
-                  onBlur={saveUsername}
-                  onKeyDown={e => {
-                    if (e.key === 'Enter') e.target.blur()
-                    if (e.key === 'Escape') {
-                      setUsernameInput(username ?? '')
-                      setUsernameStatus(null)
-                      setEditingUsername(false)
-                    }
-                  }}
-                  placeholder={S.profile.usernamePlaceholder}
-                  maxLength={20}
-                  autoFocus
-                />
-                {usernameStatus === 'invalid' && <span className="profile-username-msg profile-username-error">{S.profile.usernameInvalidWeb}</span>}
-                {usernameStatus === 'taken' && <span className="profile-username-msg profile-username-error">{S.profile.usernameTakenShort}</span>}
-                {usernameStatus === 'reserved' && <span className="profile-username-msg profile-username-error">{S.profile.usernameReservedShort}</span>}
-              </div>
-            ) : (
+          <div className="profile-name-row">
+            <h1 className="profile-name">{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` · ${S.profile.objectCount(itemCount)}` : ''}</h1>
+            {isOwner && (
               <button
-                className="profile-username-btn"
-                onClick={() => { setUsernameInput(username ?? ''); setEditingUsername(true) }}
-              >{username ? `@${username}` : S.profile.setUsername}</button>
-            )
-          )}
-          {!isOwner && username && (
-            <p className="profile-username-readonly">@{username}</p>
-          )}
-          {isOwner ? (
-            editingHome ? (
-              <div className="profile-home-edit">
-                <LocationPicker
-                  value={home}
-                  onChange={async next => {
-                    if (!next) return
-                    await saveHome(next)
-                    setEditingHome(false)
-                  }}
-                  placeholder={S.profile.setHomeCity}
-                />
-                <div className="profile-home-edit-actions">
-                  {home && (
-                    <button
-                      className="link-btn"
-                      onClick={async () => { await saveHome(null); setEditingHome(false) }}
-                    >{S.common.remove}</button>
-                  )}
-                  <button className="link-btn" onClick={() => setEditingHome(false)}>{S.common.done}</button>
-                </div>
-              </div>
-            ) : (
-              <button
-                className="profile-home-btn"
-                onClick={() => setEditingHome(true)}
+                className="profile-edit-btn"
+                onClick={() => setEditProfileVisible(true)}
+                aria-label={S.profile.edit}
+                title={S.profile.edit}
               >
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M12 20h9" />
+                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
                 </svg>
-                {home?.location ? home.location.split(',')[0] : S.profile.setHomeCityShort}
               </button>
-            )
-          ) : home?.location && (
+            )}
+          </div>
+          {username && <p className="profile-username-readonly">@{username}</p>}
+          {home?.location && (
             <p className="profile-home-readonly">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
                 <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
@@ -944,6 +847,17 @@ export default function ProfilePage() {
             onApply={handleBatchEdit}
             allTags={allTags}
             selectedCount={selectedIds.size}
+          />
+
+          <EditProfileSheet
+            visible={editProfileVisible}
+            onClose={() => setEditProfileVisible(false)}
+            initialName={profileName}
+            initialUsername={username}
+            initialHome={home}
+            onSaveName={saveName}
+            onSaveUsername={saveUsername}
+            onSaveHome={saveHome}
           />
 
           {manageTagsVisible && (

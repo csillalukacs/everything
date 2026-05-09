@@ -149,6 +149,12 @@ input {
   gap: 12px;
 }
 
+.profile-name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .profile-name {
   font-size: 48px;
   font-weight: 300;
@@ -157,41 +163,18 @@ input {
   font-family: Georgia, 'Times New Roman', serif;
 }
 
-.profile-name-editable {
-  cursor: text;
-}
-
-.profile-name-editable:hover {
-  opacity: 0.6;
-}
-
-.profile-name-input {
-  font-size: 48px;
-  font-weight: 300;
-  letter-spacing: 1px;
-  color: #2D2D2D;
-  font-family: Georgia, 'Times New Roman', serif;
-  background: transparent;
-  border-bottom: 1.5px solid #ccc;
-  border-radius: 0;
-  padding: 0;
-  width: auto;
-  min-width: 2ch;
-  max-width: 600px;
-}
-
-.profile-username-btn {
-  margin-top: 4px;
+.profile-edit-btn {
   background: none;
   border: none;
-  padding: 0;
-  font-size: 14px;
+  padding: 4px;
   color: #999;
   cursor: pointer;
-  font-family: inherit;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
 }
 
-.profile-username-btn:hover {
+.profile-edit-btn:hover {
   color: #2D2D2D;
 }
 
@@ -201,56 +184,13 @@ input {
   color: #999;
 }
 
-.profile-username-edit {
-  margin-top: 4px;
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.profile-username-at {
-  color: #999;
-  font-size: 14px;
-}
-
-.profile-username-input {
-  font-size: 14px;
-  color: #2D2D2D;
-  background: transparent;
-  border: none;
-  border-bottom: 1px solid #ccc;
-  border-radius: 0;
-  padding: 2px 0;
-  font-family: inherit;
-  outline: none;
-  min-width: 8ch;
-}
-
 .profile-username-msg {
-  margin-left: 8px;
+  margin: 4px 0 0;
   font-size: 12px;
 }
 
 .profile-username-error {
   color: #C0392B;
-}
-
-.profile-home-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  margin-top: 4px;
-  background: none;
-  border: none;
-  padding: 0;
-  font-size: 13px;
-  color: #999;
-  cursor: pointer;
-  font-family: inherit;
-}
-
-.profile-home-btn:hover {
-  color: #2D2D2D;
 }
 
 .profile-home-readonly {
@@ -260,21 +200,6 @@ input {
   margin: 4px 0 0;
   font-size: 13px;
   color: #999;
-}
-
-.profile-home-edit {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  margin-top: 8px;
-  width: 100%;
-  max-width: 360px;
-}
-
-.profile-home-edit-actions {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
 }
 
 .header-meta {
@@ -1852,6 +1777,18 @@ button.stats-bar-col {
 .sheet-batch-edit {
   width: 380px;
   max-width: calc(100vw - 32px);
+}
+
+.sheet-edit-profile {
+  width: 380px;
+  max-width: calc(100vw - 32px);
+}
+
+.sheet-edit-profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  gap: 16px;
 }
 
 .batch-section-label {

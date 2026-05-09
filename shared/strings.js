@@ -92,6 +92,9 @@ export const S = {
     collection: 'collection',
     account: 'account',
     objectCount: (n) => `${n} ${plural(n, 'object')}`,
+    edit: 'edit profile',                                // web edit-profile dialog title
+    displayName: 'display name',
+    displayNamePlaceholder: 'your name',
     // Username validation — mobile + web wording differs slightly
     usernameInvalidMobile: '3–20 chars: a–z, 0–9, _',
     usernameInvalidWeb: '3–20 chars, a–z 0–9 _',
