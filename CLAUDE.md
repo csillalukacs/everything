@@ -68,7 +68,6 @@ The app uses a bottom tab bar with three buttons: **feed** (left), **+** (center
 | `app/(tabs)/feed.js` | `/feed` | Feed (placeholder) |
 | `app/(tabs)/index.js` | `/` | Your collection — profile-styled header (display_name, @username, item count), settings-gear top-right, search/grid/batch flows |
 | `app/add.js` | `/add` | Camera/library → background removal → save (presented as transparent modal) |
-| `app/settings.js` | `/settings` | Your own settings sheet (display name, username, logout) — reached via gear icon on `/` |
 | `app/u/[slug].js` | `/u/<username\|uuid>` | Public profile view; redirects to `/` if `slug` resolves to current user |
 | `app/canvas.js` | `/canvas` | Free-form collage canvas — currently hidden (no UI entry point), kept for future |
 
@@ -83,7 +82,7 @@ These are reused by the routes above. Most are still rendered as `<Modal>` overl
 | `screens/ItemDetailModal.js` | View/edit a single item; prev/next navigation through filtered list. Edit/delete buttons hidden when `onSave`/`onDelete` not provided (read-only mode) |
 | `screens/BatchTagSheet.js` | Bottom sheet to apply tags to multiple selected items |
 | `screens/CanvasScreen.js` | Free-form collage: drag/pinch/rotate items on a Skia canvas |
-| `screens/ProfileScreen.js` | Your own settings sheet (mounted by `app/settings.js`) |
+| `screens/ProfileScreen.js` | Your own settings sheet — mounted in-tree by `app/(tabs)/index.js`, opened via gear icon |
 | `screens/ProfileViewScreen.js` | Read-only public profile (mounted by `app/u/[slug].js`) |
 | `screens/OpenProfileSheet.js` | Bottom sheet to type/paste a username and navigate to `/u/<slug>` |
 

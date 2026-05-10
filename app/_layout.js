@@ -27,7 +27,6 @@ function RootStack() {
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: '#F5F0EB' } }}>
       <Stack.Screen name="(tabs)" />
-      <Stack.Screen name="settings" options={transparentSheetOptions} />
       <Stack.Screen name="add" options={transparentSheetOptions} />
       <Stack.Screen name="u/[slug]" />
       <Stack.Screen name="stats" />

@@ -18,6 +18,7 @@ import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
 import FilterSheet from '../../screens/FilterSheet';
+import ProfileScreen from '../../screens/ProfileScreen';
 import { cityOf, thumbOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
@@ -60,6 +61,7 @@ export default function Collection() {
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHelpVisible, setSearchHelpVisible] = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
+  const [settingsVisible, setSettingsVisible] = useState(false);
 
   useEffect(() => {
     if (params.city) {
@@ -202,7 +204,7 @@ export default function Collection() {
           <TouchableOpacity onPress={() => router.push('/stats')} style={styles.headerIconBtn}>
             <Ionicons name="bar-chart-outline" size={22} color="#999" />
           </TouchableOpacity>
-          <TouchableOpacity onPress={() => router.push('/settings')} style={styles.headerIconBtn}>
+          <TouchableOpacity onPress={() => setSettingsVisible(true)} style={styles.headerIconBtn}>
             <Ionicons name="settings-outline" size={22} color="#999" />
           </TouchableOpacity>
         </View>
@@ -419,6 +421,13 @@ export default function Collection() {
         activeCity={activeCity}
         onChangeYear={setActiveYear}
         onChangeCity={setActiveCity}
+      />
+
+      <ProfileScreen
+        visible={settingsVisible}
+        onClose={() => setSettingsVisible(false)}
+        session={session}
+        itemCount={itemCount ?? items.length}
       />
 
       <Modal

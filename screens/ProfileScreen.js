@@ -1,5 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
 import {
+  Animated,
+  Dimensions,
+  Easing,
   Modal,
   ScrollView,
   StyleSheet,
@@ -13,6 +16,9 @@ import { USERNAME_RE } from '../shared/identifiers';
 import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const ANIM_DURATION = 220;
+
 export default function ProfileScreen({ visible, onClose, session, itemCount }) {
   const [displayName, setDisplayName] = useState('');
   const [editingName, setEditingName] = useState(false);
@@ -25,6 +31,25 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
   const [home, setHome] = useState(null);
   const inputRef = useRef(null);
   const usernameRef = useRef(null);
+
+  const [mounted, setMounted] = useState(visible);
+  const backdrop = useRef(new Animated.Value(0)).current;
+  const translate = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 1, duration: ANIM_DURATION, useNativeDriver: true }),
+        Animated.timing(translate, { toValue: 0, duration: ANIM_DURATION, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    } else if (mounted) {
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 0, duration: ANIM_DURATION, useNativeDriver: true }),
+        Animated.timing(translate, { toValue: SCREEN_HEIGHT, duration: ANIM_DURATION, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      ]).start(({ finished }) => { if (finished) setMounted(false); });
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (!visible || !session) return;
@@ -127,9 +152,11 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
+    <Modal visible={mounted} animationType="none" transparent onRequestClose={onClose}>
+      <View style={styles.overlay}>
+        <Animated.View style={[styles.backdrop, { opacity: backdrop }]} pointerEvents="none" />
+        <TouchableOpacity style={styles.overlayTop} activeOpacity={1} onPress={onClose} />
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: translate }] }]}>
           <View style={styles.header}>
             <Text style={styles.title}>{S.profile.title}</Text>
             <TouchableOpacity onPress={onClose}>
@@ -224,8 +251,8 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
               <Text style={styles.logoutText}>{S.common.logOut}</Text>
             </TouchableOpacity>
           </ScrollView>
-        </TouchableOpacity>
-      </TouchableOpacity>
+        </Animated.View>
+      </View>
     </Modal>
   );
 }
@@ -233,8 +260,14 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: 'rgba(0,0,0,0.4)',
+  },
+  overlayTop: {
+    flex: 1,
   },
   sheet: {
     backgroundColor: '#F5F0EB',
@@ -242,7 +275,6 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
     padding: 24,
     paddingBottom: 48,
-    maxHeight: '70%',
   },
   header: {
     flexDirection: 'row',
