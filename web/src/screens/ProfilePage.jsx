@@ -270,21 +270,33 @@ export default function ProfilePage() {
   }
 
   async function uploadImage(file) {
-    const ext = file.name.split('.').pop()
-    const ts = Date.now()
-    const path = `${sessionUserId}/${ts}.${ext}`
-    const thumbPath = `${sessionUserId}/${ts}_thumb.webp`
+    const ext = (file.name.split('.').pop() || 'jpg').toLowerCase()
     const thumbBlob = await makeThumbnail(file)
-    const { error } = await supabase.storage.from('item-images').upload(path, file, { contentType: file.type, cacheControl: '31536000, immutable' })
-    if (error) return null
-    const image_url = supabase.storage.from('item-images').getPublicUrl(path).data.publicUrl
+
+    const { data: presign, error: presignErr } = await supabase.functions.invoke('r2-presign', {
+      body: { ext, contentType: file.type },
+    })
+    if (presignErr || !presign) { console.error('Presign error:', presignErr); return null }
+    const { main, thumb, cacheControl } = presign
+
+    const mainRes = await fetch(main.uploadUrl, {
+      method: 'PUT',
+      body: file,
+      headers: { 'Content-Type': file.type, 'Cache-Control': cacheControl },
+    })
+    if (!mainRes.ok) { console.error('Main upload failed:', mainRes.status); return null }
+
     let thumb_url = null
     if (thumbBlob) {
-      const { error: thumbErr } = await supabase.storage.from('item-images').upload(thumbPath, thumbBlob, { contentType: 'image/webp', cacheControl: '31536000, immutable' })
-      if (thumbErr) console.warn('Thumb upload failed:', thumbErr)
-      else thumb_url = supabase.storage.from('item-images').getPublicUrl(thumbPath).data.publicUrl
+      const thumbRes = await fetch(thumb.uploadUrl, {
+        method: 'PUT',
+        body: thumbBlob,
+        headers: { 'Content-Type': 'image/webp', 'Cache-Control': cacheControl },
+      })
+      if (thumbRes.ok) thumb_url = thumb.publicUrl
+      else console.warn('Thumb upload failed:', thumbRes.status)
     }
-    return { image_url, thumb_url }
+    return { image_url: main.publicUrl, thumb_url }
   }
 
   async function ensureTags(tagNames) {
