@@ -1,10 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
-  Animated,
-  Dimensions,
-  Easing,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,9 +7,7 @@ import {
   View,
 } from 'react-native';
 import { S } from '../shared/strings';
-
-const SCREEN_HEIGHT = Dimensions.get('window').height;
-const ANIM_DURATION = 220;
+import BottomSheet from './BottomSheet';
 
 export default function FilterSheet({
   visible,
@@ -31,45 +24,22 @@ export default function FilterSheet({
   const hasAny = availableYears.length > 0 || hasMissingYear || availableCities.length > 0 || hasMissingCity;
   const filtersActive = !!(activeYear || activeCity);
 
-  const [mounted, setMounted] = useState(visible);
-  const backdrop = useRef(new Animated.Value(0)).current;
-  const translate = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
-
-  useEffect(() => {
-    if (visible) {
-      setMounted(true);
-      Animated.parallel([
-        Animated.timing(backdrop, { toValue: 1, duration: ANIM_DURATION, useNativeDriver: true }),
-        Animated.timing(translate, { toValue: 0, duration: ANIM_DURATION, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      ]).start();
-    } else if (mounted) {
-      Animated.parallel([
-        Animated.timing(backdrop, { toValue: 0, duration: ANIM_DURATION, useNativeDriver: true }),
-        Animated.timing(translate, { toValue: SCREEN_HEIGHT, duration: ANIM_DURATION, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
-      ]).start(({ finished }) => { if (finished) setMounted(false); });
-    }
-  }, [visible]);
-
   return (
-    <Modal visible={mounted} animationType="none" transparent onRequestClose={onClose}>
-      <View style={styles.overlay}>
-        <Animated.View style={[styles.backdrop, { opacity: backdrop }]} pointerEvents="none" />
-        <TouchableOpacity style={styles.overlayTop} activeOpacity={1} onPress={onClose} />
-        <Animated.View style={[styles.sheet, { transform: [{ translateY: translate }] }]}>
-          <View style={styles.header}>
-            <Text style={styles.title}>filters</Text>
-            <View style={styles.headerActions}>
-              {filtersActive && (
-                <TouchableOpacity onPress={() => { onChangeYear(null); onChangeCity(null); }}>
-                  <Text style={styles.clear}>{S.common.clear}</Text>
-                </TouchableOpacity>
-              )}
-              <TouchableOpacity onPress={onClose}>
-                <Text style={styles.done}>{S.common.done}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-          <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+    <BottomSheet visible={visible} onClose={onClose} sheetStyle={styles.sheet}>
+      <View style={styles.header}>
+        <Text style={styles.title}>filters</Text>
+        <View style={styles.headerActions}>
+          {filtersActive && (
+            <TouchableOpacity onPress={() => { onChangeYear(null); onChangeCity(null); }}>
+              <Text style={styles.clear}>{S.common.clear}</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.done}>{S.common.done}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
             {(availableYears.length > 0 || hasMissingYear) && (
               <>
                 <Text style={styles.sectionTitle}>year</Text>
@@ -137,24 +107,12 @@ export default function FilterSheet({
             {!hasAny && (
               <Text style={styles.empty}>no filters available</Text>
             )}
-          </ScrollView>
-        </Animated.View>
-      </View>
-    </Modal>
+      </ScrollView>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-  },
-  backdrop: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  overlayTop: {
-    flex: 1,
-  },
   sheet: {
     backgroundColor: '#F5F0EB',
     borderTopLeftRadius: 20,
