@@ -1,5 +1,9 @@
+import { useEffect, useRef, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import {
+  Animated,
+  Dimensions,
+  Easing,
   Modal,
   ScrollView,
   StyleSheet,
@@ -8,6 +12,9 @@ import {
   View,
 } from 'react-native';
 import { S } from '../shared/strings';
+
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+const ANIM_DURATION = 220;
 
 export default function FilterSheet({
   visible,
@@ -24,11 +31,31 @@ export default function FilterSheet({
   const hasAny = availableYears.length > 0 || hasMissingYear || availableCities.length > 0 || hasMissingCity;
   const filtersActive = !!(activeYear || activeCity);
 
+  const [mounted, setMounted] = useState(visible);
+  const backdrop = useRef(new Animated.Value(0)).current;
+  const translate = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  useEffect(() => {
+    if (visible) {
+      setMounted(true);
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 1, duration: ANIM_DURATION, useNativeDriver: true }),
+        Animated.timing(translate, { toValue: 0, duration: ANIM_DURATION, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]).start();
+    } else if (mounted) {
+      Animated.parallel([
+        Animated.timing(backdrop, { toValue: 0, duration: ANIM_DURATION, useNativeDriver: true }),
+        Animated.timing(translate, { toValue: SCREEN_HEIGHT, duration: ANIM_DURATION, easing: Easing.in(Easing.cubic), useNativeDriver: true }),
+      ]).start(({ finished }) => { if (finished) setMounted(false); });
+    }
+  }, [visible]);
+
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
+    <Modal visible={mounted} animationType="none" transparent onRequestClose={onClose}>
       <View style={styles.overlay}>
+        <Animated.View style={[styles.backdrop, { opacity: backdrop }]} pointerEvents="none" />
         <TouchableOpacity style={styles.overlayTop} activeOpacity={1} onPress={onClose} />
-        <View style={styles.sheet}>
+        <Animated.View style={[styles.sheet, { transform: [{ translateY: translate }] }]}>
           <View style={styles.header}>
             <Text style={styles.title}>filters</Text>
             <View style={styles.headerActions}>
@@ -111,7 +138,7 @@ export default function FilterSheet({
               <Text style={styles.empty}>no filters available</Text>
             )}
           </ScrollView>
-        </View>
+        </Animated.View>
       </View>
     </Modal>
   );
@@ -120,6 +147,9 @@ export default function FilterSheet({
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
+  },
+  backdrop: {
+    ...StyleSheet.absoluteFillObject,
     backgroundColor: 'rgba(0,0,0,0.4)',
   },
   overlayTop: {
