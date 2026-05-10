@@ -39,6 +39,7 @@ export const S = {
     selectAll: 'select all',
     deselectAll: 'deselect all',
     noMatches: 'no matches',
+    clear: 'clear',
   },
 
   // Auth

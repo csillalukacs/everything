@@ -17,6 +17,7 @@ import { Image } from 'expo-image';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
+import FilterSheet from '../../screens/FilterSheet';
 import { cityOf, thumbOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
@@ -58,6 +59,7 @@ export default function Collection() {
   const [renameError, setRenameError] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchHelpVisible, setSearchHelpVisible] = useState(false);
+  const [filterSheetVisible, setFilterSheetVisible] = useState(false);
 
   useEffect(() => {
     if (params.city) {
@@ -206,30 +208,40 @@ export default function Collection() {
         </View>
       </View>
 
-      <View style={styles.searchContainer}>
-        <Ionicons name="search" size={16} color="#999" />
-        <TextInput
-          style={styles.searchInput}
-          placeholder={S.common.search}
-          placeholderTextColor="#999"
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-          autoCorrect={false}
-          autoCapitalize="none"
-          returnKeyType="search"
-        />
-        {searchQuery.length > 0 && (
-          <TouchableOpacity onPress={() => setSearchQuery('')}>
-            <Ionicons name="close-circle" size={16} color="#999" />
+      <View style={styles.searchRow}>
+        <View style={styles.searchContainer}>
+          <Ionicons name="search" size={16} color="#999" />
+          <TextInput
+            style={styles.searchInput}
+            placeholder={S.common.search}
+            placeholderTextColor="#999"
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            autoCorrect={false}
+            autoCapitalize="none"
+            returnKeyType="search"
+          />
+          {searchQuery.length > 0 && (
+            <TouchableOpacity onPress={() => setSearchQuery('')}>
+              <Ionicons name="close-circle" size={16} color="#999" />
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={styles.searchHelpButton}
+            onPress={() => setSearchHelpVisible(true)}
+            accessibilityLabel={S.a11y.searchHelp}
+            hitSlop={8}
+          >
+            <Text style={styles.searchHelpButtonText}>?</Text>
           </TouchableOpacity>
-        )}
+        </View>
         <TouchableOpacity
-          style={styles.searchHelpButton}
-          onPress={() => setSearchHelpVisible(true)}
-          accessibilityLabel={S.a11y.searchHelp}
+          style={styles.filterIconBtn}
+          onPress={() => setFilterSheetVisible(true)}
           hitSlop={8}
         >
-          <Text style={styles.searchHelpButtonText}>?</Text>
+          <Ionicons name="options-outline" size={20} color={(activeYear || activeCity) ? '#2D2D2D' : '#999'} />
+          {(activeYear || activeCity) && <View style={styles.filterIconDot} />}
         </TouchableOpacity>
       </View>
 
@@ -266,65 +278,6 @@ export default function Collection() {
         </TouchableOpacity>
       </Modal>
 
-      {(availableYears.length > 0 || availableCities.length > 0 || hasMissingYear || hasMissingCity) && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.metaFilterScroll}
-          contentContainerStyle={styles.filterScrollContent}
-        >
-          {hasMissingYear && (() => {
-            const active = activeYear === 'none';
-            return (
-              <TouchableOpacity
-                key="y-none"
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setActiveYear(active ? null : 'none')}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{S.collection.noYear}</Text>
-              </TouchableOpacity>
-            );
-          })()}
-          {availableYears.map(y => {
-            const active = activeYear === y;
-            return (
-              <TouchableOpacity
-                key={`y-${y}`}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setActiveYear(active ? null : y)}
-              >
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{y}</Text>
-              </TouchableOpacity>
-            );
-          })}
-          {hasMissingCity && (() => {
-            const active = activeCity === 'none';
-            return (
-              <TouchableOpacity
-                key="c-none"
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setActiveCity(active ? null : 'none')}
-              >
-                <Ionicons name="location-outline" size={11} color={active ? '#fff' : '#999'} />
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{S.collection.noCity}</Text>
-              </TouchableOpacity>
-            );
-          })()}
-          {availableCities.map(c => {
-            const active = activeCity === c;
-            return (
-              <TouchableOpacity
-                key={`c-${c}`}
-                style={[styles.filterChip, active && styles.filterChipActive]}
-                onPress={() => setActiveCity(active ? null : c)}
-              >
-                <Ionicons name="location-outline" size={11} color={active ? '#fff' : '#999'} />
-                <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{c}</Text>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-      )}
 
       {tags.length > 0 && (
         <View style={styles.filterRow}>
@@ -453,6 +406,19 @@ export default function Collection() {
         onApply={handleBatchEdit}
         allTags={tags}
         selectedCount={selectedIds.size}
+      />
+
+      <FilterSheet
+        visible={filterSheetVisible}
+        onClose={() => setFilterSheetVisible(false)}
+        availableYears={availableYears}
+        availableCities={availableCities}
+        hasMissingYear={hasMissingYear}
+        hasMissingCity={hasMissingCity}
+        activeYear={activeYear}
+        activeCity={activeCity}
+        onChangeYear={setActiveYear}
+        onChangeCity={setActiveCity}
       />
 
       <Modal
@@ -600,7 +566,14 @@ const styles = StyleSheet.create({
   headerIconBtn: {
     padding: 4,
   },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 12,
+  },
   searchContainer: {
+    flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
@@ -610,7 +583,25 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
     backgroundColor: '#fff',
-    marginBottom: 12,
+  },
+  filterIconBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  filterIconDot: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 4,
+    backgroundColor: '#2D2D2D',
   },
   searchInput: {
     flex: 1,
@@ -688,10 +679,6 @@ const styles = StyleSheet.create({
     flexGrow: 1,
     flexShrink: 1,
   },
-  metaFilterScroll: {
-    flexGrow: 0,
-    marginBottom: 12,
-  },
   filterScrollContent: {
     gap: 8,
     paddingVertical: 2,
@@ -731,9 +718,6 @@ const styles = StyleSheet.create({
   },
   filterChipCountActive: {
     color: '#bbb',
-  },
-  filterChipDashed: {
-    borderStyle: 'dashed',
   },
   manageOverlay: {
     flex: 1,
