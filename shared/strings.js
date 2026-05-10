@@ -153,6 +153,7 @@ export const S = {
     sort: {
       newest: 'newest',
       oldest: 'oldest',
+      lastEdited: 'last edited',
       nameAZ: 'name a–z',
       nameZA: 'name z–a',
       acquiredNewest: 'acquired (newest)',

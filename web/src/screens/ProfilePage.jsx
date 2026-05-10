@@ -504,6 +504,7 @@ export default function ProfilePage() {
     }
     switch (sortParam) {
       case 'oldest': return arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+      case 'edited': return arr.sort((a, b) => new Date(b.updated_at ?? b.created_at) - new Date(a.updated_at ?? a.created_at))
       case 'name-asc': return arr.sort(cmpName)
       case 'name-desc': return arr.sort((a, b) => -cmpName(a, b))
       case 'acquired-desc': return arr.sort((a, b) => -cmpYear(a, b))
@@ -804,6 +805,7 @@ export default function ProfilePage() {
           options={[
             { value: 'newest', label: S.filters.sort.newest },
             { value: 'oldest', label: S.filters.sort.oldest },
+            { value: 'edited', label: S.filters.sort.lastEdited },
             { value: 'name-asc', label: S.filters.sort.nameAZ },
             { value: 'name-desc', label: S.filters.sort.nameZA },
             { value: 'acquired-desc', label: S.filters.sort.acquiredNewest },
