@@ -1,8 +1,8 @@
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { Image } from 'expo-image';
-import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { fetchPublicFeed } from '../../shared/itemsApi';
@@ -19,6 +19,7 @@ export default function Feed() {
   const insets = useSafeAreaInsets();
   const [feedItems, setFeedItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
@@ -30,6 +31,18 @@ export default function Feed() {
       .catch(e => console.error('fetchPublicFeed error:', e))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
+  }, []);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try {
+      const rows = await fetchPublicFeed(supabase, { limit: 50 });
+      setFeedItems(rows);
+    } catch (e) {
+      console.error('fetchPublicFeed error:', e);
+    } finally {
+      setRefreshing(false);
+    }
   }, []);
 
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
@@ -44,6 +57,9 @@ export default function Feed() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 80, paddingBottom: tabBarOffset + 24 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
+        }
       >
         <View style={styles.header}>
           <Text style={styles.title}>{S.appName}</Text>
