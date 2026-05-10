@@ -14,8 +14,12 @@ export function thumbOf(item) {
 export function imagePathFromUrl(url) {
   if (!url || typeof url !== 'string') return null;
   const idx = url.indexOf(STORAGE_PATH_MARKER);
-  if (idx === -1) return null;
-  return url.slice(idx + STORAGE_PATH_MARKER.length).split('?')[0] || null;
+  if (idx !== -1) return url.slice(idx + STORAGE_PATH_MARKER.length).split('?')[0] || null;
+  try {
+    return new URL(url).pathname.replace(/^\/+/, '').split('?')[0] || null;
+  } catch {
+    return null;
+  }
 }
 
 export function imagePathsForItem(item) {

@@ -1,26 +1,71 @@
 #!/usr/bin/env node
-// Delete files in the item-images bucket that aren't referenced by any row in
-// `items` (image_url, thumb_url, or previous_images entries).
+// Delete files in the R2 bucket that aren't referenced by any row in `items`
+// (image_url, thumb_url, or previous_images entries).
 //
-// Usage:
-//   SUPABASE_URL=... SUPABASE_SERVICE_ROLE_KEY=... node scripts/delete-orphan-images.js
+// One-time install:
+//   npm i --no-save @aws-sdk/client-s3
+//
+// Required env:
+//   SUPABASE_URL
+//   SUPABASE_SERVICE_ROLE_KEY
+//   R2_ENDPOINT                https://<account-id>.r2.cloudflarestorage.com
+//   R2_ACCESS_KEY_ID
+//   R2_SECRET_ACCESS_KEY
+//   R2_BUCKET
 //
 // Optional:
-//   USER_ID=<uuid>      restrict cleanup to one user's folder
+//   USER_ID=<uuid>      restrict cleanup to one user's prefix
 //   DRY_RUN=1           list what would be deleted without removing it
-//   MIN_AGE_MINUTES=60  skip files newer than this (default 60) to avoid racing
-//                       with in-flight uploads whose DB row hasn't landed yet
+//   MIN_AGE_MINUTES=60  skip files newer than this (default 60) so in-flight
+//                       uploads whose DB row hasn't landed yet aren't nuked
 
 const { createClient } = require('@supabase/supabase-js');
+const {
+  S3Client,
+  ListObjectsV2Command,
+  DeleteObjectsCommand,
+} = require('@aws-sdk/client-s3');
 
-const ITEM_IMAGES_BUCKET = 'item-images';
-const STORAGE_PATH_MARKER = `/${ITEM_IMAGES_BUCKET}/`;
+const required = [
+  'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY',
+  'R2_ENDPOINT', 'R2_ACCESS_KEY_ID', 'R2_SECRET_ACCESS_KEY', 'R2_BUCKET',
+];
+const missing = required.filter(k => !process.env[k]);
+if (missing.length) {
+  console.error(`Missing env: ${missing.join(', ')}`);
+  process.exit(1);
+}
+
+const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { persistSession: false },
+});
+
+const r2 = new S3Client({
+  endpoint: process.env.R2_ENDPOINT,
+  region: 'auto',
+  credentials: {
+    accessKeyId: process.env.R2_ACCESS_KEY_ID,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY,
+  },
+  forcePathStyle: true,
+});
+
+const R2_BUCKET = process.env.R2_BUCKET;
+const DRY_RUN = process.env.DRY_RUN === '1';
+const ONLY_USER = process.env.USER_ID || null;
+const MIN_AGE_MS = (parseInt(process.env.MIN_AGE_MINUTES, 10) || 60) * 60_000;
+const DELETE_BATCH = 1000;
 
 function imagePathFromUrl(url) {
   if (!url || typeof url !== 'string') return null;
-  const idx = url.indexOf(STORAGE_PATH_MARKER);
-  if (idx === -1) return null;
-  return url.slice(idx + STORAGE_PATH_MARKER.length).split('?')[0] || null;
+  const marker = '/item-images/';
+  const idx = url.indexOf(marker);
+  if (idx !== -1) return url.slice(idx + marker.length).split('?')[0] || null;
+  try {
+    return new URL(url).pathname.replace(/^\/+/, '').split('?')[0] || null;
+  } catch {
+    return null;
+  }
 }
 
 function imagePathsForItem(item) {
@@ -36,20 +81,6 @@ function imagePathsForItem(item) {
   }
   return paths;
 }
-
-const SUPABASE_URL = process.env.SUPABASE_URL;
-const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
-if (!SUPABASE_URL || !SERVICE_KEY) {
-  console.error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required');
-  process.exit(1);
-}
-
-const supabase = createClient(SUPABASE_URL, SERVICE_KEY, { auth: { persistSession: false } });
-const DRY_RUN = process.env.DRY_RUN === '1';
-const ONLY_USER = process.env.USER_ID || null;
-const MIN_AGE_MS = (parseInt(process.env.MIN_AGE_MINUTES, 10) || 60) * 60_000;
-const LIST_PAGE = 1000;
-const REMOVE_BATCH = 200;
 
 async function fetchReferencedPaths() {
   const referenced = new Set();
@@ -70,82 +101,67 @@ async function fetchReferencedPaths() {
   return referenced;
 }
 
-async function listUserFolders() {
-  if (ONLY_USER) return [ONLY_USER];
-  const folders = [];
-  let offset = 0;
-  for (;;) {
-    const { data, error } = await supabase.storage
-      .from(ITEM_IMAGES_BUCKET)
-      .list('', { limit: LIST_PAGE, offset });
-    if (error) throw error;
-    for (const entry of data) if (entry.id === null) folders.push(entry.name);
-    if (data.length < LIST_PAGE) break;
-    offset += LIST_PAGE;
-  }
-  return folders;
-}
-
-async function listUserFiles(userId) {
+async function listAllR2Files() {
   const files = [];
-  let offset = 0;
+  let token;
   for (;;) {
-    const { data, error } = await supabase.storage
-      .from(ITEM_IMAGES_BUCKET)
-      .list(userId, { limit: LIST_PAGE, offset });
-    if (error) throw error;
-    for (const entry of data) {
-      if (entry.id === null) continue;
+    const res = await r2.send(new ListObjectsV2Command({
+      Bucket: R2_BUCKET,
+      Prefix: ONLY_USER ? `${ONLY_USER}/` : undefined,
+      ContinuationToken: token,
+      MaxKeys: 1000,
+    }));
+    for (const obj of res.Contents ?? []) {
       files.push({
-        path: `${userId}/${entry.name}`,
-        createdAt: entry.created_at ? new Date(entry.created_at).getTime() : 0,
+        path: obj.Key,
+        createdAt: obj.LastModified ? obj.LastModified.getTime() : 0,
       });
     }
-    if (data.length < LIST_PAGE) break;
-    offset += LIST_PAGE;
+    if (!res.IsTruncated) break;
+    token = res.NextContinuationToken;
   }
   return files;
 }
 
-async function removeBatch(paths) {
+async function deleteBatched(paths) {
   if (DRY_RUN) return;
-  for (let i = 0; i < paths.length; i += REMOVE_BATCH) {
-    const slice = paths.slice(i, i + REMOVE_BATCH);
-    const { error } = await supabase.storage.from(ITEM_IMAGES_BUCKET).remove(slice);
-    if (error) throw error;
+  for (let i = 0; i < paths.length; i += DELETE_BATCH) {
+    const slice = paths.slice(i, i + DELETE_BATCH);
+    const { Errors } = await r2.send(new DeleteObjectsCommand({
+      Bucket: R2_BUCKET,
+      Delete: { Objects: slice.map(Key => ({ Key })), Quiet: true },
+    }));
+    if (Errors?.length) {
+      for (const e of Errors) console.error(`[fail] ${e.Key}: ${e.Message}`);
+    }
   }
 }
 
 async function main() {
-  console.log(`Scanning ${ITEM_IMAGES_BUCKET}${ONLY_USER ? ` for user ${ONLY_USER}` : ''}${DRY_RUN ? ' (dry run)' : ''}`);
+  console.log(`Scanning R2 bucket ${R2_BUCKET}${ONLY_USER ? ` for user ${ONLY_USER}` : ''}${DRY_RUN ? ' (dry run)' : ''}`);
 
-  const folders = await listUserFolders();
-  console.log(`${folders.length} user folder${folders.length === 1 ? '' : 's'}`);
+  const files = await listAllR2Files();
+  console.log(`${files.length} files in R2`);
 
   const referenced = await fetchReferencedPaths();
   console.log(`${referenced.size} referenced paths in DB`);
 
   const cutoff = Date.now() - MIN_AGE_MS;
   const orphans = [];
-  let totalFiles = 0, tooNew = 0;
-
-  for (const folder of folders) {
-    const files = await listUserFiles(folder);
-    totalFiles += files.length;
-    for (const f of files) {
-      if (referenced.has(f.path)) continue;
-      if (f.createdAt > cutoff) { tooNew++; continue; }
-      orphans.push(f.path);
-    }
+  let tooNew = 0;
+  for (const f of files) {
+    if (referenced.has(f.path)) continue;
+    if (f.createdAt > cutoff) { tooNew++; continue; }
+    orphans.push(f.path);
   }
 
-  console.log(`${totalFiles} files in storage, ${orphans.length} orphaned, ${tooNew} skipped (too new)`);
+  console.log(`${orphans.length} orphaned, ${tooNew} skipped (too new)`);
   if (orphans.length === 0) return;
 
   if (DRY_RUN) {
     for (const p of orphans) console.log(`  would delete: ${p}`);
   } else {
-    await removeBatch(orphans);
+    await deleteBatched(orphans);
     console.log(`deleted ${orphans.length} orphaned file${orphans.length === 1 ? '' : 's'}`);
   }
 }

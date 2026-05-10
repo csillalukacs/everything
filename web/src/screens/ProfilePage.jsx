@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
-import { cityOf, acquiredFields, thumbOf, imagePathsForItem, ITEM_IMAGES_BUCKET } from '../../../shared/items'
+import { cityOf, acquiredFields, thumbOf, imagePathsForItem } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { UUID_RE, USERNAME_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
@@ -383,8 +383,8 @@ export default function ProfilePage() {
   async function deleteStorageForItems(itemsToDelete) {
     const paths = itemsToDelete.flatMap(imagePathsForItem)
     if (paths.length === 0) return
-    const { error } = await supabase.storage.from(ITEM_IMAGES_BUCKET).remove(paths)
-    if (error) console.warn('Storage delete failed (orphans left for cleanup):', error)
+    const { error } = await supabase.functions.invoke('r2-delete', { body: { paths } })
+    if (error) console.warn('R2 delete failed (orphans left for cleanup):', error)
   }
 
   async function handleDelete() {
