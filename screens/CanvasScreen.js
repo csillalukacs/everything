@@ -27,6 +27,7 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
+import { thumbOf } from '../shared/items';
 import { S } from '../shared/strings';
 
 const INITIAL_SIZE = 120;
@@ -356,7 +357,7 @@ export default function CanvasScreen({ visible, onClose, items }) {
                     onPress={() => addToCanvas(item)}
                   >
                     {item.image_url && (
-                      <Image source={{ uri: item.image_url }} style={styles.trayImage} cachePolicy="memory-disk" contentFit="cover" />
+                      <Image source={{ uri: thumbOf(item) }} style={styles.trayImage} cachePolicy="memory-disk" contentFit="cover" />
                     )}
                   </TouchableOpacity>
                 ))}

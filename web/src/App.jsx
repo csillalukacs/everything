@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { fetchPublicFeed } from '../../shared/itemsApi'
+import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
 import AuthScreen from './screens/AuthScreen'
@@ -105,7 +106,7 @@ export default function App() {
                 </div>
                 {item.image_url && (
                   <div className="feed-thumb-wrap">
-                    <img src={item.image_url} alt={item.name || ''} className="feed-thumb" />
+                    <img src={thumbOf(item)} alt={item.name || ''} className="feed-thumb" />
                   </div>
                 )}
               </article>

@@ -17,7 +17,7 @@ import { Image } from 'expo-image';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
-import { cityOf } from '../../shared/items';
+import { cityOf, thumbOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
 
@@ -391,7 +391,7 @@ export default function Collection() {
             >
               {item.image_url && (
                 <View style={styles.cardImageContainer}>
-                  <Image source={{ uri: item.image_url }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
+                  <Image source={{ uri: thumbOf(item) }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
                 </View>
               )}
               {item.is_private && !batchMode && (

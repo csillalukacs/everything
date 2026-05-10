@@ -6,6 +6,7 @@ import { ActivityIndicator, Platform, ScrollView, StyleSheet, Text, TouchableOpa
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { fetchPublicFeed } from '../../shared/itemsApi';
+import { thumbOf } from '../../shared/items';
 import { relativeTime } from '../../shared/dates';
 import { S } from '../../shared/strings';
 import ItemDetailModal from '../../screens/ItemDetailModal';
@@ -89,7 +90,7 @@ export default function Feed() {
                   {item.image_url && (
                     <View style={styles.thumbWrap}>
                       <Image
-                        source={{ uri: item.image_url }}
+                        source={{ uri: thumbOf(item) }}
                         style={styles.thumbImage}
                         contentFit="contain"
                         cachePolicy="memory-disk"

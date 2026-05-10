@@ -15,6 +15,7 @@ import {
 import { Image } from 'expo-image';
 import { supabase } from '../lib/supabase';
 import { fetchAllItems, fetchItemCount } from '../shared/itemsApi';
+import { thumbOf } from '../shared/items';
 import { UUID_RE } from '../shared/identifiers';
 import { S } from '../shared/strings';
 import ItemDetailModal from './ItemDetailModal';
@@ -224,7 +225,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
                     {item.image_url && (
                       <View style={styles.cardImageContainer}>
                         <Image
-                          source={{ uri: item.image_url }}
+                          source={{ uri: thumbOf(item) }}
                           style={styles.cardImage}
                           recyclingKey={item.id}
                           cachePolicy="memory-disk"

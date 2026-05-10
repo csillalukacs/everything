@@ -22,7 +22,7 @@ import {
   endOfWeekKey,
   endOfMonthKey,
 } from '../../../shared/dates'
-import { cityOf } from '../../../shared/items'
+import { cityOf, thumbOf } from '../../../shared/items'
 import { S } from '../../../shared/strings'
 
 const markerIcon = L.icon({
@@ -148,7 +148,7 @@ export default function StatsPage() {
         .catch(e => console.error('fetchItemCount error:', e))
       fetchAllItems(supabase, {
         userId: session.user.id,
-        columns: 'id, created_at, name, image_url, acquired_year, acquired_location, acquired_lat, acquired_lng, tags(id, name)',
+        columns: 'id, created_at, name, image_url, thumb_url, acquired_year, acquired_location, acquired_lat, acquired_lng, tags(id, name)',
       })
         .then(data => { setItems(data); setLoading(false) })
         .catch(e => { console.error('fetchAllItems error:', e); setLoading(false) })
@@ -558,7 +558,7 @@ export default function StatsPage() {
                                   title={s.name || ''}
                                 >
                                   {s.image_url
-                                    ? <img src={s.image_url} alt={s.name || ''} />
+                                    ? <img src={thumbOf(s)} alt={s.name || ''} />
                                     : <div className="map-popup-thumb-placeholder" />
                                   }
                                 </button>

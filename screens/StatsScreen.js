@@ -21,7 +21,7 @@ import {
   formatWeekLabel,
   formatMonthLabel,
 } from '../shared/dates';
-import { cityOf } from '../shared/items';
+import { cityOf, thumbOf } from '../shared/items';
 import { S } from '../shared/strings';
 
 const PIE_PALETTE = [
@@ -408,7 +408,7 @@ export default function StatsScreen() {
                 {selectedGroup.samples.map(s => (
                   <View key={s.id} style={styles.sheetThumb}>
                     {s.image_url
-                      ? <Image source={{ uri: s.image_url }} style={styles.sheetThumbImg} contentFit="cover" />
+                      ? <Image source={{ uri: thumbOf(s) }} style={styles.sheetThumbImg} contentFit="cover" />
                       : <View style={styles.sheetThumbPlaceholder} />
                     }
                   </View>

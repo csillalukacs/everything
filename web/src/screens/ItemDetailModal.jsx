@@ -58,7 +58,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   function handleImageChange(f) {
     if (!f) return
     if (typeof editPhoto === 'string' && editPhoto.startsWith('http')) {
-      const kept = { url: editPhoto, added_at: editImageAddedAt ?? item?.created_at }
+      const kept = { url: editPhoto, thumb_url: item?.thumb_url ?? null, added_at: editImageAddedAt ?? item?.created_at }
       setEditPreviousImages(prev => [kept, ...prev])
     }
     setEditImageAddedAt(new Date().toISOString())
@@ -184,7 +184,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                             className={`thumbnail${selected ? ' thumbnail-selected' : ''}`}
                             onClick={() => setDisplayedIdx(idx)}
                           >
-                            <img src={entry.url} alt="" />
+                            <img src={entry.thumb_url || entry.url} alt="" />
                           </button>
                           {removable && (
                             <button

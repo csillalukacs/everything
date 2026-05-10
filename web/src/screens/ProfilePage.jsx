@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
-import { cityOf, acquiredFields } from '../../../shared/items'
+import { cityOf, acquiredFields, thumbOf } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { UUID_RE, USERNAME_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
@@ -252,12 +252,39 @@ export default function ProfilePage() {
     writeCache(tagsCacheKey(sessionUserId), allTags)
   }, [allTags, isOwner, sessionUserId])
 
+  async function makeThumbnail(file, maxW = 400) {
+    try {
+      const bitmap = await createImageBitmap(file)
+      const scale = Math.min(1, maxW / bitmap.width)
+      const w = Math.round(bitmap.width * scale)
+      const h = Math.round(bitmap.height * scale)
+      const canvas = document.createElement('canvas')
+      canvas.width = w
+      canvas.height = h
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, w, h)
+      return await new Promise(resolve => canvas.toBlob(resolve, 'image/webp', 0.85))
+    } catch (e) {
+      console.warn('Thumbnail generation failed:', e)
+      return null
+    }
+  }
+
   async function uploadImage(file) {
     const ext = file.name.split('.').pop()
-    const path = `${sessionUserId}/${Date.now()}.${ext}`
+    const ts = Date.now()
+    const path = `${sessionUserId}/${ts}.${ext}`
+    const thumbPath = `${sessionUserId}/${ts}_thumb.webp`
+    const thumbBlob = await makeThumbnail(file)
     const { error } = await supabase.storage.from('item-images').upload(path, file, { contentType: file.type, cacheControl: '31536000, immutable' })
     if (error) return null
-    return supabase.storage.from('item-images').getPublicUrl(path).data.publicUrl
+    const image_url = supabase.storage.from('item-images').getPublicUrl(path).data.publicUrl
+    let thumb_url = null
+    if (thumbBlob) {
+      const { error: thumbErr } = await supabase.storage.from('item-images').upload(thumbPath, thumbBlob, { contentType: 'image/webp', cacheControl: '31536000, immutable' })
+      if (thumbErr) console.warn('Thumb upload failed:', thumbErr)
+      else thumb_url = supabase.storage.from('item-images').getPublicUrl(thumbPath).data.publicUrl
+    }
+    return { image_url, thumb_url }
   }
 
   async function ensureTags(tagNames) {
@@ -284,14 +311,16 @@ export default function ProfilePage() {
   }
 
   async function handleSave(name, file, tagNames, isPrivate, description, acquired) {
-    const image_url = await uploadImage(file)
-    if (!image_url) return
+    const uploaded = await uploadImage(file)
+    if (!uploaded) return
+    const { image_url, thumb_url } = uploaded
     const { data, error } = await supabase
       .from('items')
       .insert({
         name: name || null,
         description: description || null,
         image_url,
+        thumb_url,
         is_private: isPrivate ?? false,
         ...acquiredFields(acquired),
       })
@@ -308,10 +337,13 @@ export default function ProfilePage() {
 
   async function handleUpdate(name, photoOrFile, tagNames, isPrivate, description, acquired, previousImages, imageAddedAt) {
     let image_url = typeof photoOrFile === 'string' ? photoOrFile : null
+    let thumb_url = selectedItem?.thumb_url ?? null
     const isNewPhoto = photoOrFile instanceof File
     if (isNewPhoto) {
-      image_url = await uploadImage(photoOrFile)
-      if (!image_url) return
+      const uploaded = await uploadImage(photoOrFile)
+      if (!uploaded) return
+      image_url = uploaded.image_url
+      thumb_url = uploaded.thumb_url
     }
     const { data, error } = await supabase
       .from('items')
@@ -319,6 +351,7 @@ export default function ProfilePage() {
         name: name || null,
         description: description || null,
         image_url,
+        thumb_url,
         is_private: isPrivate ?? false,
         ...acquiredFields(acquired),
         ...(previousImages !== undefined ? { previous_images: previousImages } : {}),
@@ -817,7 +850,7 @@ export default function ProfilePage() {
               onClick={() => isOwner && batchMode ? toggleBatchSelect(item.id) : openItem(item)}
               onContextMenu={isOwner ? e => { e.preventDefault(); toggleBatchSelect(item.id) } : undefined}
             >
-              {item.image_url && <img src={item.image_url} alt={item.name || ''} loading="lazy" />}
+              {item.image_url && <img src={thumbOf(item)} alt={item.name || ''} loading="lazy" />}
               {item.is_private && !batchMode && (
                 <div className="card-private-badge"><LockIcon size={10} color="#fff" /></div>
               )}

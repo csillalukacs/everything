@@ -137,7 +137,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   async function handleCaptured(uri) {
     setCameraVisible(false);
     if (editPhoto && editPhoto.startsWith('http')) {
-      const kept = { url: editPhoto, added_at: editImageAddedAt ?? item?.created_at };
+      const kept = { url: editPhoto, thumb_url: item?.thumb_url ?? null, added_at: editImageAddedAt ?? item?.created_at };
       setEditPreviousImages(prev => [kept, ...prev]);
     }
     setEditImageAddedAt(new Date().toISOString());
@@ -243,7 +243,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                     style={[styles.thumbnail, selected && styles.thumbnailSelected]}
                     activeOpacity={0.8}
                   >
-                    <Image source={{ uri: entry.url }} style={styles.thumbnailImage} cachePolicy="memory-disk" contentFit="cover" />
+                    <Image source={{ uri: entry.thumb_url || entry.url }} style={styles.thumbnailImage} cachePolicy="memory-disk" contentFit="cover" />
                   </TouchableOpacity>
                   {removable && (
                     <TouchableOpacity

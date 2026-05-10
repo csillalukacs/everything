@@ -4,6 +4,10 @@ export function cityOf(loc) {
   return c || null;
 }
 
+export function thumbOf(item) {
+  return item?.thumb_url || item?.image_url || null;
+}
+
 export function acquiredFields(acquired) {
   return {
     acquired_year: acquired?.year ?? null,
