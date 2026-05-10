@@ -1,3 +1,4 @@
+import { Ionicons } from '@expo/vector-icons';
 import { useEffect, useRef, useState } from 'react';
 import {
   ScrollView,
@@ -13,18 +14,51 @@ import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
 
+function EditActions({ onSave, onCancel, disabled }) {
+  return (
+    <View style={styles.editActions}>
+      <TouchableOpacity onPress={onCancel} hitSlop={10} style={styles.actionBtn} disabled={disabled}>
+        <Ionicons name="close" size={20} color="#999" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={onSave} hitSlop={10} style={styles.actionBtn} disabled={disabled}>
+        <Ionicons name="checkmark" size={20} color="#2D2D2D" />
+      </TouchableOpacity>
+    </View>
+  );
+}
+
 export default function ProfileScreen({ visible, onClose, session, itemCount }) {
   const [displayName, setDisplayName] = useState('');
-  const [editingName, setEditingName] = useState(false);
   const [nameInput, setNameInput] = useState('');
   const [username, setUsername] = useState(null);
-  const [editingUsername, setEditingUsername] = useState(false);
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameError, setUsernameError] = useState(null);
   const [savingUsername, setSavingUsername] = useState(false);
   const [home, setHome] = useState(null);
+  const [homeInput, setHomeInput] = useState(null);
+  const [editingField, setEditingField] = useState(null);
   const inputRef = useRef(null);
   const usernameRef = useRef(null);
+
+  function startEdit(field) {
+    setUsernameError(null);
+    if (field === 'name') setNameInput(displayName);
+    if (field === 'username') setUsernameInput(username ?? '');
+    if (field === 'home') setHomeInput(home);
+    setEditingField(field);
+  }
+
+  function cancelEdit() {
+    setEditingField(null);
+    setUsernameError(null);
+  }
+
+  useEffect(() => {
+    if (!visible) {
+      setEditingField(null);
+      setUsernameError(null);
+    }
+  }, [visible]);
 
   useEffect(() => {
     if (!visible || !session) return;
@@ -57,34 +91,25 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       .eq('user_id', session.user.id);
   }
 
-  function handleHomeChange(next) {
-    if (next) saveHome(next);
-  }
-
   useEffect(() => {
-    if (editingName) inputRef.current?.focus();
-  }, [editingName]);
-
-  useEffect(() => {
-    if (editingUsername) usernameRef.current?.focus();
-  }, [editingUsername]);
+    if (editingField === 'name') inputRef.current?.focus();
+    if (editingField === 'username') usernameRef.current?.focus();
+  }, [editingField]);
 
   async function saveName() {
     const trimmed = nameInput.trim();
     if (trimmed && trimmed !== displayName) {
       await supabase.from('profiles').upsert({ user_id: session.user.id, display_name: trimmed });
       setDisplayName(trimmed);
-    } else {
-      setNameInput(displayName);
     }
-    setEditingName(false);
+    setEditingField(null);
   }
 
   async function saveUsername() {
     const trimmed = usernameInput.trim().toLowerCase();
     setUsernameError(null);
     if (trimmed === (username ?? '')) {
-      setEditingUsername(false);
+      setEditingField(null);
       return;
     }
     setSavingUsername(true);
@@ -93,7 +118,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       setSavingUsername(false);
       if (!error) {
         setUsername(null);
-        setEditingUsername(false);
+        setEditingField(null);
       }
       return;
     }
@@ -123,7 +148,14 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
     }
     setUsername(trimmed);
     setUsernameInput(trimmed);
-    setEditingUsername(false);
+    setEditingField(null);
+  }
+
+  async function saveHomeEdit() {
+    const changed = (homeInput?.lat ?? null) !== (home?.lat ?? null)
+      || (homeInput?.lng ?? null) !== (home?.lng ?? null);
+    if (changed) await saveHome(homeInput);
+    setEditingField(null);
   }
 
   return (
@@ -137,27 +169,43 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
 
       <ScrollView showsVerticalScrollIndicator={false}>
             <View style={styles.section}>
-              <Text style={styles.label}>{S.profile.name}</Text>
-              {editingName ? (
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>{S.profile.name}</Text>
+                {editingField === 'name' && (
+                  <EditActions onSave={saveName} onCancel={cancelEdit} />
+                )}
+              </View>
+              {editingField === 'name' ? (
                 <TextInput
                   ref={inputRef}
-                  style={styles.nameInput}
+                  style={styles.input}
                   value={nameInput}
                   onChangeText={setNameInput}
                   returnKeyType="done"
                   onSubmitEditing={saveName}
-                  onBlur={saveName}
                 />
               ) : (
-                <TouchableOpacity onPress={() => setEditingName(true)}>
-                  <Text style={styles.nameValue}>{displayName}</Text>
-                </TouchableOpacity>
+                <View style={styles.displayRow}>
+                  <Text style={styles.displayValue}>{displayName}</Text>
+                  <TouchableOpacity
+                    onPress={() => startEdit('name')}
+                    hitSlop={10}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color="#999" />
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>{S.profile.username}</Text>
-              {editingUsername ? (
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>{S.profile.username}</Text>
+                {editingField === 'username' && (
+                  <EditActions onSave={saveUsername} onCancel={cancelEdit} disabled={savingUsername} />
+                )}
+              </View>
+              {editingField === 'username' ? (
                 <>
                   <View style={styles.usernameRow}>
                     <Text style={styles.usernameAt}>@</Text>
@@ -177,41 +225,69 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
                     />
                   </View>
                   {usernameError && <Text style={styles.usernameError}>{usernameError}</Text>}
-                  <Text style={styles.usernameHint}>{S.profile.usernameHint(usernameInput)}</Text>
+                  <Text style={styles.hint}>{S.profile.usernameHint(usernameInput)}</Text>
                 </>
               ) : (
-                <TouchableOpacity onPress={() => setEditingUsername(true)}>
-                  <Text style={username ? styles.nameValue : styles.usernamePlaceholder}>
+                <View style={styles.displayRow}>
+                  <Text style={username ? styles.displayValue : styles.placeholderValue}>
                     {username ? `@${username}` : S.profile.setUsername}
                   </Text>
-                </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={() => startEdit('username')}
+                    hitSlop={10}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color="#999" />
+                  </TouchableOpacity>
+                </View>
               )}
             </View>
 
             <View style={styles.section}>
-              <View style={styles.homeLabelRow}>
+              <View style={styles.labelRow}>
                 <Text style={styles.label}>{S.profile.homeCity}</Text>
-                {home && (
+                {editingField === 'home' ? (
+                  <EditActions onSave={saveHomeEdit} onCancel={cancelEdit} />
+                ) : home && (
                   <TouchableOpacity onPress={() => saveHome(null)}>
                     <Text style={styles.homeRemove}>{S.common.remove}</Text>
                   </TouchableOpacity>
                 )}
               </View>
-              <LocationPicker
-                value={home}
-                onChange={handleHomeChange}
-                placeholder={S.profile.setHomeCity}
-              />
-              <Text style={styles.usernameHint}>{S.profile.homeCityPublicHint}</Text>
+              {editingField === 'home' ? (
+                <LocationPicker
+                  value={homeInput}
+                  onChange={setHomeInput}
+                  placeholder={S.profile.setHomeCity}
+                />
+              ) : (
+                <View style={styles.displayRow}>
+                  <Text style={home ? styles.displayValue : styles.placeholderValue}>
+                    {home?.location ?? S.profile.setHomeCity}
+                  </Text>
+                  <TouchableOpacity
+                    onPress={() => startEdit('home')}
+                    hitSlop={10}
+                    style={styles.editBtn}
+                  >
+                    <Ionicons name="pencil-outline" size={16} color="#999" />
+                  </TouchableOpacity>
+                </View>
+              )}
+              <Text style={styles.hint}>{S.profile.homeCityPublicHint}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>{S.profile.collection}</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>{S.profile.collection}</Text>
+              </View>
               <Text style={styles.countValue}>{S.profile.objectCount(itemCount)}</Text>
             </View>
 
             <View style={styles.section}>
-              <Text style={styles.label}>{S.profile.account}</Text>
+              <View style={styles.labelRow}>
+                <Text style={styles.label}>{S.profile.account}</Text>
+              </View>
               <Text style={styles.email}>{session?.user.email}</Text>
             </View>
 
@@ -257,15 +333,31 @@ const styles = StyleSheet.create({
     color: '#999',
     textTransform: 'uppercase',
     letterSpacing: 0.8,
-    marginBottom: 8,
   },
-  nameValue: {
+  displayRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  displayValue: {
+    flex: 1,
     fontSize: 20,
     fontWeight: '300',
     color: '#2D2D2D',
     letterSpacing: 0.3,
   },
-  nameInput: {
+  placeholderValue: {
+    flex: 1,
+    fontSize: 20,
+    fontWeight: '300',
+    color: '#999',
+    letterSpacing: 0.3,
+  },
+  editBtn: {
+    paddingLeft: 12,
+    paddingVertical: 4,
+  },
+  input: {
     fontSize: 20,
     fontWeight: '300',
     color: '#2D2D2D',
@@ -296,27 +388,30 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingLeft: 2,
   },
-  usernamePlaceholder: {
-    fontSize: 20,
-    fontWeight: '300',
-    color: '#999',
-    letterSpacing: 0.3,
-  },
   usernameError: {
     fontSize: 13,
     color: '#E74C3C',
     marginTop: 6,
   },
-  usernameHint: {
+  hint: {
     fontSize: 12,
     color: '#999',
     marginTop: 6,
   },
-  homeLabelRow: {
+  labelRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 8,
+  },
+  editActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  actionBtn: {
+    paddingVertical: 2,
+    paddingHorizontal: 2,
   },
   homeRemove: {
     fontSize: 12,
