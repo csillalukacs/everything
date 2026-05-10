@@ -4,13 +4,12 @@ import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
 import { cityOf, acquiredFields, thumbOf, imagePathsForItem } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
-import { UUID_RE, USERNAME_RE } from '../../../shared/identifiers'
+import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
-import EditProfileSheet from './EditProfileSheet'
 import FilterDropdown from './FilterDropdown'
 
 const itemsCacheKey = userId => `cache:items:${userId}`
@@ -91,7 +90,6 @@ export default function ProfilePage() {
   const [username, setUsername] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
-  const [editProfileVisible, setEditProfileVisible] = useState(false)
   const [sessionUserId, setSessionUserId] = useState(null)
   const [home, setHome] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
@@ -645,69 +643,12 @@ export default function ProfilePage() {
     )
   }
 
-  async function saveHome(next) {
-    setHome(next)
-    await supabase
-      .from('profiles')
-      .update({
-        home_location: next?.location ?? null,
-        home_lat: next?.lat ?? null,
-        home_lng: next?.lng ?? null,
-      })
-      .eq('user_id', userId)
-  }
-
-  async function saveName(trimmed) {
-    if (!trimmed) return
-    await supabase.from('profiles').upsert({ user_id: userId, display_name: trimmed })
-    setProfileName(trimmed)
-  }
-
-  async function saveUsername(trimmed) {
-    if (trimmed === (username ?? '').toLowerCase()) return null
-    if (trimmed === '') {
-      const { error } = await supabase.from('profiles').update({ username: null }).eq('user_id', userId)
-      if (!error) setUsername(null)
-      return null
-    }
-    if (!USERNAME_RE.test(trimmed)) return 'invalid'
-    const { data: existing } = await supabase
-      .from('profiles')
-      .select('user_id')
-      .ilike('username', trimmed)
-      .maybeSingle()
-    if (existing && existing.user_id !== userId) return 'taken'
-    const { error } = await supabase
-      .from('profiles')
-      .update({ username: trimmed })
-      .eq('user_id', userId)
-    if (error) {
-      return /reserved/i.test(error.message) ? 'reserved' : 'taken'
-    }
-    setUsername(trimmed)
-    if (UUID_RE.test(slug)) navigate(`/u/${trimmed}`, { replace: true })
-    return null
-  }
-
   return (
     <div className="app">
       <header className="header">
         <div>
           <div className="profile-name-row">
             <h1 className="profile-name">{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` · ${S.profile.objectCount(itemCount)}` : ''}</h1>
-            {isOwner && (
-              <button
-                className="profile-edit-btn"
-                onClick={() => setEditProfileVisible(true)}
-                aria-label={S.profile.edit}
-                title={S.profile.edit}
-              >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M12 20h9" />
-                  <path d="M16.5 3.5a2.121 2.121 0 1 1 3 3L7 19l-4 1 1-4 12.5-12.5z" />
-                </svg>
-              </button>
-            )}
           </div>
           {username && <p className="profile-username-readonly">@{username}</p>}
           {home?.location && (
@@ -721,6 +662,7 @@ export default function ProfilePage() {
           )}
         </div>
         <div className="header-links" style={{ marginTop: 8 }}>
+          {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
           {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
           <Link to="/" className="link-btn">{S.appName}</Link>
         </div>
@@ -955,17 +897,6 @@ export default function ProfilePage() {
             onApply={handleBatchEdit}
             allTags={allTags}
             selectedCount={selectedIds.size}
-          />
-
-          <EditProfileSheet
-            visible={editProfileVisible}
-            onClose={() => setEditProfileVisible(false)}
-            initialName={profileName}
-            initialUsername={username}
-            initialHome={home}
-            onSaveName={saveName}
-            onSaveUsername={saveUsername}
-            onSaveHome={saveHome}
           />
 
           {manageTagsVisible && (
