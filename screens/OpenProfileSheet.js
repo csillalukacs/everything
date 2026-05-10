@@ -1,8 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
 import {
-  KeyboardAvoidingView,
-  Modal,
-  Platform,
   StyleSheet,
   Text,
   TextInput,
@@ -10,6 +7,7 @@ import {
   View,
 } from 'react-native';
 import { S } from '../shared/strings';
+import BottomSheet from './BottomSheet';
 
 function parseSlug(input) {
   const trimmed = input.trim();
@@ -38,59 +36,41 @@ export default function OpenProfileSheet({ visible, onClose, onOpen }) {
   }
 
   return (
-    <Modal visible={visible} animationType="slide" transparent onRequestClose={onClose}>
-      <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={onClose}>
-        <KeyboardAvoidingView
-          behavior={Platform.OS === 'ios' ? 'padding' : undefined}
-          style={styles.kavWrap}
-          pointerEvents="box-none"
-        >
-          <TouchableOpacity style={styles.sheet} activeOpacity={1} onPress={() => {}}>
-            <View style={styles.header}>
-              <Text style={styles.title}>{S.openProfile.title}</Text>
-              <TouchableOpacity onPress={onClose}>
-                <Text style={styles.cancel}>{S.common.cancel}</Text>
-              </TouchableOpacity>
-            </View>
-            <Text style={styles.label}>{S.profile.username}</Text>
-            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', gap: 3 }}>
-              <Text style={{fontSize: 22, color: '#999'}}>@</Text>
-              <TextInput
-                ref={inputRef}
-                style={[styles.input, { flex: 1 }]}
-                value={input}
-                onChangeText={setInput}
-                placeholder={S.profile.usernameExample}
-                placeholderTextColor="#bbb"
-                autoCapitalize="none"
-                autoCorrect={false}
-                returnKeyType="go"
-                onSubmitEditing={submit}
-              />
-            </View>
-            <TouchableOpacity
-              style={[styles.goBtn, !parseSlug(input) && styles.goBtnDisabled]}
-              onPress={submit}
-              disabled={!parseSlug(input)}
-            >
-              <Text style={styles.goBtnText}>{S.common.go}</Text>
-            </TouchableOpacity>
-          </TouchableOpacity>
-        </KeyboardAvoidingView>
+    <BottomSheet visible={visible} onClose={onClose} keyboardAvoiding sheetStyle={styles.sheet}>
+      <View style={styles.header}>
+        <Text style={styles.title}>{S.openProfile.title}</Text>
+        <TouchableOpacity onPress={onClose}>
+          <Text style={styles.cancel}>{S.common.cancel}</Text>
+        </TouchableOpacity>
+      </View>
+      <Text style={styles.label}>{S.profile.username}</Text>
+      <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%', gap: 3 }}>
+        <Text style={{ fontSize: 22, color: '#999' }}>@</Text>
+        <TextInput
+          ref={inputRef}
+          style={[styles.input, { flex: 1 }]}
+          value={input}
+          onChangeText={setInput}
+          placeholder={S.profile.usernameExample}
+          placeholderTextColor="#bbb"
+          autoCapitalize="none"
+          autoCorrect={false}
+          returnKeyType="go"
+          onSubmitEditing={submit}
+        />
+      </View>
+      <TouchableOpacity
+        style={[styles.goBtn, !parseSlug(input) && styles.goBtnDisabled]}
+        onPress={submit}
+        disabled={!parseSlug(input)}
+      >
+        <Text style={styles.goBtnText}>{S.common.go}</Text>
       </TouchableOpacity>
-    </Modal>
+    </BottomSheet>
   );
 }
 
 const styles = StyleSheet.create({
-  overlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  kavWrap: {
-    width: '100%',
-  },
   sheet: {
     backgroundColor: '#F5F0EB',
     borderTopLeftRadius: 20,

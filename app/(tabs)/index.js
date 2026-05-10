@@ -19,6 +19,7 @@ import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
 import FilterSheet from '../../screens/FilterSheet';
 import ProfileScreen from '../../screens/ProfileScreen';
+import BottomSheet from '../../screens/BottomSheet';
 import { cityOf, thumbOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
@@ -430,108 +431,98 @@ export default function Collection() {
         itemCount={itemCount ?? items.length}
       />
 
-      <Modal
-        visible={manageTagsVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={closeManageTags}
-      >
-        <View style={styles.manageOverlay}>
-          <TouchableOpacity style={styles.manageOverlayTop} activeOpacity={1} onPress={closeManageTags} />
-          <View style={styles.manageSheet}>
-            <View style={styles.manageHeader}>
-              <Text style={styles.manageTitle}>{S.collection.manageTags(tags.length)}</Text>
-              <TouchableOpacity onPress={closeManageTags}>
-                <Text style={styles.manageDone}>{S.common.done}</Text>
-              </TouchableOpacity>
-            </View>
-            <View style={styles.manageSearchContainer}>
-              <Ionicons name="search" size={16} color="#999" />
-              <TextInput
-                style={styles.manageSearchInput}
-                placeholder={S.collection.searchTags}
-                placeholderTextColor="#999"
-                value={manageTagSearch}
-                onChangeText={setManageTagSearch}
-                autoCorrect={false}
-                autoCapitalize="none"
-              />
-              {manageTagSearch.length > 0 && (
-                <TouchableOpacity onPress={() => setManageTagSearch('')}>
-                  <Ionicons name="close-circle" size={16} color="#999" />
-                </TouchableOpacity>
-              )}
-            </View>
-            <FlatList
-              style={styles.manageList}
-              data={manageTagsList}
-              keyExtractor={tag => tag.id}
-              keyboardShouldPersistTaps="handled"
-              ListEmptyComponent={
-                <Text style={styles.manageEmpty}>
-                  {tags.length === 0 ? S.collection.noTagsYet : S.common.noMatches}
-                </Text>
-              }
-              renderItem={({ item: tag, index }) => {
-                const isRenaming = renamingTagId === tag.id;
-                return (
-                  <View style={[styles.manageRow, index < manageTagsList.length - 1 && styles.manageRowBorder]}>
-                    <View style={styles.manageTagInfo}>
-                      {isRenaming ? (
-                        <TextInput
-                          style={[styles.manageTagName, styles.manageTagRenameInput, renameError && styles.manageTagRenameInputError]}
-                          value={renameDraft}
-                          onChangeText={(v) => { setRenameDraft(v); if (renameError) setRenameError(null); }}
-                          onSubmitEditing={() => commitRenameTag(tag)}
-                          onBlur={() => commitRenameTag(tag)}
-                          autoFocus
-                          autoCorrect={false}
-                          autoCapitalize="none"
-                          returnKeyType="done"
-                        />
-                      ) : (
-                        <Text style={styles.manageTagName} numberOfLines={1}>{tag.name}</Text>
-                      )}
-                      {!isRenaming && (
-                        <Text style={styles.manageTagCount}>{totalTagCounts.get(tag.id) ?? 0}</Text>
-                      )}
-                      {isRenaming && renameError && (
-                        <Text style={styles.manageTagRenameError} numberOfLines={1}>{renameError}</Text>
-                      )}
-                    </View>
-                    <View style={styles.manageActions}>
-                      {isRenaming ? (
-                        <TouchableOpacity onPress={cancelRenameTag}>
-                          <Text style={styles.manageDone}>{S.common.cancel}</Text>
-                        </TouchableOpacity>
-                      ) : (
-                        <>
-                          <TouchableOpacity onPress={() => startRenameTag(tag)} style={styles.manageLockBtn}>
-                            <Ionicons name="pencil-outline" size={16} color="#999" />
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => toggleTagPrivacy(tag)} style={styles.manageLockBtn}>
-                            <Ionicons
-                              name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
-                              size={16}
-                              color={tag.is_private ? '#2D2D2D' : '#ccc'}
-                            />
-                          </TouchableOpacity>
-                          <TouchableOpacity onPress={() => {
-                            deleteTag(tag.id);
-                            if (activeTag?.id === tag.id) setActiveTag(null);
-                          }}>
-                            <Text style={styles.manageDeleteBtn}>{S.common.delete}</Text>
-                          </TouchableOpacity>
-                        </>
-                      )}
-                    </View>
-                  </View>
-                );
-              }}
-            />
-          </View>
+      <BottomSheet visible={manageTagsVisible} onClose={closeManageTags} sheetStyle={styles.manageSheet}>
+        <View style={styles.manageHeader}>
+          <Text style={styles.manageTitle}>{S.collection.manageTags(tags.length)}</Text>
+          <TouchableOpacity onPress={closeManageTags}>
+            <Text style={styles.manageDone}>{S.common.done}</Text>
+          </TouchableOpacity>
         </View>
-      </Modal>
+        <View style={styles.manageSearchContainer}>
+          <Ionicons name="search" size={16} color="#999" />
+          <TextInput
+            style={styles.manageSearchInput}
+            placeholder={S.collection.searchTags}
+            placeholderTextColor="#999"
+            value={manageTagSearch}
+            onChangeText={setManageTagSearch}
+            autoCorrect={false}
+            autoCapitalize="none"
+          />
+          {manageTagSearch.length > 0 && (
+            <TouchableOpacity onPress={() => setManageTagSearch('')}>
+              <Ionicons name="close-circle" size={16} color="#999" />
+            </TouchableOpacity>
+          )}
+        </View>
+        <FlatList
+          style={styles.manageList}
+          data={manageTagsList}
+          keyExtractor={tag => tag.id}
+          keyboardShouldPersistTaps="handled"
+          ListEmptyComponent={
+            <Text style={styles.manageEmpty}>
+              {tags.length === 0 ? S.collection.noTagsYet : S.common.noMatches}
+            </Text>
+          }
+          renderItem={({ item: tag, index }) => {
+            const isRenaming = renamingTagId === tag.id;
+            return (
+              <View style={[styles.manageRow, index < manageTagsList.length - 1 && styles.manageRowBorder]}>
+                <View style={styles.manageTagInfo}>
+                  {isRenaming ? (
+                    <TextInput
+                      style={[styles.manageTagName, styles.manageTagRenameInput, renameError && styles.manageTagRenameInputError]}
+                      value={renameDraft}
+                      onChangeText={(v) => { setRenameDraft(v); if (renameError) setRenameError(null); }}
+                      onSubmitEditing={() => commitRenameTag(tag)}
+                      onBlur={() => commitRenameTag(tag)}
+                      autoFocus
+                      autoCorrect={false}
+                      autoCapitalize="none"
+                      returnKeyType="done"
+                    />
+                  ) : (
+                    <Text style={styles.manageTagName} numberOfLines={1}>{tag.name}</Text>
+                  )}
+                  {!isRenaming && (
+                    <Text style={styles.manageTagCount}>{totalTagCounts.get(tag.id) ?? 0}</Text>
+                  )}
+                  {isRenaming && renameError && (
+                    <Text style={styles.manageTagRenameError} numberOfLines={1}>{renameError}</Text>
+                  )}
+                </View>
+                <View style={styles.manageActions}>
+                  {isRenaming ? (
+                    <TouchableOpacity onPress={cancelRenameTag}>
+                      <Text style={styles.manageDone}>{S.common.cancel}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <>
+                      <TouchableOpacity onPress={() => startRenameTag(tag)} style={styles.manageLockBtn}>
+                        <Ionicons name="pencil-outline" size={16} color="#999" />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => toggleTagPrivacy(tag)} style={styles.manageLockBtn}>
+                        <Ionicons
+                          name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
+                          size={16}
+                          color={tag.is_private ? '#2D2D2D' : '#ccc'}
+                        />
+                      </TouchableOpacity>
+                      <TouchableOpacity onPress={() => {
+                        deleteTag(tag.id);
+                        if (activeTag?.id === tag.id) setActiveTag(null);
+                      }}>
+                        <Text style={styles.manageDeleteBtn}>{S.common.delete}</Text>
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </View>
+              </View>
+            );
+          }}
+        />
+      </BottomSheet>
     </View>
   );
 }
@@ -727,13 +718,6 @@ const styles = StyleSheet.create({
   },
   filterChipCountActive: {
     color: '#bbb',
-  },
-  manageOverlay: {
-    flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-  },
-  manageOverlayTop: {
-    flex: 1,
   },
   manageSheet: {
     backgroundColor: '#F5F0EB',

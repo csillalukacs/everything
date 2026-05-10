@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import {
   ActivityIndicator,
-  KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
@@ -14,6 +13,7 @@ import {
 } from 'react-native';
 import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
+import BottomSheet from './BottomSheet';
 
 export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
   const [pendingTags, setPendingTags] = useState([]);
@@ -165,14 +165,9 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
   }
 
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={handleClose}>
-      <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={handleClose} />
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
-        <View style={styles.sheet}>
-          {sheetContent}
-        </View>
-      </KeyboardAvoidingView>
-    </Modal>
+    <BottomSheet visible={visible} onClose={handleClose} keyboardAvoiding sheetStyle={styles.sheet}>
+      {sheetContent}
+    </BottomSheet>
   );
 }
 
