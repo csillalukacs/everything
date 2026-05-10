@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
-import { cityOf, acquiredFields, thumbOf } from '../../../shared/items'
+import { cityOf, acquiredFields, thumbOf, imagePathsForItem, ITEM_IMAGES_BUCKET } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { UUID_RE, USERNAME_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
@@ -368,6 +368,13 @@ export default function ProfilePage() {
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
   }
 
+  async function deleteStorageForItems(itemsToDelete) {
+    const paths = itemsToDelete.flatMap(imagePathsForItem)
+    if (paths.length === 0) return
+    const { error } = await supabase.storage.from(ITEM_IMAGES_BUCKET).remove(paths)
+    if (error) console.warn('Storage delete failed (orphans left for cleanup):', error)
+  }
+
   async function handleDelete() {
     const itemToDelete = selectedItem
     closeItem()
@@ -375,6 +382,7 @@ export default function ProfilePage() {
     if (!error) {
       setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
       setItemCount(c => (c == null ? null : Math.max(0, c - 1)))
+      deleteStorageForItems([itemToDelete])
     }
   }
 
@@ -439,12 +447,14 @@ export default function ProfilePage() {
 
   async function handleBatchDelete() {
     const ids = [...selectedIds]
+    const targets = items.filter(i => ids.includes(i.id))
     setSelectedIds(new Set())
     await supabase.from('item_tags').delete().in('item_id', ids)
     const { error } = await supabase.from('items').delete().in('id', ids)
     if (!error) {
       setItems(prev => prev.filter(i => !ids.includes(i.id)))
       setItemCount(c => (c == null ? null : Math.max(0, c - ids.length)))
+      if (targets.length > 0) deleteStorageForItems(targets)
     }
   }
 
