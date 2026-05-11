@@ -54,20 +54,19 @@ export default function Feed() {
 
   return (
     <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
+        <Text style={styles.title}>{S.appName}</Text>
+        <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
+          <Ionicons name="search" size={22} color="#999" />
+        </TouchableOpacity>
+      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={{ paddingHorizontal: 24, paddingTop: 80, paddingBottom: tabBarOffset + 24 }}
+        contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: tabBarOffset + 24 }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
         }
       >
-        <View style={styles.header}>
-          <Text style={styles.title}>{S.appName}</Text>
-          <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
-            <Ionicons name="search" size={22} color="#999" />
-          </TouchableOpacity>
-        </View>
-
         {loading ? (
           <View style={styles.empty}>
             <ActivityIndicator color="#999" />
@@ -144,7 +143,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 28,
+    paddingHorizontal: 24,
+    paddingBottom: 28,
+    backgroundColor: '#F5F0EB',
   },
   title: {
     fontSize: 36,
