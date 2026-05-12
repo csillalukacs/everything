@@ -1,10 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Dimensions,
   FlatList,
-  Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -27,11 +27,13 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [profile, setProfile] = useState(null);
+  const [resolvedUserId, setResolvedUserId] = useState(null);
   const [items, setItems] = useState([]);
   const [itemCount, setItemCount] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (!visible || !slug) return;
@@ -39,6 +41,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
     setLoading(true);
     setNotFound(false);
     setProfile(null);
+    setResolvedUserId(null);
     setItems([]);
     setItemCount(null);
     setActiveTag(null);
@@ -71,6 +74,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
         return;
       }
       setProfile(resolvedProfile);
+      setResolvedUserId(resolvedId);
 
       fetchItemCount(supabase, { userId: resolvedId, publicOnly: true })
         .then(c => { if (!cancelled) setItemCount(c); })
@@ -89,6 +93,23 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
 
     return () => { cancelled = true; };
   }, [visible, slug]);
+
+  const onRefresh = useCallback(async () => {
+    if (!resolvedUserId) return;
+    setRefreshing(true);
+    try {
+      const [fetched, count] = await Promise.all([
+        fetchAllItems(supabase, { userId: resolvedUserId, publicOnly: true }),
+        fetchItemCount(supabase, { userId: resolvedUserId, publicOnly: true }),
+      ]);
+      setItems(fetched);
+      setItemCount(count);
+    } catch (e) {
+      console.error('ProfileView refresh error:', e);
+    } finally {
+      setRefreshing(false);
+    }
+  }, [resolvedUserId]);
 
   const query = searchQuery.trim().toLowerCase();
   const searchedItems = query
@@ -121,8 +142,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
     ?? (profile?.username ? `@${profile.username}` : (slug ?? '').slice(0, 8));
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={styles.container}>
+    <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={28} color="#2D2D2D" />
@@ -205,38 +225,40 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
               </ScrollView>
             )}
 
-            {items.length === 0 ? (
-              <View style={styles.centered}>
-                <Text style={styles.emptyText}>{S.profileView.nothingPublic}</Text>
-              </View>
-            ) : (
-              <FlatList
-                data={filteredItems}
-                keyExtractor={item => item.id}
-                numColumns={2}
-                columnWrapperStyle={styles.row}
-                contentContainerStyle={styles.listContent}
-                style={styles.list}
-                renderItem={({ item }) => (
-                  <TouchableOpacity
-                    style={styles.card}
-                    onPress={() => setSelectedItem(item)}
-                  >
-                    {item.image_url && (
-                      <View style={styles.cardImageContainer}>
-                        <Image
-                          source={{ uri: thumbOf(item) }}
-                          style={styles.cardImage}
-                          recyclingKey={item.id}
-                          cachePolicy="memory-disk"
-                          contentFit="cover"
-                        />
-                      </View>
-                    )}
-                  </TouchableOpacity>
-                )}
-              />
-            )}
+            <FlatList
+              data={filteredItems}
+              keyExtractor={item => item.id}
+              numColumns={2}
+              columnWrapperStyle={filteredItems.length > 0 ? styles.row : undefined}
+              contentContainerStyle={filteredItems.length > 0 ? styles.listContent : styles.listContentEmpty}
+              style={styles.list}
+              refreshControl={
+                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
+              }
+              ListEmptyComponent={
+                <View style={styles.centered}>
+                  <Text style={styles.emptyText}>{S.profileView.nothingPublic}</Text>
+                </View>
+              }
+              renderItem={({ item }) => (
+                <TouchableOpacity
+                  style={styles.card}
+                  onPress={() => setSelectedItem(item)}
+                >
+                  {item.image_url && (
+                    <View style={styles.cardImageContainer}>
+                      <Image
+                        source={{ uri: thumbOf(item) }}
+                        style={styles.cardImage}
+                        recyclingKey={item.id}
+                        cachePolicy="memory-disk"
+                        contentFit="cover"
+                      />
+                    </View>
+                  )}
+                </TouchableOpacity>
+              )}
+            />
           </>
         )}
 
@@ -255,8 +277,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
             return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null;
           })()}
         />
-      </View>
-    </Modal>
+    </View>
   );
 }
 
@@ -367,6 +388,10 @@ const styles = StyleSheet.create({
   },
   listContent: {
     justifyContent: 'flex-start',
+    paddingBottom: 40,
+  },
+  listContentEmpty: {
+    flexGrow: 1,
     paddingBottom: 40,
   },
   row: {

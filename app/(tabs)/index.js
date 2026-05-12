@@ -1,10 +1,11 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   Dimensions,
   FlatList,
   Modal,
+  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -46,6 +47,7 @@ export default function Collection() {
     deleteTag,
     toggleTagPrivacy,
     renameTag,
+    refresh,
   } = useCollection();
 
   const [activeTag, setActiveTag] = useState(null);
@@ -63,6 +65,12 @@ export default function Collection() {
   const [searchHelpVisible, setSearchHelpVisible] = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await refresh(); } finally { setRefreshing(false); }
+  }, [refresh]);
 
   useEffect(() => {
     if (params.city) {
@@ -336,6 +344,9 @@ export default function Collection() {
         columnWrapperStyle={styles.row}
         contentContainerStyle={[styles.listContent, { paddingBottom: tabBarOffset + 24 }]}
         style={styles.list}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
+        }
         renderItem={({ item }) => {
           const isSelected = selectedIds.has(item.id);
           return (

@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { useCollection } from '../lib/CollectionProvider';
@@ -104,28 +104,33 @@ function Card({ label, value, sub }) {
 
 export default function StatsScreen() {
   const router = useRouter();
-  const { items, itemCount, session } = useCollection();
+  const { items, itemCount, session, refresh } = useCollection();
   const [home, setHome] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
+  const fetchHome = useCallback(async () => {
     if (!session) return;
-    let cancelled = false;
-    supabase
+    const { data } = await supabase
       .from('profiles')
       .select('home_location, home_lat, home_lng')
       .eq('user_id', session.user.id)
-      .maybeSingle()
-      .then(({ data }) => {
-        if (cancelled) return;
-        if (data?.home_lat != null && data?.home_lng != null) {
-          setHome({ lat: data.home_lat, lng: data.home_lng, location: data.home_location });
-        } else {
-          setHome(null);
-        }
-      });
-    return () => { cancelled = true; };
+      .maybeSingle();
+    if (data?.home_lat != null && data?.home_lng != null) {
+      setHome({ lat: data.home_lat, lng: data.home_lng, location: data.home_location });
+    } else {
+      setHome(null);
+    }
   }, [session]);
+
+  useEffect(() => {
+    fetchHome().catch(() => {});
+  }, [fetchHome]);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    try { await Promise.all([refresh(), fetchHome()]); } finally { setRefreshing(false); }
+  }, [refresh, fetchHome]);
 
   const stats = useMemo(() => {
     const byDay = bucketize(items, dayKey);
@@ -268,7 +273,13 @@ export default function StatsScreen() {
         </View>
       </View>
 
-      <ScrollView style={{ flex: 1 }} contentContainerStyle={{ paddingBottom: 40 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ paddingBottom: 40 }}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
+        }
+      >
         {items.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>{S.stats.empty}</Text>
