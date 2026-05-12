@@ -215,7 +215,7 @@ export default function ProfilePage() {
           ownerSession = true
           setIsOwner(true)
           setSessionUserId(session.user.id)
-          const { data: tagsData } = await supabase.from('tags').select('*').order('name')
+          const { data: tagsData } = await supabase.from('tags').select('*').eq('user_id', session.user.id).order('name')
           if (tagsData) {
             setAllTags(tagsData)
             writeCache(tagsCacheKey(resolvedId), tagsData)
