@@ -42,8 +42,6 @@ export default function CameraCaptureModal({ visible, onCapture, onCancel }) {
     if (status !== 'granted') return;
     const result = await ImagePicker.launchImageLibraryAsync({
       mediaTypes: ['images'],
-      allowsEditing: true,
-      aspect: [1, 1],
       quality: 0.7,
     });
     if (!result.canceled) onCapture(result.assets[0].uri);
