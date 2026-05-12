@@ -195,8 +195,6 @@ export default function Collection() {
   ).slice().sort((a, b) => a.name.localeCompare(b.name));
 
   const headlineName = profile?.display_name
-    ?? session?.user.user_metadata?.full_name
-    ?? session?.user.email
     ?? 'you';
 
   return (

@@ -72,7 +72,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       .eq('user_id', session.user.id)
       .maybeSingle()
       .then(({ data }) => {
-        const name = data?.display_name ?? session.user.user_metadata?.full_name ?? session.user.email;
+        const name = data?.display_name ?? '';
         setDisplayName(name);
         setNameInput(name);
         setUsername(data?.username ?? null);

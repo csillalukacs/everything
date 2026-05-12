@@ -194,7 +194,7 @@ export default function ProfilePage() {
       }
 
       if (session) {
-        const displayName = session.user.user_metadata?.full_name || session.user.email
+        const displayName = 'user'
         await supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName }, { ignoreDuplicates: true })
         if (session.user.id === resolvedId) {
           ownerSession = true
