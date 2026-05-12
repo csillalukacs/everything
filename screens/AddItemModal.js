@@ -24,7 +24,7 @@ import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
 export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
-  const { items } = useCollection();
+  const { items, uploadLocalPhoto } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
@@ -38,6 +38,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const [year, setYear] = useState('');
   const [acquired, setAcquired] = useState(null);
   const ocrPromiseRef = useRef(null);
+  const uploadPromiseRef = useRef(null);
   const scrollRef = useRef(null);
 
   async function processCapturedUri(uri) {
@@ -46,10 +47,17 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     ocrPromiseRef.current = ocrImage(uri);
     try {
       const cleaned = await removeBackground(uri);
-      setPhoto(await cropToContent(cleaned));
+      const finalUri = await cropToContent(cleaned);
+      setPhoto(finalUri);
+      uploadPromiseRef.current = uploadLocalPhoto(finalUri);
     } finally {
       setRemovingBg(false);
     }
+  }
+
+  function handleRetake() {
+    setPhoto(null);
+    uploadPromiseRef.current = null;
   }
 
   function toggleTag(tag) {
@@ -80,7 +88,8 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     if (!photo) return;
     setSaving(true);
     const ocrText = await (ocrPromiseRef.current ?? Promise.resolve(null));
-    await onSave(name.trim(), photo, tags, isPrivate, description.trim(), buildAcquired(), ocrText);
+    const uploadPromise = uploadPromiseRef.current;
+    await onSave(name.trim(), photo, tags, isPrivate, description.trim(), buildAcquired(), ocrText, uploadPromise);
     setName('');
     setDescription('');
     setPhoto(null);
@@ -89,6 +98,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setYear('');
     setAcquired(null);
     ocrPromiseRef.current = null;
+    uploadPromiseRef.current = null;
     setSaving(false);
   }
 
@@ -103,6 +113,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setYear('');
     setAcquired(null);
     ocrPromiseRef.current = null;
+    uploadPromiseRef.current = null;
     onClose();
   }
 
@@ -137,7 +148,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
         </TouchableOpacity>
 
         <View style={styles.imageContainer}>
-          <TouchableOpacity activeOpacity={0.9} onPress={() => setPhoto(null)} disabled={removingBg} style={StyleSheet.absoluteFill}>
+          <TouchableOpacity activeOpacity={0.9} onPress={handleRetake} disabled={removingBg} style={StyleSheet.absoluteFill}>
             <Image source={{ uri: photo }} style={styles.photo} />
             {removingBg ? (
               <View style={styles.retakeOverlay}>

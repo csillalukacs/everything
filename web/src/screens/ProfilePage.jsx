@@ -305,8 +305,8 @@ export default function ProfilePage() {
       await supabase.from('item_tags').insert(tagIds.map(tag_id => ({ item_id: itemId, tag_id })))
   }
 
-  async function handleSave(name, file, tagNames, isPrivate, description, acquired) {
-    const uploaded = await uploadImage(file)
+  async function handleSave(name, file, tagNames, isPrivate, description, acquired, uploadPromise) {
+    const uploaded = await (uploadPromise ?? uploadImage(file))
     if (!uploaded) return
     const { image_url, thumb_url } = uploaded
     const { data, error } = await supabase
@@ -874,6 +874,7 @@ export default function ProfilePage() {
             visible={addModalVisible}
             onClose={() => setAddModalVisible(false)}
             onSave={handleSave}
+            onUpload={uploadImage}
             allTags={allTags}
             items={items}
           />

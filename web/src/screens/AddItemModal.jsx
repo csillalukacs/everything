@@ -5,7 +5,7 @@ import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 import LockIcon from '../components/LockIcon'
 
-export default function AddItemModal({ visible, onClose, onSave, allTags = [], items = [] }) {
+export default function AddItemModal({ visible, onClose, onSave, onUpload, allTags = [], items = [] }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
@@ -17,6 +17,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [], i
   const [year, setYear] = useState('')
   const [acquired, setAcquired] = useState(null)
   const fileInputRef = useRef(null)
+  const uploadPromiseRef = useRef(null)
 
   if (!visible) return null
 
@@ -24,6 +25,13 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [], i
     if (!f) return
     setFile(f)
     setPreview(URL.createObjectURL(f))
+    uploadPromiseRef.current = onUpload ? onUpload(f) : null
+  }
+
+  function handleRetake() {
+    setFile(null)
+    setPreview(null)
+    uploadPromiseRef.current = null
   }
 
   function handleDrop(e) {
@@ -49,12 +57,14 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [], i
     setIsPrivate(false)
     setYear('')
     setAcquired(null)
+    uploadPromiseRef.current = null
   }
 
   async function handleSave() {
     if (!file) return
     setSaving(true)
-    await onSave(name.trim(), file, tags, isPrivate, description.trim(), buildAcquired())
+    const uploadPromise = uploadPromiseRef.current
+    await onSave(name.trim(), file, tags, isPrivate, description.trim(), buildAcquired(), uploadPromise)
     resetState()
     setSaving(false)
   }
@@ -88,7 +98,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [], i
             >
               <LockIcon size={14} color="#fff" open={!isPrivate} />
             </button>
-            <div className="image-overlay" onClick={() => { setFile(null); setPreview(null) }}>{S.common.retake}</div>
+            <div className="image-overlay" onClick={handleRetake}>{S.common.retake}</div>
           </div>
         ) : (
           <div
