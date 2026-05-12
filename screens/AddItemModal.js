@@ -45,13 +45,16 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     setPhoto(uri);
     setRemovingBg(true);
     ocrPromiseRef.current = ocrImage(uri);
+    let finalUri = uri;
     try {
       const cleaned = await removeBackground(uri);
-      const finalUri = await cropToContent(cleaned);
+      finalUri = await cropToContent(cleaned);
       setPhoto(finalUri);
-      uploadPromiseRef.current = uploadLocalPhoto(finalUri);
+    } catch {
+      // background removal can fail (e.g. unsupported image) — fall back to the original
     } finally {
       setRemovingBg(false);
+      uploadPromiseRef.current = uploadLocalPhoto(finalUri);
     }
   }
 
