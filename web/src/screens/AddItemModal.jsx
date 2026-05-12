@@ -3,13 +3,7 @@ import { S } from '../../../shared/strings'
 import { locationSuggestionsFromItems } from '../../../shared/items'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
-
-function LockIcon({ size = 10, color = 'currentColor', open = false }) {
-  const d = open
-    ? 'M12 1C9.24 1 7 3.24 7 6v1H5c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2h-2V6c0-2.76-2.24-5-5-5zm-1 14c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-7H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2zM17 7h-2V6c0-2.76-2.24-5-5-5S5 3.24 5 6v1'
-    : 'M18 8h-1V6c0-2.76-2.24-5-5-5S7 3.24 7 6v2H6c-1.1 0-2 .9-2 2v10c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V10c0-1.1-.9-2-2-2zm-6 9c-1.1 0-2-.9-2-2s.9-2 2-2 2 .9 2 2-.9 2-2 2zm3.1-9H8.9V6c0-1.71 1.39-3.1 3.1-3.1 1.71 0 3.1 1.39 3.1 3.1v2z'
-  return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
-}
+import LockIcon from '../components/LockIcon'
 
 export default function AddItemModal({ visible, onClose, onSave, allTags = [], items = [] }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
