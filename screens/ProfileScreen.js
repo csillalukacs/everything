@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ScrollView,
   StyleSheet,
@@ -9,7 +9,9 @@ import {
   View,
 } from 'react-native';
 import { supabase } from '../lib/supabase';
+import { useCollection } from '../lib/CollectionProvider';
 import { USERNAME_RE } from '../shared/identifiers';
+import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
@@ -28,6 +30,8 @@ function EditActions({ onSave, onCancel, disabled }) {
 }
 
 export default function ProfileScreen({ visible, onClose, session, itemCount }) {
+  const { items } = useCollection();
+  const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [displayName, setDisplayName] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [username, setUsername] = useState(null);
@@ -259,6 +263,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
                   value={homeInput}
                   onChange={setHomeInput}
                   placeholder={S.profile.setHomeCity}
+                  suggestions={locationSuggestions}
                 />
               ) : (
                 <View style={styles.displayRow}>

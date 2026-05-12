@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useMemo, useState } from 'react'
 import { S } from '../../../shared/strings'
+import { locationSuggestionsFromItems } from '../../../shared/items'
 import LocationPicker from './LocationPicker'
 
-export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
+export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], items = [], selectedCount, loading = false }) {
+  const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [pendingTags, setPendingTags] = useState([])
   const [addingTag, setAddingTag] = useState(false)
   const [newTagInput, setNewTagInput] = useState('')
@@ -92,7 +94,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
 
         <div>
           <p className="batch-section-label">{S.batchEdit.setLocation}</p>
-          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
+          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} suggestions={locationSuggestions} />
         </div>
 
         <div>

@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useRef, useState } from 'react';
+import { useMemo, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
@@ -17,11 +17,15 @@ import {
 } from 'react-native';
 import { cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
+import { useCollection } from '../lib/CollectionProvider';
+import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
 export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
+  const { items } = useCollection();
+  const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [photo, setPhoto] = useState(null);
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
@@ -244,6 +248,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
             value={acquired}
             onChange={setAcquired}
             placeholder={S.itemForm.cityPlaceholder}
+            suggestions={locationSuggestions}
             onFocus={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 50)}
           />
         </View>

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { searchPlaces } from '../lib/geocode'
 import { S } from '../../../shared/strings'
 
-export default function LocationPicker({ value, onChange, placeholder = S.location.defaultPlaceholder }) {
+export default function LocationPicker({ value, onChange, placeholder = S.location.defaultPlaceholder, suggestions = [] }) {
   const [query, setQuery] = useState(value?.location ?? '')
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
@@ -17,10 +17,21 @@ export default function LocationPicker({ value, onChange, placeholder = S.locati
   function handleChange(text) {
     setQuery(text)
     if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (!text.trim()) {
+    const trimmed = text.trim()
+    if (!trimmed) {
       setResults([])
       setLoading(false)
       onChange(null)
+      return
+    }
+    const lower = trimmed.toLowerCase()
+    const local = suggestions
+      .filter(s => s.location?.toLowerCase().includes(lower))
+      .slice(0, 5)
+      .map(s => ({ display_name: s.location, lat: s.lat, lng: s.lng }))
+    if (local.length > 0) {
+      setResults(local)
+      setLoading(false)
       return
     }
     setLoading(true)

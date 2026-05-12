@@ -869,6 +869,7 @@ export default function ProfilePage() {
         onSave={isOwner ? handleUpdate : undefined}
         onDelete={isOwner ? handleDelete : undefined}
         allTags={allTags}
+        items={items}
         onTagPress={tag => updateParams({ tag: tag.name, item: null })}
         onYearPress={year => updateParams({ year: String(year), yearMin: null, yearMax: null, city: null, tag: null, from: null, to: null, item: null })}
         onCityPress={city => updateParams({ city, year: null, yearMin: null, yearMax: null, tag: null, from: null, to: null, item: null })}
@@ -889,6 +890,7 @@ export default function ProfilePage() {
             onClose={() => setAddModalVisible(false)}
             onSave={handleSave}
             allTags={allTags}
+            items={items}
           />
 
           <BatchEditSheet
@@ -896,6 +898,7 @@ export default function ProfilePage() {
             onClose={() => setBatchEditVisible(false)}
             onApply={handleBatchEdit}
             allTags={allTags}
+            items={items}
             selectedCount={selectedIds.size}
           />
 

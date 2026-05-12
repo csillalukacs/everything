@@ -1,5 +1,6 @@
-import { useRef, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { S } from '../../../shared/strings'
+import { locationSuggestionsFromItems } from '../../../shared/items'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 
@@ -10,7 +11,8 @@ function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
 }
 
-export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
+export default function AddItemModal({ visible, onClose, onSave, allTags = [], items = [] }) {
+  const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [file, setFile] = useState(null)
   const [preview, setPreview] = useState(null)
   const [name, setName] = useState('')
@@ -136,7 +138,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
             value={year}
             onChange={e => setYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
           />
-          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.itemForm.cityPlaceholder} />
+          <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.itemForm.cityPlaceholder} suggestions={locationSuggestions} />
         </div>
       </div>
     </div>

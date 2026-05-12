@@ -1,5 +1,6 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { S } from '../../../shared/strings'
+import { locationSuggestionsFromItems } from '../../../shared/items'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 
@@ -10,7 +11,8 @@ function LockIcon({ size = 10, color = 'currentColor', open = false }) {
   return <svg width={size} height={size} viewBox="0 0 24 24" fill={color} aria-hidden><path d={d} /></svg>
 }
 
-export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], items = [], onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+  const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -219,7 +221,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   onChange={e => setEditDescription(e.target.value)}
                 />
                 <TagInput value={editTags} onChange={setEditTags} allTags={allTags} />
-                <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
+                <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} suggestions={locationSuggestions} />
                 <input
                   className="name-input year-input-full"
                   type="number"

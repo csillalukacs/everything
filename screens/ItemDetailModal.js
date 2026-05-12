@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
@@ -23,11 +23,15 @@ import { runOnJS } from 'react-native-worklets';
 const SCREEN_WIDTH = Dimensions.get('window').width;
 import { cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
+import { useCollection } from '../lib/CollectionProvider';
+import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+  const { items } = useCollection();
+  const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -419,7 +423,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 onSubmitEditing={Keyboard.dismiss}
               />
 
-              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} />
+              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} suggestions={locationSuggestions} />
 
               <TextInput
                 style={styles.nameInput}

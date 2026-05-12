@@ -44,3 +44,14 @@ export function acquiredFields(acquired) {
     acquired_lng: acquired?.lng ?? null,
   };
 }
+
+export function locationSuggestionsFromItems(items) {
+  const seen = new Map();
+  for (const i of items ?? []) {
+    const loc = i?.acquired_location;
+    if (!loc || seen.has(loc)) continue;
+    if (i.acquired_lat == null || i.acquired_lng == null) continue;
+    seen.set(loc, { location: loc, lat: i.acquired_lat, lng: i.acquired_lng });
+  }
+  return [...seen.values()];
+}

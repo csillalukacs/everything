@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   ActivityIndicator,
   Modal,
@@ -11,11 +11,15 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
+import { useCollection } from '../lib/CollectionProvider';
+import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
 
 export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
+  const { items } = useCollection();
+  const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [pendingTags, setPendingTags] = useState([]);
   const [addingTag, setAddingTag] = useState(false);
   const [newTagInput, setNewTagInput] = useState('');
@@ -121,7 +125,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
 
       <View>
         <Text style={styles.sectionLabel}>{S.batchEdit.setLocation}</Text>
-        <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} />
+        <LocationPicker value={acquired} onChange={setAcquired} placeholder={S.batchEdit.leaveBlankToSkip} suggestions={locationSuggestions} />
       </View>
 
       <View>
