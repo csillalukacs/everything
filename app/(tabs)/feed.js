@@ -107,7 +107,7 @@ export default function Feed() {
                       <Image
                         source={{ uri: thumbOf(item) }}
                         style={styles.thumbImage}
-                        contentFit="contain"
+                        contentFit="cover"
                         cachePolicy="memory-disk"
                       />
                     </View>

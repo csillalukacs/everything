@@ -15,7 +15,7 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { cropToContent } from '../lib/cropToContent';
+import { centerCropToSquare, cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
 import { useCollection } from '../lib/CollectionProvider';
 import { locationSuggestionsFromItems } from '../shared/items';
@@ -51,7 +51,12 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
       finalUri = await cropToContent(cleaned);
       setPhoto(finalUri);
     } catch {
-      // background removal can fail (e.g. unsupported image) — fall back to the original
+      try {
+        finalUri = await centerCropToSquare(uri);
+        setPhoto(finalUri);
+      } catch {
+        // fall back to the original
+      }
     } finally {
       setRemovingBg(false);
       uploadPromiseRef.current = uploadLocalPhoto(finalUri);
