@@ -5,34 +5,45 @@ import { thumbOf } from '../shared/items';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_GAP = 8;
-const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - GRID_GAP * 2) / 3;
+const EMPTY_SELECTION = new Set();
+
+function cardSize(numColumns) {
+  return (SCREEN_WIDTH - 48 - GRID_GAP * (numColumns - 1)) / numColumns;
+}
 
 export default function ItemGrid({
   items,
-  selectedIds,
+  selectedIds = EMPTY_SELECTION,
   onItemPress,
   onItemLongPress,
   refreshing,
   onRefresh,
   loading,
   paddingBottom,
+  numColumns = 3,
+  emptyText,
 }) {
   const batchMode = selectedIds.size > 0;
+  const size = cardSize(numColumns);
   return (
     <FlatList
       data={items}
       keyExtractor={item => item.id}
-      numColumns={3}
+      numColumns={numColumns}
       columnWrapperStyle={items.length > 0 ? styles.row : undefined}
-      contentContainerStyle={[styles.listContent, { paddingBottom }, items.length === 0 && styles.listContentEmpty]}
+      contentContainerStyle={[styles.listContent, paddingBottom != null && { paddingBottom }, items.length === 0 && styles.listContentEmpty]}
       style={styles.list}
       refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
+        onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor="#999" /> : undefined
       }
       ListEmptyComponent={
         loading ? (
           <View style={styles.listLoader}>
             <ActivityIndicator color="#999" />
+          </View>
+        ) : emptyText ? (
+          <View style={styles.listLoader}>
+            <Text style={styles.emptyText}>{emptyText}</Text>
           </View>
         ) : null
       }
@@ -40,9 +51,9 @@ export default function ItemGrid({
         const isSelected = selectedIds.has(item.id);
         return (
           <TouchableOpacity
-            style={[styles.card, isSelected && styles.cardSelected]}
+            style={[styles.card, { width: size }, isSelected && styles.cardSelected]}
             onPress={() => onItemPress(item)}
-            onLongPress={() => onItemLongPress(item)}
+            onLongPress={onItemLongPress ? () => onItemLongPress(item) : undefined}
             delayLongPress={400}
           >
             {item.image_url && (
@@ -83,6 +94,10 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 80,
   },
+  emptyText: {
+    color: '#999',
+    fontSize: 14,
+  },
   row: {
     gap: GRID_GAP,
     marginBottom: GRID_GAP,
@@ -90,7 +105,6 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   card: {
-    width: GRID_CARD_SIZE,
     backgroundColor: '#fff',
     borderRadius: 12,
     overflow: 'hidden',

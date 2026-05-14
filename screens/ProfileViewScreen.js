@@ -2,9 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
-  Dimensions,
-  FlatList,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
@@ -12,17 +9,13 @@ import {
   TouchableOpacity,
   View,
 } from 'react-native';
-import { Image } from 'expo-image';
 import { supabase } from '../lib/supabase';
 import { fetchAllItems, fetchItemCount } from '../shared/itemsApi';
-import { thumbOf } from '../shared/items';
 import { UUID_RE } from '../shared/identifiers';
 import { S } from '../shared/strings';
 import ItemDetailModal from './ItemDetailModal';
 import Avatar from './Avatar';
-
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
+import ItemGrid from './ItemGrid';
 
 export default function ProfileViewScreen({ visible, slug, onClose }) {
   const [loading, setLoading] = useState(true);
@@ -228,39 +221,13 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
               </ScrollView>
             )}
 
-            <FlatList
-              data={filteredItems}
-              keyExtractor={item => item.id}
+            <ItemGrid
+              items={filteredItems}
+              onItemPress={setSelectedItem}
+              refreshing={refreshing}
+              onRefresh={onRefresh}
               numColumns={2}
-              columnWrapperStyle={filteredItems.length > 0 ? styles.row : undefined}
-              contentContainerStyle={filteredItems.length > 0 ? styles.listContent : styles.listContentEmpty}
-              style={styles.list}
-              refreshControl={
-                <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
-              }
-              ListEmptyComponent={
-                <View style={styles.centered}>
-                  <Text style={styles.emptyText}>{S.profileView.nothingPublic}</Text>
-                </View>
-              }
-              renderItem={({ item }) => (
-                <TouchableOpacity
-                  style={styles.card}
-                  onPress={() => setSelectedItem(item)}
-                >
-                  {item.image_url && (
-                    <View style={styles.cardImageContainer}>
-                      <Image
-                        source={{ uri: thumbOf(item) }}
-                        style={styles.cardImage}
-                        recyclingKey={item.id}
-                        cachePolicy="memory-disk"
-                        contentFit="cover"
-                      />
-                    </View>
-                  )}
-                </TouchableOpacity>
-              )}
+              emptyText={S.profileView.nothingPublic}
             />
           </>
         )}
@@ -389,38 +356,6 @@ const styles = StyleSheet.create({
   },
   filterChipCountActive: {
     color: '#bbb',
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    justifyContent: 'flex-start',
-    paddingBottom: 40,
-  },
-  listContentEmpty: {
-    flexGrow: 1,
-    paddingBottom: 40,
-  },
-  row: {
-    gap: 12,
-    marginBottom: 12,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  card: {
-    width: GRID_CARD_SIZE,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  cardImageContainer: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#E8E3DD',
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
   },
   centered: {
     flex: 1,

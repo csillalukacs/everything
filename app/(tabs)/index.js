@@ -2,7 +2,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -18,6 +17,7 @@ import ManageTagsSheet from '../../screens/ManageTagsSheet';
 import ItemGrid from '../../screens/ItemGrid';
 import SearchBar from '../../screens/SearchBar';
 import BatchBar from '../../screens/BatchBar';
+import TagFilterChips from '../../screens/TagFilterChips';
 import Avatar from '../../screens/Avatar';
 import { cityOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
@@ -195,52 +195,15 @@ export default function Collection() {
         }
       />
 
-      {tags.length > 0 && (
-        <View style={styles.filterRow}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.filterScroll}
-            contentContainerStyle={styles.filterScrollContent}
-          >
-            <TouchableOpacity
-              style={[styles.filterChip, !activeTag && styles.filterChipActive]}
-              onPress={() => setActiveTag(null)}
-            >
-              <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>{S.common.all}</Text>
-              <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={[styles.filterChip, activeTag?.id === '__untagged__' && styles.filterChipActive]}
-              onPress={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
-            >
-              <Text style={[styles.filterChipText, activeTag?.id === '__untagged__' && styles.filterChipTextActive]}>{S.collection.untagged}</Text>
-              <Text style={[styles.filterChipCount, activeTag?.id === '__untagged__' && styles.filterChipCountActive]}>{untaggedCount}</Text>
-            </TouchableOpacity>
-            {tags.map(tag => {
-              const active = activeTag?.id === tag.id;
-              return (
-                <TouchableOpacity
-                  key={tag.id}
-                  style={[styles.filterChip, active && styles.filterChipActive]}
-                  onPress={() => setActiveTag(active ? null : tag)}
-                >
-                  {tag.is_private && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
-                  <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
-                  <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>
-                </TouchableOpacity>
-              );
-            })}
-          </ScrollView>
-          <TouchableOpacity
-            style={[styles.filterChip, styles.filterManageBtn]}
-            onPress={() => setManageTagsVisible(true)}
-            accessibilityLabel={S.common.manage}
-          >
-            <Ionicons name="settings-outline" size={18} color="#999" />
-          </TouchableOpacity>
-        </View>
-      )}
+      <TagFilterChips
+        tags={tags}
+        activeTag={activeTag}
+        onChangeActiveTag={setActiveTag}
+        totalCount={searchedItems.length}
+        untaggedCount={untaggedCount}
+        tagCounts={tagCounts}
+        onManagePress={() => setManageTagsVisible(true)}
+      />
 
       <ItemGrid
         items={filteredItems}
@@ -379,56 +342,5 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
     backgroundColor: '#2D2D2D',
-  },
-  filterRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 20,
-  },
-  filterScroll: {
-    flex: 1,
-    flexGrow: 1,
-    flexShrink: 1,
-  },
-  filterScrollContent: {
-    gap: 8,
-    paddingVertical: 2,
-  },
-  filterManageBtn: {
-    flexShrink: 0,
-    borderWidth: 0,
-    backgroundColor: 'transparent',
-    paddingHorizontal: 6,
-  },
-  filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    height: 34,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
-  },
-  filterChipActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
-  },
-  filterChipText: {
-    fontSize: 13,
-    color: '#999',
-  },
-  filterChipTextActive: {
-    color: '#fff',
-  },
-  filterChipCount: {
-    fontSize: 11,
-    color: '#bbb',
-    marginLeft: 2,
-  },
-  filterChipCountActive: {
-    color: '#bbb',
   },
 });

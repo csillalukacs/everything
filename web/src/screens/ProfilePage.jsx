@@ -14,7 +14,8 @@ import FilterDropdown from './FilterDropdown'
 import LockIcon from '../components/LockIcon'
 import Avatar from '../components/Avatar'
 import SearchBar from '../components/SearchBar'
-import { SettingsIcon, TrashIcon } from '../components/Icons'
+import TagFilterChips from '../components/TagFilterChips'
+import { TrashIcon } from '../components/Icons'
 import ManageTagsSheet from './ManageTagsSheet'
 import { itemsCacheKey, tagsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
@@ -654,40 +655,16 @@ export default function ProfilePage() {
         )}
       </div>
 
-      {isOwner ? (
-        allTags.length > 0 && (
-          <div className="filter-row">
-            <div className="filter-scroll">
-              <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>{S.common.all}<span className="chip-count">{searchedItems.length}</span></button>
-              <button
-                className={`chip${activeTag?.id === '__untagged__' ? ' chip-active' : ''}`}
-                onClick={() => setActiveTag(activeTag?.id === '__untagged__' ? null : { id: '__untagged__' })}
-              >{S.collection.untagged}<span className="chip-count">{untaggedCount}</span></button>
-              {allTags.map(tag => (
-                <button
-                  key={tag.id}
-                  className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
-                  onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
-                >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
-              ))}
-            </div>
-            <button className="chip filter-manage-btn" onClick={() => setManageTagsVisible(true)} aria-label={S.common.manage}><SettingsIcon size={18} color="#999" /></button>
-          </div>
-        )
-      ) : (
-        visibleTags.length > 0 && (
-          <div className="filter-scroll">
-            <button className={`chip${!activeTag ? ' chip-active' : ''}`} onClick={() => setActiveTag(null)}>{S.common.all}<span className="chip-count">{searchedItems.length}</span></button>
-            {visibleTags.map(tag => (
-              <button
-                key={tag.id}
-                className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
-                onClick={() => setActiveTag(activeTag?.id === tag.id ? null : tag)}
-              >{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
-            ))}
-          </div>
-        )
-      )}
+      <TagFilterChips
+        tags={isOwner ? allTags : visibleTags}
+        activeTag={activeTag}
+        onChangeActiveTag={setActiveTag}
+        totalCount={searchedItems.length}
+        untaggedCount={untaggedCount}
+        tagCounts={tagCounts}
+        showUntagged={isOwner}
+        onManagePress={isOwner ? () => setManageTagsVisible(true) : undefined}
+      />
 
       <div className="grid">
         {sortedItems.map(item => {
