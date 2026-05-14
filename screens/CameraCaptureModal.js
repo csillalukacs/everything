@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import * as ImagePicker from 'expo-image-picker';
 import * as MediaLibrary from 'expo-media-library';
 import { CameraView, useCameraPermissions } from 'expo-camera';
@@ -44,7 +45,10 @@ export default function CameraCaptureModal({ visible, onCapture, onCancel }) {
       mediaTypes: ['images'],
       quality: 0.7,
     });
-    if (!result.canceled) onCapture(result.assets[0].uri);
+    if (result.canceled) return;
+    const image = await ImageManipulator.manipulate(result.assets[0].uri).renderAsync();
+    const { uri } = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
+    onCapture(uri);
   }
 
   function renderBody() {
