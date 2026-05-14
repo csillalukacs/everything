@@ -154,6 +154,7 @@ export const S = {
     allYears: 'all years',
     allCities: 'all cities',
     sort: {
+      label: 'sort',
       newest: 'newest',
       oldest: 'oldest',
       lastEdited: 'last edited',
@@ -161,6 +162,7 @@ export const S = {
       nameZA: 'name z–a',
       acquiredNewest: 'acquired (newest)',
       acquiredOldest: 'acquired (oldest)',
+      random: 'random',
     },
     // Date-range chip on profile page
     addedOn: (date) => `added ${date}`,

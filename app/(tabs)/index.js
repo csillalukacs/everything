@@ -21,6 +21,7 @@ import TagFilterChips from '../../screens/TagFilterChips';
 import Avatar from '../../screens/Avatar';
 import { cityOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
+import { sortItems, newRandomSeed } from '../../shared/sortItems';
 import { S } from '../../shared/strings';
 
 const TAB_BAR_HEIGHT = 70;
@@ -58,6 +59,13 @@ export default function Collection() {
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
+  const [sortMode, setSortMode] = useState('newest');
+  const [randomSeed, setRandomSeed] = useState(() => newRandomSeed());
+
+  function handleChangeSort(mode) {
+    if (mode === 'random') setRandomSeed(newRandomSeed());
+    setSortMode(mode);
+  }
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -120,8 +128,13 @@ export default function Collection() {
     await batchTogglePrivacy([...selectedIds]);
   }
 
+  const sortedItems = useMemo(
+    () => sortItems(items, sortMode, randomSeed),
+    [items, sortMode, randomSeed],
+  );
+
   const queryAst = useMemo(() => parseQuery(searchQuery), [searchQuery]);
-  const searchedItems = items.filter(i => {
+  const searchedItems = sortedItems.filter(i => {
     if (!matchItem(i, queryAst)) return false;
     if (activeYear === 'none') {
       if (i.acquired_year != null) return false;
@@ -189,8 +202,8 @@ export default function Collection() {
             onPress={() => setFilterSheetVisible(true)}
             hitSlop={8}
           >
-            <Ionicons name="options-outline" size={20} color={(activeYear || activeCity) ? '#2D2D2D' : '#999'} />
-            {(activeYear || activeCity) && <View style={styles.filterIconDot} />}
+            <Ionicons name="options-outline" size={20} color={(activeYear || activeCity || sortMode !== 'newest') ? '#2D2D2D' : '#999'} />
+            {(activeYear || activeCity || sortMode !== 'newest') && <View style={styles.filterIconDot} />}
           </TouchableOpacity>
         }
       />
@@ -260,6 +273,8 @@ export default function Collection() {
         activeCity={activeCity}
         onChangeYear={setActiveYear}
         onChangeCity={setActiveCity}
+        sortMode={sortMode}
+        onChangeSort={handleChangeSort}
       />
 
       <ProfileScreen

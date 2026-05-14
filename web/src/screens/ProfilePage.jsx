@@ -4,6 +4,7 @@ import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
 import { cityOf, acquiredFields, thumbOf, imagePathsForItem } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
+import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -52,6 +53,11 @@ export default function ProfilePage() {
   const [batchEditVisible, setBatchEditVisible] = useState(false)
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
+  const [randomSeed, setRandomSeed] = useState(() => newRandomSeed())
+
+  useEffect(() => {
+    if (sortParam === 'random') setRandomSeed(newRandomSeed())
+  }, [sortParam])
 
   const batchMode = selectedIds.size > 0
 
@@ -430,32 +436,10 @@ export default function ProfilePage() {
   })
   const visibleTags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name))
 
-  const sortedItems = useMemo(() => {
-    const arr = [...items]
-    const cmpName = (a, b) => {
-      const an = (a.name ?? '').toLowerCase()
-      const bn = (b.name ?? '').toLowerCase()
-      if (!an && !bn) return 0
-      if (!an) return 1
-      if (!bn) return -1
-      return an.localeCompare(bn)
-    }
-    const cmpYear = (a, b) => {
-      if (a.acquired_year == null && b.acquired_year == null) return 0
-      if (a.acquired_year == null) return 1
-      if (b.acquired_year == null) return -1
-      return a.acquired_year - b.acquired_year
-    }
-    switch (sortParam) {
-      case 'oldest': return arr.sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
-      case 'edited': return arr.sort((a, b) => new Date(b.updated_at ?? b.created_at) - new Date(a.updated_at ?? a.created_at))
-      case 'name-asc': return arr.sort(cmpName)
-      case 'name-desc': return arr.sort((a, b) => -cmpName(a, b))
-      case 'acquired-desc': return arr.sort((a, b) => -cmpYear(a, b))
-      case 'acquired-asc': return arr.sort(cmpYear)
-      default: return arr.sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
-    }
-  }, [items, sortParam])
+  const sortedItems = useMemo(
+    () => sortItems(items, sortParam, randomSeed),
+    [items, sortParam, randomSeed],
+  )
 
   const queryAst = useMemo(() => parseQuery(searchQuery), [searchQuery])
   const fromDate = fromParam ? new Date(fromParam) : null
@@ -637,6 +621,7 @@ export default function ProfilePage() {
             { value: 'name-desc', label: S.filters.sort.nameZA },
             { value: 'acquired-desc', label: S.filters.sort.acquiredNewest },
             { value: 'acquired-asc', label: S.filters.sort.acquiredOldest },
+            { value: 'random', label: S.filters.sort.random },
           ]}
         />
         {yearRangeLabel && (

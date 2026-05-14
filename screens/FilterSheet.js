@@ -9,6 +9,17 @@ import {
 import { S } from '../shared/strings';
 import BottomSheet from './BottomSheet';
 
+const SORT_OPTIONS = [
+  { value: 'newest', label: S.filters.sort.newest },
+  { value: 'oldest', label: S.filters.sort.oldest },
+  { value: 'edited', label: S.filters.sort.lastEdited },
+  { value: 'name-asc', label: S.filters.sort.nameAZ },
+  { value: 'name-desc', label: S.filters.sort.nameZA },
+  { value: 'acquired-desc', label: S.filters.sort.acquiredNewest },
+  { value: 'acquired-asc', label: S.filters.sort.acquiredOldest },
+  { value: 'random', label: S.filters.sort.random },
+];
+
 export default function FilterSheet({
   visible,
   onClose,
@@ -20,9 +31,11 @@ export default function FilterSheet({
   activeCity,
   onChangeYear,
   onChangeCity,
+  sortMode,
+  onChangeSort,
 }) {
   const hasAny = availableYears.length > 0 || hasMissingYear || availableCities.length > 0 || hasMissingCity;
-  const filtersActive = !!(activeYear || activeCity);
+  const filtersActive = !!(activeYear || activeCity) || (sortMode && sortMode !== 'newest');
 
   return (
     <BottomSheet visible={visible} onClose={onClose} sheetStyle={styles.sheet}>
@@ -30,7 +43,7 @@ export default function FilterSheet({
         <Text style={styles.title}>filters</Text>
         <View style={styles.headerActions}>
           {filtersActive && (
-            <TouchableOpacity onPress={() => { onChangeYear(null); onChangeCity(null); }}>
+            <TouchableOpacity onPress={() => { onChangeYear(null); onChangeCity(null); onChangeSort?.('newest'); }}>
               <Text style={styles.clear}>{S.common.clear}</Text>
             </TouchableOpacity>
           )}
@@ -104,7 +117,26 @@ export default function FilterSheet({
                 </View>
               </>
             )}
-            {!hasAny && (
+            {onChangeSort && (
+              <>
+                <Text style={styles.sectionTitle}>{S.filters.sort.label}</Text>
+                <View style={styles.chips}>
+                  {SORT_OPTIONS.map(opt => {
+                    const active = (sortMode ?? 'newest') === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={`s-${opt.value}`}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => onChangeSort(opt.value)}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
+            {!hasAny && !onChangeSort && (
               <Text style={styles.empty}>no filters available</Text>
             )}
       </ScrollView>
