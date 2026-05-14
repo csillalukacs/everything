@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Animated,
   Dimensions,
+  Easing,
   Platform,
   StyleSheet,
   Text,
@@ -23,6 +25,10 @@ const GRID_GAP = 8;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 const TAB_BAR_HEIGHT = 70;
 const DAILY_COUNT = 9;
+const FLIP_DURATION = 650;
+const SHINE_DURATION = 1100;
+const SHINE_GAP_MIN = 2200;
+const SHINE_GAP_MAX = 5200;
 
 const dailyCacheKey = userId => `shuffle:daily:${userId}`;
 
@@ -34,12 +40,115 @@ function shuffleInPlace(arr) {
   return arr;
 }
 
+function DailyCard({ item, revealed, shouldShine, onReveal, onOpen }) {
+  const flip = useRef(new Animated.Value(revealed ? 1 : 0)).current;
+  const shine = useRef(new Animated.Value(0)).current;
+
+  function handlePress() {
+    if (revealed) {
+      onOpen();
+      return;
+    }
+    onReveal();
+    Animated.timing(flip, {
+      toValue: 1,
+      duration: FLIP_DURATION,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: true,
+    }).start();
+  }
+
+  useEffect(() => {
+    if (revealed || !shouldShine) {
+      shine.stopAnimation();
+      shine.setValue(0);
+      return;
+    }
+    shine.setValue(0);
+    Animated.timing(shine, {
+      toValue: 1,
+      duration: SHINE_DURATION,
+      easing: Easing.inOut(Easing.quad),
+      useNativeDriver: true,
+    }).start();
+  }, [shouldShine, revealed, shine]);
+
+  const coverRotate = flip.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['0deg', '180deg'],
+  });
+  const revealRotate = flip.interpolate({
+    inputRange: [0, 1],
+    outputRange: ['180deg', '360deg'],
+  });
+  const shineTranslate = shine.interpolate({
+    inputRange: [0, 1],
+    outputRange: [-50, GRID_CARD_SIZE + 50],
+  });
+
+  return (
+    <TouchableOpacity
+      style={styles.cardWrap}
+      onPress={handlePress}
+      activeOpacity={0.9}
+    >
+      <Animated.View
+        style={[
+          styles.face,
+          styles.coverFace,
+          { transform: [{ perspective: 800 }, { rotateY: coverRotate }] },
+        ]}
+      >
+        <Image
+          source={require('../../assets/card.png')}
+          style={styles.cardImage}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+        />
+        {!revealed && (
+          <Animated.View
+            style={[styles.shineTrack, { transform: [{ translateX: shineTranslate }] }]}
+            pointerEvents="none"
+          >
+            <View style={styles.shineOuter} />
+            <View style={styles.shineMid} />
+            <View style={styles.shineInner} />
+          </Animated.View>
+        )}
+      </Animated.View>
+      <Animated.View
+        style={[
+          styles.face,
+          styles.revealFace,
+          { transform: [{ perspective: 800 }, { rotateY: revealRotate }] },
+        ]}
+      >
+        {item.image_url && (
+          <Image
+            source={{ uri: thumbOf(item) }}
+            style={styles.cardImage}
+            recyclingKey={item.id}
+            cachePolicy="memory-disk"
+            contentFit="cover"
+          />
+        )}
+        {item.is_private && (
+          <View style={styles.privateBadge}>
+            <Ionicons name="lock-closed" size={10} color="#fff" />
+          </View>
+        )}
+      </Animated.View>
+    </TouchableOpacity>
+  );
+}
+
 export default function Today() {
   const insets = useSafeAreaInsets();
   const { session, items, tags, updateItem, deleteItem } = useCollection();
   const userId = session?.user?.id;
 
   const [sampleIds, setSampleIds] = useState([]);
+  const [revealedIds, setRevealedIds] = useState([]);
   const [loaded, setLoaded] = useState(false);
   const [today] = useState(() => dayKey(new Date()));
   const [selectedItem, setSelectedItem] = useState(null);
@@ -53,6 +162,7 @@ export default function Today() {
       const parsed = str ? JSON.parse(str) : null;
       if (parsed?.date === today && Array.isArray(parsed.itemIds)) {
         setSampleIds(parsed.itemIds);
+        if (Array.isArray(parsed.revealedIds)) setRevealedIds(parsed.revealedIds);
       }
       setLoaded(true);
     });
@@ -62,6 +172,7 @@ export default function Today() {
   // Keep the sample in sync with the collection:
   // - If today's selection is empty/stale, pick fresh.
   // - If one of the selected items was deleted, refill that slot only.
+  //   The refilled item starts face-down (not in revealedIds).
   // - Adding/removing other items does NOT change the selection.
   useEffect(() => {
     if (!loaded || !userId) return;
@@ -80,13 +191,72 @@ export default function Today() {
     const next = [...present, ...additions];
 
     setSampleIds(next);
-    AsyncStorage.setItem(dailyCacheKey(userId), JSON.stringify({ date: today, itemIds: next }));
+    const nextSet = new Set(next);
+    setRevealedIds(prev => prev.filter(id => nextSet.has(id)));
   }, [items, sampleIds, loaded, userId, today]);
+
+  // Persist whenever the daily state changes.
+  useEffect(() => {
+    if (!loaded || !userId) return;
+    AsyncStorage.setItem(
+      dailyCacheKey(userId),
+      JSON.stringify({ date: today, itemIds: sampleIds, revealedIds }),
+    );
+  }, [sampleIds, revealedIds, loaded, userId, today]);
 
   const sample = useMemo(() => {
     const byId = new Map(items.map(i => [i.id, i]));
     return sampleIds.map(id => byId.get(id)).filter(Boolean);
   }, [sampleIds, items]);
+
+  const revealedSet = useMemo(() => new Set(revealedIds), [revealedIds]);
+  const revealedSample = useMemo(
+    () => sample.filter(i => revealedSet.has(i.id)),
+    [sample, revealedSet],
+  );
+  const unrevealedIds = useMemo(
+    () => sampleIds.filter(id => !revealedSet.has(id)),
+    [sampleIds, revealedSet],
+  );
+
+  const [currentShineId, setCurrentShineId] = useState(null);
+  useEffect(() => {
+    if (unrevealedIds.length === 0) {
+      setCurrentShineId(null);
+      return;
+    }
+    let cancelled = false;
+    let timeoutId;
+
+    function pickNext(prevId) {
+      const pool = unrevealedIds.length > 1
+        ? unrevealedIds.filter(id => id !== prevId)
+        : unrevealedIds;
+      return pool[Math.floor(Math.random() * pool.length)];
+    }
+
+    function scheduleNext(prevId, immediate) {
+      const gap = SHINE_GAP_MIN + Math.random() * (SHINE_GAP_MAX - SHINE_GAP_MIN);
+      const delay = immediate ? 0 : SHINE_DURATION + gap;
+      timeoutId = setTimeout(() => {
+        if (cancelled) return;
+        const next = pickNext(prevId);
+        setCurrentShineId(next);
+        scheduleNext(next, false);
+      }, delay);
+    }
+
+    scheduleNext(null, true);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [unrevealedIds]);
+
+  function reveal(id) {
+    setRevealedIds(prev => (prev.includes(id) ? prev : [...prev, id]));
+  }
 
   async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls) {
     if (!selectedItem) return;
@@ -116,27 +286,14 @@ export default function Today() {
       ) : (
         <View style={styles.grid}>
           {sample.map(item => (
-            <TouchableOpacity
+            <DailyCard
               key={item.id}
-              style={styles.card}
-              onPress={() => setSelectedItem(item)}
-              activeOpacity={0.8}
-            >
-              {item.image_url && (
-                <Image
-                  source={{ uri: thumbOf(item) }}
-                  style={styles.cardImage}
-                  recyclingKey={item.id}
-                  cachePolicy="memory-disk"
-                  contentFit="cover"
-                />
-              )}
-              {item.is_private && (
-                <View style={styles.privateBadge}>
-                  <Ionicons name="lock-closed" size={10} color="#fff" />
-                </View>
-              )}
-            </TouchableOpacity>
+              item={item}
+              revealed={revealedSet.has(item.id)}
+              shouldShine={item.id === currentShineId}
+              onReveal={() => reveal(item.id)}
+              onOpen={() => setSelectedItem(item)}
+            />
           ))}
         </View>
       )}
@@ -148,8 +305,8 @@ export default function Today() {
         onDelete={handleDelete}
         onSave={handleUpdate}
         allTags={tags}
-        onPrev={(() => { const idx = sample.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(sample[idx - 1]) : null; })()}
-        onNext={(() => { const idx = sample.findIndex(i => i.id === selectedItem?.id); return idx < sample.length - 1 ? () => setSelectedItem(sample[idx + 1]) : null; })()}
+        onPrev={(() => { const idx = revealedSample.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(revealedSample[idx - 1]) : null; })()}
+        onNext={(() => { const idx = revealedSample.findIndex(i => i.id === selectedItem?.id); return idx < revealedSample.length - 1 ? () => setSelectedItem(revealedSample[idx + 1]) : null; })()}
       />
     </View>
   );
@@ -182,16 +339,64 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: GRID_GAP,
   },
-  card: {
+  cardWrap: {
     width: GRID_CARD_SIZE,
     height: GRID_CARD_SIZE,
-    borderRadius: 12,
+  },
+  face: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    borderRadius: 7,
     overflow: 'hidden',
+    backfaceVisibility: 'hidden',
+  },
+  coverFace: {
+    backgroundColor: '#2D2D2D',
+  },
+  revealFace: {
     backgroundColor: '#E8E3DD',
   },
   cardImage: {
     width: '100%',
     height: '100%',
+  },
+  shineTrack: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    width: '100%',
+    height: '100%',
+    backfaceVisibility: 'hidden',
+  },
+  shineOuter: {
+    position: 'absolute',
+    top: -GRID_CARD_SIZE / 2,
+    left: -28,
+    width: 56,
+    height: GRID_CARD_SIZE * 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.10)',
+    transform: [{ rotate: '20deg' }],
+  },
+  shineMid: {
+    position: 'absolute',
+    top: -GRID_CARD_SIZE / 2,
+    left: -10,
+    width: 20,
+    height: GRID_CARD_SIZE * 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+    transform: [{ rotate: '20deg' }],
+  },
+  shineInner: {
+    position: 'absolute',
+    top: -GRID_CARD_SIZE / 2,
+    left: -3,
+    width: 6,
+    height: GRID_CARD_SIZE * 2,
+    backgroundColor: 'rgba(255, 255, 255, 0.55)',
+    transform: [{ rotate: '20deg' }],
   },
   privateBadge: {
     position: 'absolute',
