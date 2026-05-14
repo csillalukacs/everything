@@ -22,6 +22,7 @@ import BatchEditSheet from '../../screens/BatchEditSheet';
 import FilterSheet from '../../screens/FilterSheet';
 import ProfileScreen from '../../screens/ProfileScreen';
 import BottomSheet from '../../screens/BottomSheet';
+import Avatar from '../../screens/Avatar';
 import { cityOf, thumbOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
@@ -203,6 +204,9 @@ export default function Collection() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
+        <TouchableOpacity onPress={() => setSettingsVisible(true)} activeOpacity={0.8}>
+          <Avatar profile={{ ...profile, user_id: session?.user.id }} size={44} />
+        </TouchableOpacity>
         <View style={styles.headerLeft}>
           <Text style={styles.title} numberOfLines={1}>{headlineName}</Text>
           <Text style={styles.subtitle}>

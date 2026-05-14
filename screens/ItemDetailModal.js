@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
@@ -28,8 +29,10 @@ import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
+import Avatar from './Avatar';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+  const router = useRouter();
   const { items } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [editing, setEditing] = useState(false);
@@ -449,6 +452,28 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
             </View>
             {renderPhotoExtras()}
             <View style={styles.info}>
+              {item.profile && (
+                <TouchableOpacity
+                  style={styles.ownerRow}
+                  activeOpacity={0.7}
+                  onPress={() => {
+                    const slug = item.profile.username || item.user_id;
+                    onClose?.();
+                    router.push(`/u/${slug}`);
+                  }}
+                >
+                  <Avatar profile={{ ...item.profile, user_id: item.user_id }} size={32} />
+                  <View style={styles.ownerText}>
+                    <Text style={styles.ownerName} numberOfLines={1}>
+                      {item.profile.display_name || (item.profile.username ? `@${item.profile.username}` : 'someone')}
+                    </Text>
+                    {item.profile.display_name && item.profile.username && (
+                      <Text style={styles.ownerHandle} numberOfLines={1}>@{item.profile.username}</Text>
+                    )}
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color="#999" />
+                </TouchableOpacity>
+              )}
               <View style={styles.nameRow}>
                 {item.name ? <Text style={styles.name}>{item.name}</Text> : null}
                 {item.is_private && <Ionicons name="lock-closed" size={16} color="#999" style={styles.privateLockIcon} />}
@@ -585,6 +610,30 @@ const styles = StyleSheet.create({
   info: {
     gap: 12,
     flex: 1,
+  },
+  ownerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E8E3DD',
+  },
+  ownerText: {
+    flex: 1,
+  },
+  ownerName: {
+    fontSize: 14,
+    color: '#2D2D2D',
+    fontWeight: '500',
+  },
+  ownerHandle: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 1,
   },
   name: {
     fontSize: 28,

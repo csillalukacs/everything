@@ -19,6 +19,7 @@ import { thumbOf } from '../shared/items';
 import { UUID_RE } from '../shared/identifiers';
 import { S } from '../shared/strings';
 import ItemDetailModal from './ItemDetailModal';
+import Avatar from './Avatar';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
@@ -52,17 +53,18 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
       const slugIsUuid = UUID_RE.test(slug);
       let resolvedId = null;
       let resolvedProfile = null;
+      const cols = 'user_id, display_name, username, home_location, home_lat, home_lng, avatar_url, avatar_thumb_url';
       if (slugIsUuid) {
         const { data } = await supabase
           .from('profiles')
-          .select('user_id, display_name, username, home_location, home_lat, home_lng')
+          .select(cols)
           .eq('user_id', slug)
           .maybeSingle();
         if (data) { resolvedId = data.user_id; resolvedProfile = data; }
       } else {
         const { data } = await supabase
           .from('profiles')
-          .select('user_id, display_name, username, home_location, home_lat, home_lng')
+          .select(cols)
           .ilike('username', slug)
           .maybeSingle();
         if (data) { resolvedId = data.user_id; resolvedProfile = data; }
@@ -147,6 +149,7 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
           <TouchableOpacity onPress={onClose} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={28} color="#2D2D2D" />
           </TouchableOpacity>
+          {profile && <Avatar profile={profile} size={56} style={styles.headerAvatar} />}
           <View style={{ flex: 1 }}>
             <Text style={styles.title} numberOfLines={1}>{headerTitle}</Text>
             {profile?.username && profile?.display_name && (
@@ -298,6 +301,10 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingRight: 4,
     marginLeft: -8,
+  },
+  headerAvatar: {
+    marginRight: 12,
+    marginTop: 2,
   },
   title: {
     fontSize: 28,

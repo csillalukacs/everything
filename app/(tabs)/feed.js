@@ -11,6 +11,7 @@ import { relativeTime } from '../../shared/dates';
 import { S } from '../../shared/strings';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
+import Avatar from '../../screens/Avatar';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -87,6 +88,9 @@ export default function Feed() {
                   activeOpacity={0.7}
                   onPress={() => setSelectedItem(item)}
                 >
+                  <TouchableOpacity onPress={() => openProfile(item)} hitSlop={6}>
+                    <Avatar profile={{ ...(item.profile ?? {}), user_id: item.user_id }} size={36} />
+                  </TouchableOpacity>
                   <View style={styles.feedRowText}>
                     <Text style={styles.posterRow}>
                       <Text

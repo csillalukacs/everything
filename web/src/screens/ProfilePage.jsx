@@ -12,6 +12,7 @@ import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
 import FilterDropdown from './FilterDropdown'
 import LockIcon from '../components/LockIcon'
+import Avatar from '../components/Avatar'
 
 const itemsCacheKey = userId => `cache:items:${userId}`
 const tagsCacheKey = userId => `cache:tags:${userId}`
@@ -73,6 +74,8 @@ export default function ProfilePage() {
   const [allTags, setAllTags] = useState([])
   const [profileName, setProfileName] = useState(null)
   const [username, setUsername] = useState(null)
+  const [avatarUrl, setAvatarUrl] = useState(null)
+  const [avatarThumbUrl, setAvatarThumbUrl] = useState(null)
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
   const [sessionUserId, setSessionUserId] = useState(null)
@@ -145,18 +148,19 @@ export default function ProfilePage() {
 
       let resolvedId = null
       let resolvedProfile = null
+      const cols = 'user_id, display_name, username, home_location, home_lat, home_lng, avatar_url, avatar_thumb_url'
       if (slugIsUuid) {
         resolvedId = slug
         const { data } = await supabase
           .from('profiles')
-          .select('display_name, username, home_location, home_lat, home_lng')
+          .select(cols)
           .eq('user_id', slug)
           .maybeSingle()
         resolvedProfile = data
       } else {
         const { data } = await supabase
           .from('profiles')
-          .select('user_id, display_name, username, home_location, home_lat, home_lng')
+          .select(cols)
           .ilike('username', slug)
           .maybeSingle()
         if (data) {
@@ -178,6 +182,8 @@ export default function ProfilePage() {
       if (resolvedProfile) {
         setProfileName(resolvedProfile.display_name)
         setUsername(resolvedProfile.username)
+        setAvatarUrl(resolvedProfile.avatar_url ?? null)
+        setAvatarThumbUrl(resolvedProfile.avatar_thumb_url ?? null)
         setHome(resolvedProfile.home_location
           ? { location: resolvedProfile.home_location, lat: resolvedProfile.home_lat, lng: resolvedProfile.home_lng }
           : null)
@@ -641,20 +647,32 @@ export default function ProfilePage() {
   return (
     <div className="app">
       <header className="header">
-        <div>
-          <div className="profile-name-row">
-            <h1 className="profile-name">{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` · ${S.profile.objectCount(itemCount)}` : ''}</h1>
+        <div className="profile-header-row">
+          <Avatar
+            profile={{
+              user_id: userId,
+              display_name: profileName,
+              username,
+              avatar_url: avatarUrl,
+              avatar_thumb_url: avatarThumbUrl,
+            }}
+            size={64}
+          />
+          <div>
+            <div className="profile-name-row">
+              <h1 className="profile-name">{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` · ${S.profile.objectCount(itemCount)}` : ''}</h1>
+            </div>
+            {username && <p className="profile-username-readonly">@{username}</p>}
+            {home?.location && (
+              <p className="profile-home-readonly">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
+                  <circle cx="12" cy="10" r="3" />
+                </svg>
+                {home.location.split(',')[0]}
+              </p>
+            )}
           </div>
-          {username && <p className="profile-username-readonly">@{username}</p>}
-          {home?.location && (
-            <p className="profile-home-readonly">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                <circle cx="12" cy="10" r="3" />
-              </svg>
-              {home.location.split(',')[0]}
-            </p>
-          )}
         </div>
         <div className="header-links" style={{ marginTop: 8 }}>
           {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}

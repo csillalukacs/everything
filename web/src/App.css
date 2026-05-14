@@ -2010,3 +2010,105 @@ button.stats-bar-col {
   color: #2D2D2D;
   text-decoration: underline;
 }
+
+/* ---- Avatar ---- */
+
+.avatar-image {
+  display: block;
+  background: #E8E3DD;
+}
+
+.avatar-placeholder {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 500;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+  user-select: none;
+}
+
+.avatar-edit {
+  position: relative;
+  display: inline-block;
+  cursor: pointer;
+}
+
+.avatar-edit-badge {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #2D2D2D;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid #F5F0EB;
+  font-size: 14px;
+}
+
+.profile-header-row {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.feed-poster-avatar {
+  flex-shrink: 0;
+  display: block;
+}
+
+.feed-row-with-avatar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.owner-link {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 12px;
+  background: #fff;
+  border-radius: 12px;
+  border: 1px solid #E8E3DD;
+  text-decoration: none;
+  color: inherit;
+  margin-bottom: 12px;
+}
+
+.owner-link:hover {
+  background: #F5F0EB;
+}
+
+.owner-link-text {
+  flex: 1;
+  min-width: 0;
+}
+
+.owner-link-name {
+  font-size: 14px;
+  color: #2D2D2D;
+  font-weight: 500;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-link-handle {
+  font-size: 12px;
+  color: #999;
+  margin-top: 1px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.owner-link-chevron {
+  color: #999;
+  font-size: 16px;
+}

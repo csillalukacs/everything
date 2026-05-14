@@ -1,6 +1,9 @@
 import { Ionicons } from '@expo/vector-icons';
+import * as ImagePicker from 'expo-image-picker';
+import { ImageManipulator, SaveFormat } from 'expo-image-manipulator';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +18,7 @@ import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
+import Avatar from './Avatar';
 
 function EditActions({ onSave, onCancel, disabled }) {
   return (
@@ -30,8 +34,9 @@ function EditActions({ onSave, onCancel, disabled }) {
 }
 
 export default function ProfileScreen({ visible, onClose, session, itemCount }) {
-  const { items } = useCollection();
+  const { items, profile, updateProfile, uploadLocalPhoto } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [nameInput, setNameInput] = useState('');
   const [username, setUsername] = useState(null);
@@ -162,6 +167,28 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
     setEditingField(null);
   }
 
+  async function pickAvatar() {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') return;
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ['images'],
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled) return;
+    setUploadingAvatar(true);
+    try {
+      const image = await ImageManipulator.manipulate(result.assets[0].uri).renderAsync();
+      const { uri } = await image.saveAsync({ format: SaveFormat.JPEG, compress: 0.9 });
+      const uploaded = await uploadLocalPhoto(uri);
+      if (!uploaded) return;
+      await updateProfile({ avatar_url: uploaded.image_url, avatar_thumb_url: uploaded.thumb_url });
+    } finally {
+      setUploadingAvatar(false);
+    }
+  }
+
   return (
     <BottomSheet visible={visible} onClose={onClose} sheetStyle={styles.sheet}>
       <View style={styles.header}>
@@ -172,6 +199,18 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
+            <View style={styles.avatarSection}>
+              <TouchableOpacity onPress={pickAvatar} disabled={uploadingAvatar} activeOpacity={0.8}>
+                <Avatar profile={{ ...profile, user_id: session?.user.id }} size={96} />
+                <View style={styles.avatarBadge}>
+                  {uploadingAvatar
+                    ? <ActivityIndicator size="small" color="#fff" />
+                    : <Ionicons name="camera-outline" size={16} color="#fff" />
+                  }
+                </View>
+              </TouchableOpacity>
+            </View>
+
             <View style={styles.section}>
               <View style={styles.labelRow}>
                 <Text style={styles.label}>{S.profile.name}</Text>
@@ -329,6 +368,23 @@ const styles = StyleSheet.create({
   done: {
     fontSize: 15,
     color: '#999',
+  },
+  avatarSection: {
+    alignItems: 'center',
+    marginBottom: 28,
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#2D2D2D',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 2,
+    borderColor: '#F5F0EB',
   },
   section: {
     marginBottom: 28,

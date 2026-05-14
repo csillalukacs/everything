@@ -33,7 +33,7 @@ export async function fetchPublicFeed(client, { limit = 50 } = {}) {
   const userIds = [...new Set(items.map(i => i.user_id))];
   const { data: profiles, error: pErr } = await client
     .from('profiles')
-    .select('user_id, display_name, username')
+    .select('user_id, display_name, username, avatar_url, avatar_thumb_url')
     .in('user_id', userIds);
   if (pErr) throw pErr;
 

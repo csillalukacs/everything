@@ -1,9 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import { S } from '../../../shared/strings'
 import { locationSuggestionsFromItems } from '../../../shared/items'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 import LockIcon from '../components/LockIcon'
+import Avatar from '../components/Avatar'
 
 export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], items = [], onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
@@ -228,6 +230,22 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               </>
             ) : (
               <>
+                {item.profile && (() => {
+                  const slug = item.profile.username || item.user_id
+                  const ownerName = item.profile.display_name || (item.profile.username ? `@${item.profile.username}` : 'someone')
+                  return (
+                    <Link to={`/u/${slug}`} className="owner-link" onClick={onClose}>
+                      <Avatar profile={{ ...item.profile, user_id: item.user_id }} size={32} />
+                      <div className="owner-link-text">
+                        <div className="owner-link-name">{ownerName}</div>
+                        {item.profile.display_name && item.profile.username && (
+                          <div className="owner-link-handle">@{item.profile.username}</div>
+                        )}
+                      </div>
+                      <span className="owner-link-chevron">›</span>
+                    </Link>
+                  )
+                })()}
                 <div className="detail-name-row">
                   {item.name && <h2 className="detail-name">{item.name}</h2>}
                   {item.is_private && <LockIcon size={14} color="#999" />}

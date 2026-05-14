@@ -7,6 +7,7 @@ import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
 import AuthScreen from './screens/AuthScreen'
 import ItemDetailModal from './screens/ItemDetailModal'
+import Avatar from './components/Avatar'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -89,6 +90,13 @@ export default function App() {
                 tabIndex={0}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setSelectedItem(item) } }}
               >
+                <Link
+                  to={`/u/${slug}`}
+                  className="feed-poster-avatar"
+                  onClick={e => e.stopPropagation()}
+                >
+                  <Avatar profile={{ ...(item.profile ?? {}), user_id: item.user_id }} size={36} />
+                </Link>
                 <div className="feed-row-text">
                   <p className="feed-poster-line">
                     <Link
