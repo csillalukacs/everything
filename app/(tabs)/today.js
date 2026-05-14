@@ -1,11 +1,14 @@
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Animated,
   Dimensions,
   Easing,
   Platform,
+  RefreshControl,
+  ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -144,14 +147,21 @@ function DailyCard({ item, revealed, shouldShine, onReveal, onOpen }) {
 
 export default function Today() {
   const insets = useSafeAreaInsets();
-  const { session, items, tags, updateItem, deleteItem } = useCollection();
+  const { session, items, itemsLoading, tags, refresh, updateItem, deleteItem } = useCollection();
   const userId = session?.user?.id;
 
   const [sampleIds, setSampleIds] = useState([]);
   const [revealedIds, setRevealedIds] = useState([]);
   const [loaded, setLoaded] = useState(false);
-  const [today] = useState(() => dayKey(new Date()));
+  const [today, setToday] = useState(() => dayKey(new Date()));
   const [selectedItem, setSelectedItem] = useState(null);
+  const [refreshing, setRefreshing] = useState(false);
+
+  const onRefresh = useCallback(async () => {
+    setRefreshing(true);
+    setToday(dayKey(new Date()));
+    try { await refresh(); } finally { setRefreshing(false); }
+  }, [refresh]);
 
   // Load cached daily selection once we know the user.
   useEffect(() => {
@@ -273,30 +283,40 @@ export default function Today() {
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
 
   return (
-    <View style={[styles.container, { paddingTop: insets.top + 16, paddingBottom: tabBarOffset }]}>
-      <View style={styles.header}>
+    <View style={styles.container}>
+      <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>{S.today.title}</Text>
         <Text style={styles.subtitle}>{S.today.subtitle}</Text>
       </View>
-
-      {sample.length === 0 ? (
-        <View style={styles.empty}>
-          <Text style={styles.emptyText}>{S.today.empty}</Text>
-        </View>
-      ) : (
-        <View style={styles.grid}>
-          {sample.map(item => (
-            <DailyCard
-              key={item.id}
-              item={item}
-              revealed={revealedSet.has(item.id)}
-              shouldShine={item.id === currentShineId}
-              onReveal={() => reveal(item.id)}
-              onOpen={() => setSelectedItem(item)}
-            />
-          ))}
-        </View>
-      )}
+      <ScrollView
+        contentContainerStyle={[styles.scrollContent, { paddingBottom: tabBarOffset }]}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
+        }
+      >
+        {sample.length === 0 ? (
+          <View style={styles.empty}>
+            {itemsLoading || items.length > 0 ? (
+              <ActivityIndicator color="#999" />
+            ) : (
+              <Text style={styles.emptyText}>{S.today.empty}</Text>
+            )}
+          </View>
+        ) : (
+          <View style={styles.grid}>
+            {sample.map(item => (
+              <DailyCard
+                key={item.id}
+                item={item}
+                revealed={revealedSet.has(item.id)}
+                shouldShine={item.id === currentShineId}
+                onReveal={() => reveal(item.id)}
+                onOpen={() => setSelectedItem(item)}
+              />
+            ))}
+          </View>
+        )}
+      </ScrollView>
 
       <ItemDetailModal
         visible={!!selectedItem}
@@ -316,9 +336,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F0EB',
+  },
+  scrollContent: {
     paddingHorizontal: GRID_PADDING,
+    flexGrow: 1,
   },
   header: {
+    paddingHorizontal: GRID_PADDING,
     paddingBottom: 24,
   },
   title: {

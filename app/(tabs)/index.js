@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
+  ActivityIndicator,
   Dimensions,
   FlatList,
   Modal,
@@ -38,6 +39,7 @@ export default function Collection() {
     session,
     items,
     itemCount,
+    itemsLoading,
     tags,
     profile,
     updateItem,
@@ -340,11 +342,18 @@ export default function Collection() {
         data={filteredItems}
         keyExtractor={item => item.id}
         numColumns={3}
-        columnWrapperStyle={styles.row}
-        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarOffset + 24 }]}
+        columnWrapperStyle={filteredItems.length > 0 ? styles.row : undefined}
+        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarOffset + 24 }, filteredItems.length === 0 && styles.listContentEmpty]}
         style={styles.list}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
+        }
+        ListEmptyComponent={
+          itemsLoading ? (
+            <View style={styles.listLoader}>
+              <ActivityIndicator color="#999" />
+            </View>
+          ) : null
         }
         renderItem={({ item }) => {
           const isSelected = selectedIds.has(item.id);
@@ -851,6 +860,15 @@ const styles = StyleSheet.create({
   },
   listContent: {
     justifyContent: 'flex-start',
+  },
+  listContentEmpty: {
+    flexGrow: 1,
+  },
+  listLoader: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 80,
   },
   row: {
     gap: GRID_GAP,

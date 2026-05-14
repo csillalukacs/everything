@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
 import { useCollection } from '../lib/CollectionProvider';
@@ -104,7 +104,7 @@ function Card({ label, value, sub }) {
 
 export default function StatsScreen() {
   const router = useRouter();
-  const { items, itemCount, session, refresh } = useCollection();
+  const { items, itemCount, itemsLoading, session, refresh } = useCollection();
   const [home, setHome] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [refreshing, setRefreshing] = useState(false);
@@ -282,7 +282,11 @@ export default function StatsScreen() {
       >
         {items.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>{S.stats.empty}</Text>
+            {itemsLoading ? (
+              <ActivityIndicator color="#999" />
+            ) : (
+              <Text style={styles.emptyText}>{S.stats.empty}</Text>
+            )}
           </View>
         ) : (
           <>
