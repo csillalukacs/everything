@@ -30,6 +30,8 @@ import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 import Avatar from './Avatar';
+import TagInput from './TagInput';
+import PhotoStrip from './PhotoStrip';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
@@ -50,10 +52,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [removingBg, setRemovingBg] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
   const [nameEditable, setNameEditable] = useState(false);
-  const [addingTag, setAddingTag] = useState(false);
-  const [newTagName, setNewTagName] = useState('');
   const nameInputRef = useRef(null);
-  const scrollRef = useRef(null);
   const ocrPromiseRef = useRef(null);
   const translateX = useSharedValue(0);
   const pendingDir = useRef(null);
@@ -108,12 +107,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   useEffect(() => {
     if (nameEditable) nameInputRef.current?.focus();
   }, [nameEditable]);
-
-  useEffect(() => {
-    if (addingTag) {
-      setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
-    }
-  }, [addingTag]);
 
   function enterEdit() {
     setEditName(item.name ?? '');
@@ -170,22 +163,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     });
   }
 
-  function toggleTag(tag) {
-    setEditTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
-  }
-
-  function handleConfirmNewTag() {
-    const trimmed = newTagName.trim().toLowerCase();
-    if (!trimmed) {
-      setAddingTag(false);
-      setNewTagName('');
-      return;
-    }
-    if (!editTags.includes(trimmed)) setEditTags(prev => [...prev, trimmed]);
-    setAddingTag(false);
-    setNewTagName('');
-  }
-
   function buildAcquired() {
     const y = editYear.trim();
     const yearNum = y ? parseInt(y, 10) : null;
@@ -218,61 +195,18 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         ...(item.previous_images ?? []),
       ];
   const safeDisplayedIdx = Math.min(displayedIdx, allPhotos.length - 1);
-  const displayedEntry = allPhotos[safeDisplayedIdx] ?? {};
-  const displayPhoto = displayedEntry.url;
-  const displayedDate = displayedEntry.added_at;
+  const displayPhoto = allPhotos[safeDisplayedIdx]?.url;
 
-  function renderPhotoExtras() {
-    const hasMultiple = allPhotos.filter(p => p?.url).length > 1;
-    if (!hasMultiple && !displayedDate) return null;
-    return (
-      <View style={styles.photoExtras}>
-        {displayedDate ? (
-          <Text style={styles.photoDate}>
-            {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
-          </Text>
-        ) : null}
-        {hasMultiple && (
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            style={styles.thumbnailScroll}
-            contentContainerStyle={styles.thumbnailRow}
-          >
-            {allPhotos.map((entry, idx) => {
-              if (!entry?.url) return null;
-              const selected = idx === safeDisplayedIdx;
-              const removable = editing && idx > 0;
-              return (
-                <View key={`${entry.url}-${idx}`} style={styles.thumbnailWrap}>
-                  <TouchableOpacity
-                    onPress={() => setDisplayedIdx(idx)}
-                    style={[styles.thumbnail, selected && styles.thumbnailSelected]}
-                    activeOpacity={0.8}
-                  >
-                    <Image source={{ uri: entry.thumb_url || entry.url }} style={styles.thumbnailImage} cachePolicy="memory-disk" contentFit="cover" />
-                  </TouchableOpacity>
-                  {removable && (
-                    <TouchableOpacity
-                      onPress={() => removePreviousPhoto(idx - 1)}
-                      style={styles.thumbnailRemove}
-                      hitSlop={6}
-                    >
-                      <Ionicons name="close" size={14} color="#fff" />
-                    </TouchableOpacity>
-                  )}
-                </View>
-              );
-            })}
-          </ScrollView>
-        )}
-      </View>
-    );
-  }
+  const photoStrip = (
+    <PhotoStrip
+      photos={allPhotos}
+      selectedIdx={safeDisplayedIdx}
+      onSelect={setDisplayedIdx}
+      editable={editing}
+      onRemove={removePreviousPhoto}
+    />
+  );
   const itemTags = item.tags ?? [];
-  const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name));
-  const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]));
-  const tagOptions = [...new Set([...allTagNames, ...editTags])].sort();
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={editing ? cancelEdit : onClose}>
@@ -346,7 +280,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               </TouchableOpacity>
             </View>
 
-            {renderPhotoExtras()}
+            {photoStrip}
 
             <CameraCaptureModal
               visible={cameraVisible}
@@ -355,52 +289,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
             />
 
             <View style={styles.editFields}>
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.tagScroll}
-                contentContainerStyle={styles.tagScrollContent}
-              >
-                {tagOptions.map(tag => {
-                  const selected = editTags.includes(tag);
-                  const isTagPrivate = tagPrivacyMap[tag];
-                  return (
-                    <TouchableOpacity
-                      key={tag}
-                      style={[styles.tagChip, selected && styles.tagChipSelected]}
-                      onPress={() => toggleTag(tag)}
-                    >
-                      {isTagPrivate && <Ionicons name="lock-closed" size={10} color={selected ? '#fff' : '#ccc'} />}
-                      <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>{tag}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-                {addingTag ? (
-                  <View style={styles.newTagRow}>
-                    <TextInput
-                      style={styles.newTagInput}
-                      placeholder={S.itemForm.tagPlaceholder}
-                      placeholderTextColor="#bbb"
-                      value={newTagName}
-                      onChangeText={setNewTagName}
-                      autoFocus
-                      returnKeyType="done"
-                      onSubmitEditing={handleConfirmNewTag}
-                      onBlur={handleConfirmNewTag}
-                    />
-                    <TouchableOpacity onPress={handleConfirmNewTag} style={styles.newTagConfirm}>
-                      <Ionicons name="checkmark" size={18} color="#2D2D2D" />
-                    </TouchableOpacity>
-                  </View>
-                ) : (
-                  <TouchableOpacity
-                    style={[styles.tagChip, styles.tagChipAdd]}
-                    onPress={() => setAddingTag(true)}
-                  >
-                    <Ionicons name="add" size={16} color="#999" />
-                  </TouchableOpacity>
-                )}
-              </ScrollView>
+              <TagInput allTags={allTags} selectedTags={editTags} onChange={setEditTags} />
 
               <TouchableOpacity activeOpacity={1} onPress={() => setNameEditable(true)}>
                 <TextInput
@@ -450,7 +339,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 : <View style={styles.imagePlaceholder} />
               }
             </View>
-            {renderPhotoExtras()}
+            {photoStrip}
             <View style={styles.info}>
               {item.profile && (
                 <TouchableOpacity
@@ -708,57 +597,6 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingBottom: 40,
   },
-  tagScroll: {
-    flexGrow: 0,
-  },
-  tagScrollContent: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  tagChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 14,
-    height: 34,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
-  },
-  tagChipSelected: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
-  },
-  tagChipAdd: {
-    borderStyle: 'dashed',
-  },
-  tagChipText: {
-    fontSize: 13,
-    color: '#999',
-  },
-  tagChipTextSelected: {
-    color: '#fff',
-  },
-  newTagRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    borderRadius: 20,
-    paddingHorizontal: 12,
-    height: 34,
-    backgroundColor: '#fff',
-    gap: 6,
-  },
-  newTagInput: {
-    fontSize: 13,
-    color: '#2D2D2D',
-    minWidth: 80,
-  },
-  newTagConfirm: {
-    padding: 2,
-  },
   nameInput: {
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -771,51 +609,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     lineHeight: 21,
-  },
-  photoExtras: {
-    marginBottom: 16,
-    marginTop: -8,
-  },
-  photoDate: {
-    fontSize: 12,
-    color: '#999',
-    marginBottom: 8,
-  },
-  thumbnailScroll: {
-    flexGrow: 0,
-  },
-  thumbnailRow: {
-    gap: 8,
-    paddingVertical: 4,
-  },
-  thumbnailWrap: {
-    position: 'relative',
-  },
-  thumbnail: {
-    width: 56,
-    height: 56,
-    borderRadius: 10,
-    overflow: 'hidden',
-    backgroundColor: '#E8E3DD',
-    borderWidth: 2,
-    borderColor: 'transparent',
-  },
-  thumbnailSelected: {
-    borderColor: '#2D2D2D',
-  },
-  thumbnailImage: {
-    width: '100%',
-    height: '100%',
-  },
-  thumbnailRemove: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: '#2D2D2D',
-    alignItems: 'center',
-    justifyContent: 'center',
   },
 });

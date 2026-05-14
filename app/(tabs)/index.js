@@ -2,34 +2,26 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
-  Dimensions,
-  FlatList,
-  Modal,
-  RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { Image } from 'expo-image';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import BatchEditSheet from '../../screens/BatchEditSheet';
 import FilterSheet from '../../screens/FilterSheet';
 import ProfileScreen from '../../screens/ProfileScreen';
 import ManageTagsSheet from '../../screens/ManageTagsSheet';
+import ItemGrid from '../../screens/ItemGrid';
+import SearchBar from '../../screens/SearchBar';
 import Avatar from '../../screens/Avatar';
-import { cityOf, thumbOf } from '../../shared/items';
+import { cityOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
 
-const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_GAP = 8;
-const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - GRID_GAP * 2) / 3;
 const TAB_BAR_HEIGHT = 70;
 
 export default function Collection() {
@@ -62,7 +54,6 @@ export default function Collection() {
   const [batchEditVisible, setBatchEditVisible] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [searchHelpVisible, setSearchHelpVisible] = useState(false);
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
@@ -188,76 +179,20 @@ export default function Collection() {
         </View>
       </View>
 
-      <View style={styles.searchRow}>
-        <View style={styles.searchContainer}>
-          <Ionicons name="search" size={16} color="#999" />
-          <TextInput
-            style={styles.searchInput}
-            placeholder={S.common.search}
-            placeholderTextColor="#999"
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            autoCorrect={false}
-            autoCapitalize="none"
-            returnKeyType="search"
-          />
-          {searchQuery.length > 0 && (
-            <TouchableOpacity onPress={() => setSearchQuery('')}>
-              <Ionicons name="close-circle" size={16} color="#999" />
-            </TouchableOpacity>
-          )}
+      <SearchBar
+        value={searchQuery}
+        onChange={setSearchQuery}
+        rightAdornment={
           <TouchableOpacity
-            style={styles.searchHelpButton}
-            onPress={() => setSearchHelpVisible(true)}
-            accessibilityLabel={S.a11y.searchHelp}
+            style={styles.filterIconBtn}
+            onPress={() => setFilterSheetVisible(true)}
             hitSlop={8}
           >
-            <Text style={styles.searchHelpButtonText}>?</Text>
+            <Ionicons name="options-outline" size={20} color={(activeYear || activeCity) ? '#2D2D2D' : '#999'} />
+            {(activeYear || activeCity) && <View style={styles.filterIconDot} />}
           </TouchableOpacity>
-        </View>
-        <TouchableOpacity
-          style={styles.filterIconBtn}
-          onPress={() => setFilterSheetVisible(true)}
-          hitSlop={8}
-        >
-          <Ionicons name="options-outline" size={20} color={(activeYear || activeCity) ? '#2D2D2D' : '#999'} />
-          {(activeYear || activeCity) && <View style={styles.filterIconDot} />}
-        </TouchableOpacity>
-      </View>
-
-      <Modal
-        visible={searchHelpVisible}
-        transparent
-        animationType="fade"
-        onRequestClose={() => setSearchHelpVisible(false)}
-      >
-        <TouchableOpacity
-          style={styles.searchHelpBackdrop}
-          activeOpacity={1}
-          onPress={() => setSearchHelpVisible(false)}
-        >
-          <TouchableOpacity activeOpacity={1} style={styles.searchHelpCard} onPress={() => {}}>
-            <Text style={styles.searchHelpTitle}>{S.searchHelp.title}</Text>
-            <Text style={styles.searchHelpIntro}>{S.searchHelp.intro}</Text>
-            <ScrollView style={styles.searchHelpList}>
-              {S.searchHelp.examples.map(ex => (
-                <TouchableOpacity
-                  key={ex.code}
-                  style={styles.searchHelpRow}
-                  onPress={() => {
-                    setSearchQuery(ex.code);
-                    setSearchHelpVisible(false);
-                  }}
-                >
-                  <Text style={styles.searchHelpCode}>{ex.code}</Text>
-                  <Text style={styles.searchHelpDesc}>{ex.desc}</Text>
-                </TouchableOpacity>
-              ))}
-            </ScrollView>
-          </TouchableOpacity>
-        </TouchableOpacity>
-      </Modal>
-
+        }
+      />
 
       {tags.length > 0 && (
         <View style={styles.filterRow}>
@@ -306,50 +241,15 @@ export default function Collection() {
         </View>
       )}
 
-      <FlatList
-        data={filteredItems}
-        keyExtractor={item => item.id}
-        numColumns={3}
-        columnWrapperStyle={filteredItems.length > 0 ? styles.row : undefined}
-        contentContainerStyle={[styles.listContent, { paddingBottom: tabBarOffset + 24 }, filteredItems.length === 0 && styles.listContentEmpty]}
-        style={styles.list}
-        refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
-        }
-        ListEmptyComponent={
-          itemsLoading ? (
-            <View style={styles.listLoader}>
-              <ActivityIndicator color="#999" />
-            </View>
-          ) : null
-        }
-        renderItem={({ item }) => {
-          const isSelected = selectedIds.has(item.id);
-          return (
-            <TouchableOpacity
-              style={[styles.card, isSelected && styles.cardSelected]}
-              onPress={() => batchMode ? toggleBatchSelect(item.id) : setSelectedItem(item)}
-              onLongPress={() => toggleBatchSelect(item.id)}
-              delayLongPress={400}
-            >
-              {item.image_url && (
-                <View style={styles.cardImageContainer}>
-                  <Image source={{ uri: thumbOf(item) }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
-                </View>
-              )}
-              {item.is_private && !batchMode && (
-                <View style={styles.privateBadge}>
-                  <Ionicons name="lock-closed" size={10} color="#fff" />
-                </View>
-              )}
-              {batchMode && (
-                <View style={[styles.selectionCircle, isSelected && styles.selectionCircleActive]}>
-                  {isSelected && <Text style={styles.selectionCheck}>✓</Text>}
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        }}
+      <ItemGrid
+        items={filteredItems}
+        selectedIds={selectedIds}
+        onItemPress={item => batchMode ? toggleBatchSelect(item.id) : setSelectedItem(item)}
+        onItemLongPress={item => toggleBatchSelect(item.id)}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
+        loading={itemsLoading}
+        paddingBottom={tabBarOffset + 24}
       />
 
       {batchMode && (
@@ -473,24 +373,6 @@ const styles = StyleSheet.create({
   headerIconBtn: {
     padding: 4,
   },
-  searchRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    marginBottom: 12,
-  },
-  searchContainer: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingHorizontal: 14,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
-  },
   filterIconBtn: {
     width: 40,
     height: 40,
@@ -509,71 +391,6 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
     backgroundColor: '#2D2D2D',
-  },
-  searchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#2D2D2D',
-    paddingVertical: 0,
-  },
-  searchHelpButton: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 1.5,
-    borderColor: '#E0E0E0',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  searchHelpButtonText: {
-    fontSize: 12,
-    fontWeight: '600',
-    color: '#999',
-    lineHeight: 14,
-  },
-  searchHelpBackdrop: {
-    flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
-    alignItems: 'center',
-    justifyContent: 'center',
-    padding: 24,
-  },
-  searchHelpCard: {
-    width: '100%',
-    maxWidth: 420,
-    maxHeight: '80%',
-    backgroundColor: '#fff',
-    borderRadius: 16,
-    padding: 20,
-  },
-  searchHelpTitle: {
-    fontSize: 15,
-    fontWeight: '600',
-    color: '#2D2D2D',
-    marginBottom: 4,
-  },
-  searchHelpIntro: {
-    fontSize: 13,
-    color: '#999',
-    marginBottom: 12,
-  },
-  searchHelpList: {
-    flexGrow: 0,
-  },
-  searchHelpRow: {
-    paddingVertical: 8,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F0EBE5',
-  },
-  searchHelpCode: {
-    fontFamily: 'Menlo',
-    fontSize: 13,
-    color: '#2D2D2D',
-    marginBottom: 2,
-  },
-  searchHelpDesc: {
-    fontSize: 12,
-    color: '#666',
   },
   filterRow: {
     flexDirection: 'row',
@@ -625,80 +442,6 @@ const styles = StyleSheet.create({
   },
   filterChipCountActive: {
     color: '#bbb',
-  },
-  privateBadge: {
-    position: 'absolute',
-    top: 8,
-    left: 8,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
-    backgroundColor: 'rgba(0,0,0,0.45)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  list: {
-    flex: 1,
-  },
-  listContent: {
-    justifyContent: 'flex-start',
-  },
-  listContentEmpty: {
-    flexGrow: 1,
-  },
-  listLoader: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 80,
-  },
-  row: {
-    gap: GRID_GAP,
-    marginBottom: GRID_GAP,
-    justifyContent: 'flex-start',
-    alignItems: 'flex-start',
-  },
-  card: {
-    width: GRID_CARD_SIZE,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    overflow: 'hidden',
-  },
-  cardSelected: {
-    borderWidth: 2.5,
-    borderColor: '#2D2D2D',
-  },
-  cardImageContainer: {
-    width: '100%',
-    aspectRatio: 1,
-    backgroundColor: '#E8E3DD',
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  selectionCircle: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    borderWidth: 2,
-    borderColor: '#fff',
-    backgroundColor: 'rgba(0,0,0,0.25)',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  selectionCircleActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
-  },
-  selectionCheck: {
-    color: '#fff',
-    fontSize: 14,
-    lineHeight: 16,
-    fontWeight: 'bold',
   },
   batchBar: {
     position: 'absolute',

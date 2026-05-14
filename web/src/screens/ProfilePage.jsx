@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
@@ -13,29 +13,11 @@ import BatchEditSheet from './BatchEditSheet'
 import FilterDropdown from './FilterDropdown'
 import LockIcon from '../components/LockIcon'
 import Avatar from '../components/Avatar'
+import SearchBar from '../components/SearchBar'
+import { SettingsIcon, TrashIcon } from '../components/Icons'
 import ManageTagsSheet from './ManageTagsSheet'
 import { itemsCacheKey, tagsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
-
-function SettingsIcon({ size = 16, color = 'currentColor' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  )
-}
-
-function TrashIcon({ size = 18, color = 'currentColor' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <polyline points="3 6 5 6 21 6" />
-      <path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6" />
-      <path d="M10 11v6M14 11v6" />
-      <path d="M9 6V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2" />
-    </svg>
-  )
-}
 
 export default function ProfilePage() {
   const { slug } = useParams()
@@ -69,24 +51,6 @@ export default function ProfilePage() {
   const [batchEditVisible, setBatchEditVisible] = useState(false)
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const [searchHelpOpen, setSearchHelpOpen] = useState(false)
-  const searchHelpRef = useRef(null)
-
-  useEffect(() => {
-    if (!searchHelpOpen) return
-    function onDocClick(e) {
-      if (searchHelpRef.current && !searchHelpRef.current.contains(e.target)) {
-        setSearchHelpOpen(false)
-      }
-    }
-    function onKey(e) { if (e.key === 'Escape') setSearchHelpOpen(false) }
-    document.addEventListener('mousedown', onDocClick)
-    document.addEventListener('keydown', onKey)
-    return () => {
-      document.removeEventListener('mousedown', onDocClick)
-      document.removeEventListener('keydown', onKey)
-    }
-  }, [searchHelpOpen])
 
   const batchMode = selectedIds.size > 0
 
@@ -632,50 +596,7 @@ export default function ProfilePage() {
       </header>
 
       <div className="search-row">
-        <div className="search-container" ref={searchHelpRef}>
-          <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
-          <input
-            type="text"
-            className="search-input"
-            placeholder={S.common.search}
-            value={searchQuery}
-            onChange={e => setSearchQuery(e.target.value)}
-          />
-          {searchQuery && (
-            <button className="search-clear" onClick={() => setSearchQuery('')} aria-label={S.a11y.clearSearch}>×</button>
-          )}
-          <button
-            type="button"
-            className={`search-help-button${searchHelpOpen ? ' search-help-button-active' : ''}`}
-            onClick={() => setSearchHelpOpen(v => !v)}
-            aria-label={S.a11y.searchHelp}
-            aria-expanded={searchHelpOpen}
-          >?</button>
-          {searchHelpOpen && (
-            <div className="search-help-popover" role="dialog" aria-label={S.searchHelp.title}>
-              <div className="search-help-title">{S.searchHelp.title}</div>
-              <div className="search-help-intro">{S.searchHelp.intro}</div>
-              <ul className="search-help-list">
-                {S.searchHelp.examples.map(ex => (
-                  <li key={ex.code}>
-                    <button
-                      type="button"
-                      className="search-help-code"
-                      onClick={() => {
-                        setSearchQuery(ex.code)
-                        setSearchHelpOpen(false)
-                      }}
-                    >{ex.code}</button>
-                    <span className="search-help-desc">{ex.desc}</span>
-                  </li>
-                ))}
-              </ul>
-            </div>
-          )}
-        </div>
+        <SearchBar value={searchQuery} onChange={setSearchQuery} />
         {(availableYears.length > 0 || hasMissingYear) && (
           <FilterDropdown
             ariaLabel={S.a11y.filterByYear}

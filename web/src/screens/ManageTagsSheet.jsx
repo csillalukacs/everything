@@ -2,15 +2,7 @@ import { useMemo, useState } from 'react'
 import { S } from '../../../shared/strings'
 import { filterAndSortTags, validateTagRename } from '../../../shared/tagManagement'
 import LockIcon from '../components/LockIcon'
-
-function PencilIcon({ size = 14, color = 'currentColor' }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-      <path d="M12 20h9" />
-      <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z" />
-    </svg>
-  )
-}
+import { PencilIcon, SearchIcon } from '../components/Icons'
 
 export default function ManageTagsSheet({
   visible,
@@ -68,10 +60,7 @@ export default function ManageTagsSheet({
           <button className="link-btn" onClick={handleClose}>{S.common.done}</button>
         </div>
         <div className="search-container manage-tag-search">
-          <svg className="search-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#999" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-            <circle cx="11" cy="11" r="7" />
-            <line x1="21" y1="21" x2="16.65" y2="16.65" />
-          </svg>
+          <SearchIcon className="search-icon" />
           <input
             type="text"
             className="search-input"
