@@ -24,6 +24,9 @@ import {
 } from '../../../shared/dates'
 import { cityOf, thumbOf } from '../../../shared/items'
 import { S } from '../../../shared/strings'
+import { buildTagDistribution, computeYearStats, buildMapGroups } from '../../../shared/stats'
+import { itemsCacheKey } from '../../../shared/cacheKeys'
+import { readCache } from '../lib/cache'
 
 const markerIcon = L.icon({
   iconUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
@@ -41,12 +44,6 @@ const homeIcon = L.divIcon({
   iconSize: [16, 16],
   iconAnchor: [8, 8],
 })
-
-const itemsCacheKey = userId => `cache:items:${userId}`
-
-function readCache(key) {
-  try { const raw = localStorage.getItem(key); return raw ? JSON.parse(raw) : null } catch { return null }
-}
 
 function Bar({ count, max, label, title, onClick }) {
   const heightPct = max > 0 ? (count / max) * 100 : 0
@@ -70,12 +67,6 @@ function Bar({ count, max, label, title, onClick }) {
     </Tag>
   )
 }
-
-const PIE_PALETTE = [
-  '#C5705D', '#D4A55C', '#8FA363', '#5C9A8C', '#5A7CA8',
-  '#8A6FA3', '#B5688A', '#8B6F47', '#A89B6E', '#5C5C5C',
-]
-const PIE_UNTAGGED_COLOR = '#D5D0C8'
 
 function PieChart({ slices, total, size = 240, hoveredKey, onHover }) {
   const r = size / 2 - 1
@@ -187,93 +178,9 @@ export default function StatsPage() {
     return { byDay, byWeek, byMonth, streak, longest, bestDayKey, bestDayCount }
   }, [items])
 
-  const yearStats = useMemo(() => {
-    const years = items.map(i => i.acquired_year).filter(y => y != null)
-    if (years.length === 0) return null
-    const min = Math.min(...years)
-    const max = Math.max(...years)
-    const range = max - min
-    const bucketSize = range > 30 ? 5 : 1
-    const buckets = new Map()
-    for (const y of years) {
-      const bucket = Math.floor(y / bucketSize) * bucketSize
-      buckets.set(bucket, (buckets.get(bucket) ?? 0) + 1)
-    }
-    const startBucket = Math.floor(min / bucketSize) * bucketSize
-    const endBucket = Math.floor(max / bucketSize) * bucketSize
-    const bars = []
-    for (let b = startBucket; b <= endBucket; b += bucketSize) {
-      bars.push({ key: b, label: bucketSize === 1 ? `'${String(b).slice(2)}` : String(b), count: buckets.get(b) ?? 0 })
-    }
-    const maxCount = Math.max(...bars.map(b => b.count))
-    return { bars, max: maxCount, bucketSize }
-  }, [items])
-
-  const mapGroups = useMemo(() => {
-    const groups = new Map()
-    for (const i of items) {
-      if (i.acquired_lat == null || i.acquired_lng == null) continue
-      const city = cityOf(i.acquired_location)
-      const key = city
-        ? `city:${city.toLowerCase()}`
-        : `coord:${Math.round(i.acquired_lat * 10) / 10},${Math.round(i.acquired_lng * 10) / 10}`
-      let g = groups.get(key)
-      if (!g) {
-        g = { key, city, items: [], latSum: 0, lngSum: 0 }
-        groups.set(key, g)
-      }
-      g.items.push(i)
-      g.latSum += i.acquired_lat
-      g.lngSum += i.acquired_lng
-    }
-    return [...groups.values()].map(g => {
-      const withImage = g.items.filter(i => i.image_url)
-      const pool = withImage.length > 0 ? withImage : g.items
-      const shuffled = [...pool].sort(() => Math.random() - 0.5)
-      return {
-        key: g.key,
-        lat: g.latSum / g.items.length,
-        lng: g.lngSum / g.items.length,
-        city: g.city,
-        count: g.items.length,
-        samples: shuffled.slice(0, 5),
-        regionLabel: g.items[0]?.acquired_location?.split(',').slice(1, 3).join(',').trim() || null,
-      }
-    })
-  }, [items])
-
-  const tagDistribution = useMemo(() => {
-    if (items.length === 0) return null
-    const appearances = new Map()
-    for (const item of items) {
-      for (const tag of item.tags ?? []) {
-        appearances.set(tag.name, (appearances.get(tag.name) ?? 0) + 1)
-      }
-    }
-    const tagCounts = new Map()
-    let untaggedCount = 0
-    for (const item of items) {
-      const tags = item.tags ?? []
-      if (tags.length === 0) { untaggedCount++; continue }
-      let chosen = tags[0].name
-      let chosenCount = appearances.get(chosen) ?? 0
-      for (let i = 1; i < tags.length; i++) {
-        const n = tags[i].name
-        const c = appearances.get(n) ?? 0
-        if (c > chosenCount) { chosen = n; chosenCount = c }
-      }
-      tagCounts.set(chosen, (tagCounts.get(chosen) ?? 0) + 1)
-    }
-    const tagSlices = [...tagCounts.entries()]
-      .map(([label, count]) => ({ label, count, kind: 'tag' }))
-      .sort((a, b) => b.count - a.count)
-      .map((s, i) => ({ ...s, color: PIE_PALETTE[i % PIE_PALETTE.length] }))
-    const slices = [...tagSlices]
-    if (untaggedCount > 0) slices.push({ label: S.collection.untagged, count: untaggedCount, kind: 'untagged', color: PIE_UNTAGGED_COLOR })
-    if (slices.length === 0) return null
-    const total = slices.reduce((sum, s) => sum + s.count, 0)
-    return { slices, total }
-  }, [items])
+  const yearStats = useMemo(() => computeYearStats(items), [items])
+  const mapGroups = useMemo(() => buildMapGroups(items), [items])
+  const tagDistribution = useMemo(() => buildTagDistribution(items), [items])
 
   const topCities = useMemo(() => {
     const counts = new Map()

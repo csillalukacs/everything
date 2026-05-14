@@ -20,6 +20,7 @@ import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import { thumbOf } from '../../shared/items';
 import { dayKey } from '../../shared/dates';
+import { dailyCacheKey } from '../../shared/cacheKeys';
 import { S } from '../../shared/strings';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -32,8 +33,6 @@ const FLIP_DURATION = 650;
 const SHINE_DURATION = 1100;
 const SHINE_GAP_MIN = 2200;
 const SHINE_GAP_MAX = 5200;
-
-const dailyCacheKey = userId => `shuffle:daily:${userId}`;
 
 function shuffleInPlace(arr) {
   for (let i = arr.length - 1; i > 0; i--) {
