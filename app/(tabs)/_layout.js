@@ -4,8 +4,9 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { S } from '../../shared/strings';
 
+const TAB_BAR_HEIGHT = 70;
+
 function CustomTabBar({ state, navigation }) {
-  const router = useRouter();
   const insets = useSafeAreaInsets();
   const currentRoute = state.routes[state.index]?.name;
 
@@ -16,7 +17,7 @@ function CustomTabBar({ state, navigation }) {
   return (
     <View style={[styles.bar, { paddingBottom: Math.max(insets.bottom, 12) }]}>
       <TouchableOpacity
-        style={styles.sideBtn}
+        style={styles.tabBtn}
         onPress={() => go('feed')}
         accessibilityLabel={S.a11y.feed}
       >
@@ -27,18 +28,20 @@ function CustomTabBar({ state, navigation }) {
         />
       </TouchableOpacity>
 
-      <View style={styles.plusWrap}>
-        <TouchableOpacity
-          style={styles.plusBtn}
-          onPress={() => router.push('/add')}
-          accessibilityLabel={S.a11y.addItem}
-        >
-          <Ionicons name="add" size={32} color="#fff" />
-        </TouchableOpacity>
-      </View>
+      <TouchableOpacity
+        style={styles.tabBtn}
+        onPress={() => go('today')}
+        accessibilityLabel={S.a11y.today}
+      >
+        <Ionicons
+          name={currentRoute === 'today' ? 'today' : 'today-outline'}
+          size={24}
+          color={currentRoute === 'today' ? '#2D2D2D' : '#999'}
+        />
+      </TouchableOpacity>
 
       <TouchableOpacity
-        style={styles.sideBtn}
+        style={styles.tabBtn}
         onPress={() => go('index')}
         accessibilityLabel={S.a11y.yourCollection}
       >
@@ -52,15 +55,35 @@ function CustomTabBar({ state, navigation }) {
   );
 }
 
+function FloatingAddButton() {
+  const router = useRouter();
+  const insets = useSafeAreaInsets();
+  const bottomOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12) + 12;
+  return (
+    <TouchableOpacity
+      style={[styles.fab, { bottom: bottomOffset }]}
+      onPress={() => router.push('/add')}
+      accessibilityLabel={S.a11y.addItem}
+      activeOpacity={0.85}
+    >
+      <Ionicons name="add" size={30} color="#fff" />
+    </TouchableOpacity>
+  );
+}
+
 export default function TabsLayout() {
   return (
-    <Tabs
-      screenOptions={{ headerShown: false }}
-      tabBar={props => <CustomTabBar {...props} />}
-    >
-      <Tabs.Screen name="feed" />
-      <Tabs.Screen name="index" />
-    </Tabs>
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{ headerShown: false }}
+        tabBar={props => <CustomTabBar {...props} />}
+      >
+        <Tabs.Screen name="feed" />
+        <Tabs.Screen name="today" />
+        <Tabs.Screen name="index" />
+      </Tabs>
+      <FloatingAddButton />
+    </View>
   );
 }
 
@@ -75,26 +98,24 @@ const styles = StyleSheet.create({
     borderTopWidth: 1,
     borderTopColor: '#E8E3DD',
   },
-  sideBtn: {
+  tabBtn: {
     flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
   },
-  plusWrap: {
-    width: 72,
-    alignItems: 'center',
-  },
-  plusBtn: {
-    width: 64,
-    height: 64,
-    borderRadius: 32,
+  fab: {
+    position: 'absolute',
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
     backgroundColor: '#2D2D2D',
     alignItems: 'center',
     justifyContent: 'center',
-    marginTop: -16,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 6,
   },
 });

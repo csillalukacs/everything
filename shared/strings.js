@@ -167,6 +167,13 @@ export const S = {
       `added ${from ?? '…'} – ${to ?? '…'}`,
   },
 
+  // Today (mobile) — 3x3 daily-contemplation grid tab
+  today: {
+    title: 'today',
+    subtitle: 'give these objects special attention today',
+    empty: 'nothing here yet',
+  },
+
   // Feed (mobile) and home page (web)
   feed: {
     emptyMobile: 'nothing yet — add your first thing',
@@ -248,6 +255,7 @@ export const S = {
   a11y: {
     // mobile tab bar
     feed: 'feed',
+    today: 'today',
     addItem: 'add thing',
     yourCollection: 'your collection',
     // web
