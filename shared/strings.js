@@ -72,6 +72,7 @@ export const S = {
   batchEdit: {
     title: (n) => `edit ${n} ${plural(n, 'thing')}`,
     addTags: 'add tags',
+    removeTag: 'remove tag',
     setYear: 'set year',
     setLocation: 'set location',
     leaveBlankToSkip: 'leave blank to skip',

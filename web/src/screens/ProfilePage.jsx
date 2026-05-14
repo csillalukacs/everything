@@ -406,8 +406,8 @@ export default function ProfilePage() {
     if (!error) setAllTags(prev => prev.map(t => t.id === tag.id ? { ...t, is_private: newPrivate } : t))
   }
 
-  async function handleBatchEdit({ addTags, acquired }) {
-    if (addTags.length === 0 && !acquired) { setBatchEditVisible(false); return }
+  async function handleBatchEdit({ addTags, acquired, removeTagId }) {
+    if (addTags.length === 0 && !acquired && !removeTagId) { setBatchEditVisible(false); return }
     const resolved = addTags.length > 0 ? await ensureTags(addTags) : []
     if (resolved === null) return
     const ids = [...selectedIds]
@@ -416,17 +416,27 @@ export default function ProfilePage() {
     setItems(prev => prev.map(item => {
       if (!selectedIds.has(item.id)) return item
       const next = { ...item }
+      let nextTags = item.tags ?? []
+      if (removeTagId) nextTags = nextTags.filter(t => t.id !== removeTagId)
       if (resolved.length > 0) {
-        const existing = item.tags ?? []
-        const existingIds = new Set(existing.map(t => t.id))
-        next.tags = [...existing, ...resolved.filter(t => !existingIds.has(t.id))]
+        const existingIds = new Set(nextTags.map(t => t.id))
+        nextTags = [...nextTags, ...resolved.filter(t => !existingIds.has(t.id))]
       }
+      if (removeTagId || resolved.length > 0) next.tags = nextTags
       if (acquiredPatch) Object.assign(next, acquiredPatch)
       return next
     }))
     setBatchEditVisible(false)
     setSelectedIds(new Set())
 
+    if (removeTagId) {
+      const { error } = await supabase
+        .from('item_tags')
+        .delete()
+        .eq('tag_id', removeTagId)
+        .in('item_id', ids)
+      if (error) console.error('Batch remove tag error:', error)
+    }
     if (resolved.length > 0) {
       const rows = ids.flatMap(item_id => resolved.map(t => ({ item_id, tag_id: t.id })))
       const { error } = await supabase
@@ -886,6 +896,7 @@ export default function ProfilePage() {
             allTags={allTags}
             items={items}
             selectedCount={selectedIds.size}
+            activeTag={activeTag}
           />
 
           {manageTagsVisible && (

@@ -3,13 +3,15 @@ import { S } from '../../../shared/strings'
 import { locationSuggestionsFromItems } from '../../../shared/items'
 import LocationPicker from './LocationPicker'
 
-export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], items = [], selectedCount, loading = false }) {
+export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], items = [], selectedCount, activeTag = null, loading = false }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [pendingTags, setPendingTags] = useState([])
   const [addingTag, setAddingTag] = useState(false)
   const [newTagInput, setNewTagInput] = useState('')
   const [year, setYear] = useState('')
   const [acquired, setAcquired] = useState(null)
+  const [removeActiveTag, setRemoveActiveTag] = useState(false)
+  const removableTag = activeTag && activeTag.id !== '__untagged__' && activeTag.name ? activeTag : null
 
   if (!visible) return null
 
@@ -30,6 +32,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
     setNewTagInput('')
     setYear('')
     setAcquired(null)
+    setRemoveActiveTag(false)
   }
 
   function buildAcquired() {
@@ -41,7 +44,8 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
   }
 
   function handleApply() {
-    onApply({ addTags: pendingTags, acquired: buildAcquired() })
+    const removeTagId = removeActiveTag && removableTag ? removableTag.id : null
+    onApply({ addTags: pendingTags, acquired: buildAcquired(), removeTagId })
     reset()
   }
 
@@ -53,7 +57,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
 
   const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name))
   const tagOptions = [...new Set([...allTagNames, ...pendingTags])].sort()
-  const hasChanges = pendingTags.length > 0 || year.trim().length > 0 || !!acquired
+  const hasChanges = pendingTags.length > 0 || year.trim().length > 0 || !!acquired || (removeActiveTag && !!removableTag)
 
   return (
     <div className="sheet-overlay" onClick={e => e.target === e.currentTarget && handleClose()}>
@@ -91,6 +95,16 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
             )}
           </div>
         </div>
+
+        {removableTag && (
+          <div>
+            <p className="batch-section-label">{S.batchEdit.removeTag}</p>
+            <button
+              className={`chip${removeActiveTag ? ' chip-active' : ''}`}
+              onClick={() => setRemoveActiveTag(v => !v)}
+            >{removableTag.name}</button>
+          </div>
+        )}
 
         <div>
           <p className="batch-section-label">{S.batchEdit.setLocation}</p>
