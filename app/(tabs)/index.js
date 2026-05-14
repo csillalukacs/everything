@@ -26,7 +26,8 @@ import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { S } from '../../shared/strings';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - 12) / 2;
+const GRID_GAP = 8;
+const GRID_CARD_SIZE = (SCREEN_WIDTH - 48 - GRID_GAP * 2) / 3;
 const TAB_BAR_HEIGHT = 70;
 
 export default function Collection() {
@@ -338,7 +339,7 @@ export default function Collection() {
       <FlatList
         data={filteredItems}
         keyExtractor={item => item.id}
-        numColumns={2}
+        numColumns={3}
         columnWrapperStyle={styles.row}
         contentContainerStyle={[styles.listContent, { paddingBottom: tabBarOffset + 24 }]}
         style={styles.list}
@@ -852,8 +853,8 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-start',
   },
   row: {
-    gap: 12,
-    marginBottom: 12,
+    gap: GRID_GAP,
+    marginBottom: GRID_GAP,
     justifyContent: 'flex-start',
     alignItems: 'flex-start',
   },
