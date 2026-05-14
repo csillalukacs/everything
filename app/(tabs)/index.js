@@ -17,6 +17,7 @@ import ProfileScreen from '../../screens/ProfileScreen';
 import ManageTagsSheet from '../../screens/ManageTagsSheet';
 import ItemGrid from '../../screens/ItemGrid';
 import SearchBar from '../../screens/SearchBar';
+import BatchBar from '../../screens/BatchBar';
 import Avatar from '../../screens/Avatar';
 import { cityOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
@@ -253,27 +254,14 @@ export default function Collection() {
       />
 
       {batchMode && (
-        <View style={[styles.batchBar]}>
-          <TouchableOpacity onPress={() => setSelectedIds(new Set())} style={styles.batchBarBtn}>
-            <Text style={styles.batchBarCancelText}>{S.common.cancel}</Text>
-          </TouchableOpacity>
-          <Text style={styles.batchBarCount}>{S.batchEdit.selectedCount(selectedIds.size)}</Text>
-          <View style={styles.batchBarActions}>
-            <TouchableOpacity onPress={handleBatchTogglePrivacy} style={styles.batchBarIcon}>
-              <Ionicons
-                name={[...selectedIds].every(id => items.find(i => i.id === id)?.is_private) ? 'lock-closed' : 'lock-open-outline'}
-                size={18}
-                color="#fff"
-              />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={handleBatchDelete} style={styles.batchBarIcon}>
-              <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setBatchEditVisible(true)} style={styles.batchBarBtn}>
-              <Text style={styles.batchBarTagText}>{S.common.edit}</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+        <BatchBar
+          selectedIds={selectedIds}
+          items={items}
+          onCancel={() => setSelectedIds(new Set())}
+          onTogglePrivacy={handleBatchTogglePrivacy}
+          onDelete={handleBatchDelete}
+          onEdit={() => setBatchEditVisible(true)}
+        />
       )}
 
       <ItemDetailModal
@@ -442,48 +430,5 @@ const styles = StyleSheet.create({
   },
   filterChipCountActive: {
     color: '#bbb',
-  },
-  batchBar: {
-    position: 'absolute',
-    left: 24,
-    right: 24,
-    bottom: 10,
-    height: 56,
-    borderRadius: 28,
-    backgroundColor: '#2D2D2D',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-  },
-  batchBarBtn: {
-    padding: 8,
-    minWidth: 56,
-  },
-  batchBarCancelText: {
-    color: '#aaa',
-    fontSize: 15,
-  },
-  batchBarCount: {
-    color: '#fff',
-    fontSize: 14,
-  },
-  batchBarActions: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  batchBarIcon: {
-    padding: 8,
-  },
-  batchBarTagText: {
-    color: '#fff',
-    fontSize: 15,
-    fontWeight: '500',
-    textAlign: 'right',
   },
 });

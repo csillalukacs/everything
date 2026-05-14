@@ -5,14 +5,12 @@ import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
   Dimensions,
-  Keyboard,
   KeyboardAvoidingView,
   Modal,
   Platform,
   ScrollView,
   StyleSheet,
   Text,
-  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
@@ -28,10 +26,10 @@ import { useCollection } from '../lib/CollectionProvider';
 import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
-import LocationPicker from './LocationPicker';
 import Avatar from './Avatar';
 import TagInput from './TagInput';
 import PhotoStrip from './PhotoStrip';
+import ItemFieldsEditor from './ItemFieldsEditor';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
@@ -51,8 +49,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [saving, setSaving] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
-  const [nameEditable, setNameEditable] = useState(false);
-  const nameInputRef = useRef(null);
   const ocrPromiseRef = useRef(null);
   const translateX = useSharedValue(0);
   const pendingDir = useRef(null);
@@ -104,10 +100,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     if (visible && autoEdit) enterEdit();
   }, [visible]);
 
-  useEffect(() => {
-    if (nameEditable) nameInputRef.current?.focus();
-  }, [nameEditable]);
-
   function enterEdit() {
     setEditName(item.name ?? '');
     setEditDescription(item.description ?? '');
@@ -121,7 +113,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditAcquired(item.acquired_location
       ? { location: item.acquired_location, lat: item.acquired_lat, lng: item.acquired_lng }
       : null);
-    setNameEditable(false);
     setEditing(true);
   }
 
@@ -290,43 +281,16 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
             <View style={styles.editFields}>
               <TagInput allTags={allTags} selectedTags={editTags} onChange={setEditTags} />
-
-              <TouchableOpacity activeOpacity={1} onPress={() => setNameEditable(true)}>
-                <TextInput
-                  ref={nameInputRef}
-                  style={styles.nameInput}
-                  value={editName}
-                  onChangeText={setEditName}
-                  placeholder={S.itemForm.namePlaceholder}
-                  placeholderTextColor="#bbb"
-                  editable={nameEditable}
-                  pointerEvents={nameEditable ? 'auto' : 'none'}
-                  returnKeyType="done"
-                  onSubmitEditing={Keyboard.dismiss}
-                />
-              </TouchableOpacity>
-              <TextInput
-                style={styles.nameInput}
-                value={editDescription}
-                onChangeText={setEditDescription}
-                placeholder={S.itemForm.descriptionPlaceholder}
-                placeholderTextColor="#bbb"
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
-              />
-
-              <LocationPicker value={editAcquired} onChange={setEditAcquired} placeholder={S.itemForm.cityPlaceholder} suggestions={locationSuggestions} />
-
-              <TextInput
-                style={styles.nameInput}
-                placeholder={S.itemForm.yearPlaceholder}
-                placeholderTextColor="#bbb"
-                value={editYear}
-                onChangeText={t => setEditYear(t.replace(/[^0-9]/g, '').slice(0, 4))}
-                keyboardType="number-pad"
-                maxLength={4}
-                returnKeyType="done"
-                onSubmitEditing={Keyboard.dismiss}
+              <ItemFieldsEditor
+                name={editName}
+                onNameChange={setEditName}
+                description={editDescription}
+                onDescriptionChange={setEditDescription}
+                acquired={editAcquired}
+                onAcquiredChange={setEditAcquired}
+                year={editYear}
+                onYearChange={setEditYear}
+                locationSuggestions={locationSuggestions}
               />
             </View>
           </ScrollView>
@@ -596,14 +560,6 @@ const styles = StyleSheet.create({
   editFields: {
     gap: 12,
     paddingBottom: 40,
-  },
-  nameInput: {
-    backgroundColor: '#fff',
-    borderRadius: 10,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
-    color: '#2D2D2D',
   },
   description: {
     fontSize: 14,
