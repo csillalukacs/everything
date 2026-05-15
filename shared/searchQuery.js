@@ -149,6 +149,7 @@ function parseClause(tok) {
   }
 
   if (field === 'name' || field === 'desc' || field === 'ocr') {
+    if (value.toLowerCase() === 'none') return { field, op: 'none', value: null, negated };
     return { field, op: 'contains', value: value.toLowerCase(), negated };
   }
 
@@ -213,9 +214,21 @@ function matchClause(item, clause) {
     return c != null && c.toLowerCase() === clause.value;
   }
 
-  if (clause.field === 'name') return (item.name ?? '').toLowerCase().includes(clause.value);
-  if (clause.field === 'desc') return (item.description ?? '').toLowerCase().includes(clause.value);
-  if (clause.field === 'ocr') return (item.ocr_text ?? '').toLowerCase().includes(clause.value);
+  if (clause.field === 'name') {
+    const v = (item.name ?? '').trim();
+    if (clause.op === 'none') return v === '';
+    return v.toLowerCase().includes(clause.value);
+  }
+  if (clause.field === 'desc') {
+    const v = (item.description ?? '').trim();
+    if (clause.op === 'none') return v === '';
+    return v.toLowerCase().includes(clause.value);
+  }
+  if (clause.field === 'ocr') {
+    const v = (item.ocr_text ?? '').trim();
+    if (clause.op === 'none') return v === '';
+    return v.toLowerCase().includes(clause.value);
+  }
 
   if (clause.field === 'acquired') {
     const y = item.acquired_year;
