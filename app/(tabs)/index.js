@@ -46,6 +46,7 @@ export default function Collection() {
     toggleTagPrivacy,
     renameTag,
     refresh,
+    setBatchModeActive,
   } = useCollection();
 
   const [activeTag, setActiveTag] = useState(null);
@@ -88,6 +89,11 @@ export default function Collection() {
 
   const batchMode = selectedIds.size > 0;
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
+
+  useEffect(() => {
+    setBatchModeActive(batchMode);
+    return () => setBatchModeActive(false);
+  }, [batchMode, setBatchModeActive]);
 
   function toggleBatchSelect(itemId) {
     setSelectedIds(prev => {

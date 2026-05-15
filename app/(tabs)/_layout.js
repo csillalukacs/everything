@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCollection } from '../../lib/CollectionProvider';
 import { S } from '../../shared/strings';
 
 const TAB_BAR_HEIGHT = 70;
@@ -58,6 +59,8 @@ function CustomTabBar({ state, navigation }) {
 function FloatingAddButton() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { batchModeActive } = useCollection();
+  if (batchModeActive) return null;
   const bottomOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12) + 12;
   return (
     <TouchableOpacity
