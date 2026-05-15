@@ -1265,6 +1265,8 @@ input {
   flex-wrap: wrap;
   gap: 8px;
   margin-bottom: 12px;
+  max-height: 180px;
+  overflow-y: auto;
 }
 
 .new-tag-row {
