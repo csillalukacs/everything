@@ -50,6 +50,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [removingBg, setRemovingBg] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
   const ocrPromiseRef = useRef(null);
+  const scrollRef = useRef(null);
   const translateX = useSharedValue(0);
   const pendingDir = useRef(null);
 
@@ -118,8 +119,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   function cancelEdit() {
     setEditing(false);
-    setAddingTag(false);
-    setNewTagName('');
     setEditDescription('');
     setDisplayedIdx(0);
     ocrPromiseRef.current = null;
@@ -280,7 +279,12 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
             />
 
             <View style={styles.editFields}>
-              <TagInput allTags={allTags} selectedTags={editTags} onChange={setEditTags} />
+              <TagInput
+                allTags={allTags}
+                selectedTags={editTags}
+                onChange={setEditTags}
+                onStartAdding={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
+              />
               <ItemFieldsEditor
                 name={editName}
                 onNameChange={setEditName}

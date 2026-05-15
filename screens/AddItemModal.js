@@ -158,7 +158,12 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
           </TouchableOpacity>
         </View>
 
-        <TagInput allTags={allTags} selectedTags={tags} onChange={setTags} />
+        <TagInput
+          allTags={allTags}
+          selectedTags={tags}
+          onChange={setTags}
+          onStartAdding={() => setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150)}
+        />
 
         <TextInput
           style={styles.input}

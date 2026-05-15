@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
 
-export default function TagInput({ allTags = [], selectedTags, onChange }) {
+export default function TagInput({ allTags = [], selectedTags, onChange, onStartAdding }) {
   const [addingTag, setAddingTag] = useState(false);
   const [newTagName, setNewTagName] = useState('');
 
@@ -68,7 +68,10 @@ export default function TagInput({ allTags = [], selectedTags, onChange }) {
       ) : (
         <TouchableOpacity
           style={[styles.tagChip, styles.tagChipAdd]}
-          onPress={() => setAddingTag(true)}
+          onPress={() => {
+            setAddingTag(true);
+            onStartAdding?.();
+          }}
         >
           <Ionicons name="add" size={16} color="#999" />
         </TouchableOpacity>
