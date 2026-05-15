@@ -2,6 +2,8 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
+import { FEATURED_TAG_NAME } from '../shared/featuredTag';
+import AppleIcon from './AppleIcon';
 
 export default function TagInput({ allTags = [], selectedTags, onChange, onStartAdding }) {
   const [addingTag, setAddingTag] = useState(false);
@@ -9,7 +11,11 @@ export default function TagInput({ allTags = [], selectedTags, onChange, onStart
 
   const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name));
   const tagPrivacyMap = Object.fromEntries(allTags.filter(t => typeof t === 'object').map(t => [t.name, t.is_private]));
-  const tagOptions = [...new Set([...allTagNames, ...selectedTags])].sort();
+  const tagOptions = [...new Set([...allTagNames, ...selectedTags])].sort((a, b) => {
+    if (a === FEATURED_TAG_NAME) return -1;
+    if (b === FEATURED_TAG_NAME) return 1;
+    return a.localeCompare(b);
+  });
 
   function toggleTag(tag) {
     onChange(selectedTags.includes(tag) ? selectedTags.filter(t => t !== tag) : [...selectedTags, tag]);
@@ -36,6 +42,7 @@ export default function TagInput({ allTags = [], selectedTags, onChange, onStart
     >
       {tagOptions.map(tag => {
         const selected = selectedTags.includes(tag);
+        const featured = tag === FEATURED_TAG_NAME;
         const isTagPrivate = tagPrivacyMap[tag];
         return (
           <TouchableOpacity
@@ -43,7 +50,8 @@ export default function TagInput({ allTags = [], selectedTags, onChange, onStart
             style={[styles.tagChip, selected && styles.tagChipSelected]}
             onPress={() => toggleTag(tag)}
           >
-            {isTagPrivate && <Ionicons name="lock-closed" size={10} color={selected ? '#fff' : '#ccc'} />}
+            {featured && <AppleIcon size={14} />}
+            {isTagPrivate && !featured && <Ionicons name="lock-closed" size={10} color={selected ? '#fff' : '#ccc'} />}
             <Text style={[styles.tagChipText, selected && styles.tagChipTextSelected]}>{tag}</Text>
           </TouchableOpacity>
         );

@@ -17,6 +17,7 @@ import { FEATURED_TAG_NAME, isFeaturedTag, sortTagsFeaturedFirst, findFeaturedTa
 import ItemDetailModal from './ItemDetailModal';
 import Avatar from './Avatar';
 import ItemGrid from './ItemGrid';
+import AppleIcon from './AppleIcon';
 
 export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
   const [loading, setLoading] = useState(true);
@@ -225,7 +226,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
                     style={[styles.filterChip, active && styles.filterChipActive]}
                     onPress={() => setActiveTag(active ? null : tag)}
                   >
-                    {featured && <Ionicons name="star" size={12} color="#F5C518" />}
+                    {featured && <AppleIcon size={14} />}
                     <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
                     <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{count}</Text>
                   </TouchableOpacity>

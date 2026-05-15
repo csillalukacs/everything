@@ -1,7 +1,7 @@
 import { S } from '../../../shared/strings'
 import { isFeaturedTag, sortTagsFeaturedFirst } from '../../../shared/featuredTag'
 import LockIcon from './LockIcon'
-import { SettingsIcon, StarIcon } from './Icons'
+import { AppleIcon, SettingsIcon } from './Icons'
 
 export default function TagFilterChips({
   tags,
@@ -27,7 +27,7 @@ export default function TagFilterChips({
         className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
         onClick={() => onChangeActiveTag(activeTag?.id === tag.id ? null : tag)}
       >
-        {featured && <StarIcon size={12} />}
+        {featured && <AppleIcon size={14} />}
         {tag.is_private && !featured && <LockIcon size={10} color="currentColor" />}
         {tag.name}
         <span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span>

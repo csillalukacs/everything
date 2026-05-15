@@ -31,6 +31,8 @@ import Avatar from './Avatar';
 import TagInput from './TagInput';
 import PhotoStrip from './PhotoStrip';
 import ItemFieldsEditor from './ItemFieldsEditor';
+import AppleIcon from './AppleIcon';
+import { isFeaturedTag } from '../shared/featuredTag';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
@@ -365,13 +367,15 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 <View style={styles.tagRow}>
                   {itemTags.map(tag => {
                     const Wrapper = onTagPress ? TouchableOpacity : View;
+                    const featured = isFeaturedTag(tag);
                     return (
                       <Wrapper
                         key={tag.id}
                         style={styles.tagBadge}
                         {...(onTagPress ? { onPress: () => onTagPress(tag) } : {})}
                       >
-                        {tag.is_private && <Ionicons name="lock-closed" size={9} color="#bbb" />}
+                        {featured && <AppleIcon size={12} />}
+                        {tag.is_private && !featured && <Ionicons name="lock-closed" size={9} color="#bbb" />}
                         <Text style={styles.tagBadgeText}>{tag.name}</Text>
                       </Wrapper>
                     );

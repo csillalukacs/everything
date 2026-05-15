@@ -3,7 +3,7 @@ import { S } from '../../../shared/strings'
 import { filterAndSortTags, validateTagRename } from '../../../shared/tagManagement'
 import { isFeaturedTag } from '../../../shared/featuredTag'
 import LockIcon from '../components/LockIcon'
-import { PencilIcon, SearchIcon, StarIcon } from '../components/Icons'
+import { AppleIcon, PencilIcon, SearchIcon } from '../components/Icons'
 
 export default function ManageTagsSheet({
   visible,
@@ -83,7 +83,7 @@ export default function ManageTagsSheet({
               return (
                 <div key={tag.id} className="manage-tag-row">
                   <div className="manage-tag-info">
-                    {featured && <StarIcon size={14} />}
+                    {featured && <AppleIcon size={16} />}
                     {isRenaming ? (
                       <input
                         type="text"

@@ -16,6 +16,8 @@ import { locationSuggestionsFromItems } from '../shared/items';
 import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
+import AppleIcon from './AppleIcon';
+import { FEATURED_TAG_NAME } from '../shared/featuredTag';
 
 export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
   const { items } = useCollection();
@@ -67,7 +69,11 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
   }
 
   const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name));
-  const tagOptions = [...new Set([...allTagNames, ...pendingTags])].sort();
+  const tagOptions = [...new Set([...allTagNames, ...pendingTags])].sort((a, b) => {
+    if (a === FEATURED_TAG_NAME) return -1;
+    if (b === FEATURED_TAG_NAME) return 1;
+    return a.localeCompare(b);
+  });
 
   const hasChanges = pendingTags.length > 0 || year.trim().length > 0 || !!acquired;
 
@@ -85,12 +91,14 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
         >
           {tagOptions.map(tag => {
             const active = pendingTags.includes(tag);
+            const featured = tag === FEATURED_TAG_NAME;
             return (
               <TouchableOpacity
                 key={tag}
                 style={[styles.chip, active && styles.chipActive]}
                 onPress={() => toggleTag(tag)}
               >
+                {featured && <AppleIcon size={14} />}
                 <Text style={[styles.chipText, active && styles.chipTextActive]}>{tag}</Text>
               </TouchableOpacity>
             );

@@ -4,6 +4,7 @@ import { Dimensions, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, Vi
 
 const SHEET_HEIGHT = Math.min(Dimensions.get('window').height * 0.7, 560);
 import BottomSheet from './BottomSheet';
+import AppleIcon from './AppleIcon';
 import { S } from '../shared/strings';
 import { filterAndSortTags, validateTagRename } from '../shared/tagManagement';
 import { isFeaturedTag } from '../shared/featuredTag';
@@ -95,7 +96,7 @@ export default function ManageTagsSheet({
           return (
             <View style={[styles.row, index < listData.length - 1 && styles.rowBorder]}>
               <View style={styles.tagInfo}>
-                {featured && <Ionicons name="star" size={14} color="#F5C518" />}
+                {featured && <AppleIcon size={16} />}
                 {isRenaming ? (
                   <TextInput
                     style={[styles.tagName, styles.renameInput, renameError && styles.renameInputError]}

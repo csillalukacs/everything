@@ -6,6 +6,8 @@ import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 import LockIcon from '../components/LockIcon'
 import Avatar from '../components/Avatar'
+import { AppleIcon } from '../components/Icons'
+import { isFeaturedTag } from '../../../shared/featuredTag'
 
 export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], items = [], onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
@@ -252,17 +254,21 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 </div>
                 {itemTags.length > 0 && (
                   <div className="tag-row">
-                    {itemTags.map(tag => (
-                      onTagPress ? (
+                    {itemTags.map(tag => {
+                      const featured = isFeaturedTag(tag)
+                      const icon = featured
+                        ? <AppleIcon size={12} />
+                        : tag.is_private ? <LockIcon size={9} color="#bbb" /> : null
+                      return onTagPress ? (
                         <button key={tag.id} className="tag-badge" onClick={() => onTagPress(tag)}>
-                          {tag.is_private && <LockIcon size={9} color="#bbb" />}{tag.name}
+                          {icon}{tag.name}
                         </button>
                       ) : (
                         <span key={tag.id} className="tag-badge">
-                          {tag.is_private && <LockIcon size={9} color="#bbb" />}{tag.name}
+                          {icon}{tag.name}
                         </span>
                       )
-                    ))}
+                    })}
                   </div>
                 )}
                 {item.description && <p className="detail-description">{item.description}</p>}

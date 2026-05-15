@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { S } from '../../../shared/strings'
+import { FEATURED_TAG_NAME } from '../../../shared/featuredTag'
 import LockIcon from '../components/LockIcon'
+import { AppleIcon } from '../components/Icons'
 
 export default function TagInput({ value = [], onChange, allTags = [], placeholder = S.tagInput.defaultPlaceholder }) {
   const [query, setQuery] = useState('')
@@ -16,9 +18,14 @@ export default function TagInput({ value = [], onChange, allTags = [], placehold
 
   const trimmedQuery = query.trim().toLowerCase()
   const available = allTagNames.filter(n => !value.includes(n))
-  const matches = trimmedQuery
+  const matchesRaw = trimmedQuery
     ? available.filter(n => n.includes(trimmedQuery))
     : available
+  const matches = matchesRaw.slice().sort((a, b) => {
+    if (a === FEATURED_TAG_NAME) return -1
+    if (b === FEATURED_TAG_NAME) return 1
+    return 0
+  })
   const exactExists = trimmedQuery && allTagNames.includes(trimmedQuery)
   const canCreate = trimmedQuery && !exactExists && !value.includes(trimmedQuery)
   const totalOptions = matches.length + (canCreate ? 1 : 0)
@@ -70,9 +77,11 @@ export default function TagInput({ value = [], onChange, allTags = [], placehold
       <div className="tag-input-row" onClick={() => inputRef.current?.focus()}>
         {value.map(tag => {
           const isPriv = tagPrivacyMap[tag]
+          const featured = tag === FEATURED_TAG_NAME
           return (
             <span key={tag} className="tag-input-chip">
-              {isPriv && <LockIcon size={10} color="#fff" />}
+              {featured && <AppleIcon size={12} />}
+              {isPriv && !featured && <LockIcon size={10} color="#fff" />}
               {tag}
               <button
                 type="button"
@@ -99,6 +108,7 @@ export default function TagInput({ value = [], onChange, allTags = [], placehold
         <div className="tag-input-dropdown">
           {matches.map((name, i) => {
             const isPriv = tagPrivacyMap[name]
+            const featured = name === FEATURED_TAG_NAME
             return (
               <button
                 type="button"
@@ -108,7 +118,8 @@ export default function TagInput({ value = [], onChange, allTags = [], placehold
                 onClick={() => add(name)}
                 onMouseEnter={() => setHighlight(i)}
               >
-                {isPriv && <LockIcon size={10} color="#bbb" />}
+                {featured && <AppleIcon size={12} />}
+                {isPriv && !featured && <LockIcon size={10} color="#bbb" />}
                 {name}
               </button>
             )

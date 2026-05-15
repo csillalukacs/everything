@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
 import { isFeaturedTag, sortTagsFeaturedFirst } from '../shared/featuredTag';
+import AppleIcon from './AppleIcon';
 
 export default function TagFilterChips({
   tags,
@@ -24,7 +25,7 @@ export default function TagFilterChips({
         style={[styles.filterChip, active && styles.filterChipActive]}
         onPress={() => onChangeActiveTag(active ? null : tag)}
       >
-        {featured && <Ionicons name="star" size={12} color="#F5C518" />}
+        {featured && <AppleIcon size={14} />}
         {tag.is_private && !featured && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
         <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
         <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>

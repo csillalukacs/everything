@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react'
 import { S } from '../../../shared/strings'
 import { locationSuggestionsFromItems } from '../../../shared/items'
+import { FEATURED_TAG_NAME, isFeaturedTag } from '../../../shared/featuredTag'
+import { AppleIcon } from '../components/Icons'
 import LocationPicker from './LocationPicker'
 
 export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], items = [], selectedCount, activeTag = null, loading = false }) {
@@ -56,7 +58,11 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
   }
 
   const allTagNames = allTags.map(t => (typeof t === 'string' ? t : t.name))
-  const tagOptions = [...new Set([...allTagNames, ...pendingTags])].sort()
+  const tagOptions = [...new Set([...allTagNames, ...pendingTags])].sort((a, b) => {
+    if (a === FEATURED_TAG_NAME) return -1
+    if (b === FEATURED_TAG_NAME) return 1
+    return a.localeCompare(b)
+  })
   const hasChanges = pendingTags.length > 0 || year.trim().length > 0 || !!acquired || (removeActiveTag && !!removableTag)
 
   return (
@@ -69,12 +75,13 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
           <div className="tag-scroll">
             {tagOptions.map(tag => {
               const active = pendingTags.includes(tag)
+              const featured = tag === FEATURED_TAG_NAME
               return (
                 <button
                   key={tag}
                   className={`chip${active ? ' chip-active' : ''}`}
                   onClick={() => toggleTag(tag)}
-                >{tag}</button>
+                >{featured && <AppleIcon size={14} />}{tag}</button>
               )
             })}
             {addingTag ? (
@@ -102,7 +109,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
             <button
               className={`chip${removeActiveTag ? ' chip-active' : ''}`}
               onClick={() => setRemoveActiveTag(v => !v)}
-            >{removableTag.name}</button>
+            >{isFeaturedTag(removableTag) && <AppleIcon size={14} />}{removableTag.name}</button>
           </div>
         )}
 
