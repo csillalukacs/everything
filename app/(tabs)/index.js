@@ -82,6 +82,13 @@ export default function Collection() {
     }
   }, [params.city, router]);
 
+  useEffect(() => {
+    if (!params.item || items.length === 0) return;
+    const found = items.find(i => i.id === String(params.item));
+    if (found) setSelectedItem(found);
+    router.setParams({ item: undefined });
+  }, [params.item, items, router]);
+
   const availableYears = [...new Set(items.map(i => i.acquired_year).filter(y => y != null))].sort((a, b) => b - a);
   const availableCities = [...new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))].sort();
   const hasMissingYear = items.some(i => i.acquired_year == null);

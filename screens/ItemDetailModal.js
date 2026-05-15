@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   ScrollView,
+  Share,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -33,7 +34,7 @@ import ItemFieldsEditor from './ItemFieldsEditor';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
-  const { items } = useCollection();
+  const { items, session, profile } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -165,6 +166,22 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     };
   }
 
+  async function handleShare() {
+    const isMine = session?.user?.id === item.user_id;
+    const slug = isMine
+      ? (profile?.username || session?.user?.id)
+      : (item.profile?.username || item.user_id);
+    if (!slug) return;
+    const url = `things://u/${slug}?item=${item.id}`;
+    const name = item.name?.trim();
+    try {
+      await Share.share({
+        message: name ? `${name}\n${url}` : url,
+        url,
+      });
+    } catch {}
+  }
+
   async function handleSave() {
     setSaving(true);
     const ocrText = ocrPromiseRef.current ? await ocrPromiseRef.current : undefined;
@@ -222,14 +239,23 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               </TouchableOpacity>
             </View>
           )}
-          {onSave ? (
-            <TouchableOpacity onPress={editing ? handleSave : enterEdit} style={styles.headerButton} disabled={saving}>
-              <Text style={[styles.headerButtonText, editing && styles.saveText]}>
-                {editing ? (saving ? S.common.saving : S.common.save) : S.common.edit}
+          {editing ? (
+            <TouchableOpacity onPress={handleSave} style={styles.headerButton} disabled={saving}>
+              <Text style={[styles.headerButtonText, styles.saveText]}>
+                {saving ? S.common.saving : S.common.save}
               </Text>
             </TouchableOpacity>
           ) : (
-            <View style={styles.headerButton} />
+            <View style={styles.rightButtons}>
+              <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
+                <Ionicons name="share-outline" size={24} color="#2D2D2D" />
+              </TouchableOpacity>
+              {onSave && (
+                <TouchableOpacity onPress={enterEdit} style={styles.headerButton}>
+                  <Text style={styles.headerButtonText}>{S.common.edit}</Text>
+                </TouchableOpacity>
+              )}
+            </View>
           )}
         </View>
 
@@ -414,6 +440,11 @@ const styles = StyleSheet.create({
   },
   navButtons: {
     flexDirection: 'row',
+    gap: 4,
+  },
+  rightButtons: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 4,
   },
   navButton: {

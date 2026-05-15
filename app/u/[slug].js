@@ -7,7 +7,7 @@ import ProfileViewScreen from '../../screens/ProfileViewScreen';
 import { UUID_RE } from '../../shared/identifiers';
 
 export default function ProfileSlugRoute() {
-  const { slug } = useLocalSearchParams();
+  const { slug, item } = useLocalSearchParams();
   const router = useRouter();
   const { session } = useCollection();
   const [resolving, setResolving] = useState(true);
@@ -31,7 +31,7 @@ export default function ProfileSlugRoute() {
       }
       if (cancelled) return;
       if (resolvedId === session.user.id) {
-        router.replace('/');
+        router.replace(item ? `/?item=${item}` : '/');
       } else {
         setShouldShow(true);
         setResolving(false);
@@ -48,5 +48,5 @@ export default function ProfileSlugRoute() {
     );
   }
 
-  return <ProfileViewScreen visible slug={slug} onClose={() => router.back()} />;
+  return <ProfileViewScreen visible slug={slug} initialItemId={item} onClose={() => router.back()} />;
 }

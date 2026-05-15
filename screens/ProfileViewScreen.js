@@ -17,7 +17,7 @@ import ItemDetailModal from './ItemDetailModal';
 import Avatar from './Avatar';
 import ItemGrid from './ItemGrid';
 
-export default function ProfileViewScreen({ visible, slug, onClose }) {
+export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -28,6 +28,20 @@ export default function ProfileViewScreen({ visible, slug, onClose }) {
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
+  const [openedInitial, setOpenedInitial] = useState(false);
+
+  useEffect(() => {
+    setOpenedInitial(false);
+  }, [slug, initialItemId]);
+
+  useEffect(() => {
+    if (openedInitial || !initialItemId || items.length === 0) return;
+    const found = items.find(i => i.id === initialItemId);
+    if (found) {
+      setSelectedItem(found);
+      setOpenedInitial(true);
+    }
+  }, [openedInitial, initialItemId, items]);
 
   useEffect(() => {
     if (!visible || !slug) return;
