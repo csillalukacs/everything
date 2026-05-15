@@ -8,6 +8,7 @@ import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
+import { FEATURED_TAG_NAME, isFeaturedTag, sortTagsFeaturedFirst, findFeaturedTag, ensureFeaturedTag } from '../../../shared/featuredTag'
 import ItemDetailModal from './ItemDetailModal'
 import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
@@ -75,14 +76,20 @@ export default function ProfilePage() {
   function openItem(item) { updateParams({ item: item.id }) }
   function closeItem() { updateParams({ item: null }) }
   function setActiveTag(tag) {
-    if (!tag) updateParams({ tag: null })
+    if (!tag) updateParams({ tag: 'all' })
     else if (tag.id === '__untagged__') updateParams({ tag: '__untagged__' })
+    else if (isFeaturedTag(tag)) updateParams({ tag: null })
     else updateParams({ tag: tag.name })
   }
 
   const activeTag = useMemo(() => {
-    if (!tagParam) return null
+    if (tagParam === 'all') return null
     if (tagParam === '__untagged__') return { id: '__untagged__' }
+    if (!tagParam || tagParam === FEATURED_TAG_NAME) {
+      return findFeaturedTag(allTags)
+        ?? findFeaturedTag(items.flatMap(i => i.tags ?? []))
+        ?? { id: '__featured__', name: FEATURED_TAG_NAME, is_private: false }
+    }
     const fromAll = allTags.find(t => t.name === tagParam)
     if (fromAll) return fromAll
     for (const item of items) {
@@ -159,8 +166,13 @@ export default function ProfilePage() {
           setSessionUserId(session.user.id)
           const { data: tagsData } = await supabase.from('tags').select('*').eq('user_id', session.user.id).order('name')
           if (tagsData) {
-            setAllTags(tagsData)
-            writeCache(tagsCacheKey(resolvedId), tagsData)
+            let next = tagsData
+            if (!next.some(isFeaturedTag)) {
+              const created = await ensureFeaturedTag(supabase, session.user.id, next)
+              if (created) next = [...next, created]
+            }
+            setAllTags(next)
+            writeCache(tagsCacheKey(resolvedId), next)
           }
         }
       }
@@ -434,7 +446,11 @@ export default function ProfilePage() {
       if (!tag.is_private) tagMap.set(tag.id, tag)
     })
   })
-  const visibleTags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name))
+  const visibleTagsList = [...tagMap.values()]
+  if (!visibleTagsList.some(isFeaturedTag)) {
+    visibleTagsList.push({ id: '__featured__', name: FEATURED_TAG_NAME, is_private: false })
+  }
+  const visibleTags = sortTagsFeaturedFirst(visibleTagsList)
 
   const sortedItems = useMemo(
     () => sortItems(items, sortParam, randomSeed),
@@ -497,18 +513,25 @@ export default function ProfilePage() {
 
   const filteredItems = activeTag?.id === '__untagged__'
     ? searchedItems.filter(i => (i.tags ?? []).length === 0)
-    : activeTag
-      ? searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
-      : searchedItems
+    : isFeaturedTag(activeTag)
+      ? searchedItems.filter(i => (i.tags ?? []).some(isFeaturedTag))
+      : activeTag
+        ? searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
+        : searchedItems
   const visibleItemIds = new Set(filteredItems.map(i => i.id))
 
   const tagCounts = new Map()
   let untaggedCount = 0
+  let featuredCount = 0
   for (const item of searchedItems) {
     const tagsArr = item.tags ?? []
     if (tagsArr.length === 0) untaggedCount++
-    for (const t of tagsArr) tagCounts.set(t.id, (tagCounts.get(t.id) ?? 0) + 1)
+    for (const t of tagsArr) {
+      tagCounts.set(t.id, (tagCounts.get(t.id) ?? 0) + 1)
+      if (isFeaturedTag(t)) featuredCount++
+    }
   }
+  tagCounts.set('__featured__', featuredCount)
 
   const totalTagCounts = new Map()
   for (const item of items) {

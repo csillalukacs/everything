@@ -6,6 +6,7 @@ const SHEET_HEIGHT = Math.min(Dimensions.get('window').height * 0.7, 560);
 import BottomSheet from './BottomSheet';
 import { S } from '../shared/strings';
 import { filterAndSortTags, validateTagRename } from '../shared/tagManagement';
+import { isFeaturedTag } from '../shared/featuredTag';
 
 export default function ManageTagsSheet({
   visible,
@@ -90,9 +91,11 @@ export default function ManageTagsSheet({
         }
         renderItem={({ item: tag, index }) => {
           const isRenaming = renamingTagId === tag.id;
+          const featured = isFeaturedTag(tag);
           return (
             <View style={[styles.row, index < listData.length - 1 && styles.rowBorder]}>
               <View style={styles.tagInfo}>
+                {featured && <Ionicons name="star" size={14} color="#F5C518" />}
                 {isRenaming ? (
                   <TextInput
                     style={[styles.tagName, styles.renameInput, renameError && styles.renameInputError]}
@@ -122,9 +125,11 @@ export default function ManageTagsSheet({
                   </TouchableOpacity>
                 ) : (
                   <>
-                    <TouchableOpacity onPress={() => startRenameTag(tag)} style={styles.lockBtn}>
-                      <Ionicons name="pencil-outline" size={16} color="#999" />
-                    </TouchableOpacity>
+                    {!featured && (
+                      <TouchableOpacity onPress={() => startRenameTag(tag)} style={styles.lockBtn}>
+                        <Ionicons name="pencil-outline" size={16} color="#999" />
+                      </TouchableOpacity>
+                    )}
                     <TouchableOpacity onPress={() => onToggleTagPrivacy(tag)} style={styles.lockBtn}>
                       <Ionicons
                         name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
@@ -132,9 +137,11 @@ export default function ManageTagsSheet({
                         color={tag.is_private ? '#2D2D2D' : '#ccc'}
                       />
                     </TouchableOpacity>
-                    <TouchableOpacity onPress={() => onDelete(tag)}>
-                      <Text style={styles.deleteBtn}>{S.common.delete}</Text>
-                    </TouchableOpacity>
+                    {!featured && (
+                      <TouchableOpacity onPress={() => onDelete(tag)}>
+                        <Text style={styles.deleteBtn}>{S.common.delete}</Text>
+                      </TouchableOpacity>
+                    )}
                   </>
                 )}
               </View>

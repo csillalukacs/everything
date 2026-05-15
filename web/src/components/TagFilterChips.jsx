@@ -1,6 +1,7 @@
 import { S } from '../../../shared/strings'
+import { isFeaturedTag, sortTagsFeaturedFirst } from '../../../shared/featuredTag'
 import LockIcon from './LockIcon'
-import { SettingsIcon } from './Icons'
+import { SettingsIcon, StarIcon } from './Icons'
 
 export default function TagFilterChips({
   tags,
@@ -10,29 +11,45 @@ export default function TagFilterChips({
   untaggedCount,
   tagCounts,
   showUntagged = false,
+  showAll = true,
   onManagePress,
 }) {
   if (tags.length === 0) return null
   const isUntagged = activeTag?.id === '__untagged__'
+  const orderedTags = sortTagsFeaturedFirst(tags)
+  const featuredTag = orderedTags.find(isFeaturedTag)
+  const otherTags = orderedTags.filter(t => !isFeaturedTag(t))
+  const renderTagChip = (tag) => {
+    const featured = isFeaturedTag(tag)
+    return (
+      <button
+        key={tag.id}
+        className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
+        onClick={() => onChangeActiveTag(activeTag?.id === tag.id ? null : tag)}
+      >
+        {featured && <StarIcon size={12} />}
+        {tag.is_private && !featured && <LockIcon size={10} color="currentColor" />}
+        {tag.name}
+        <span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span>
+      </button>
+    )
+  }
   const scroll = (
     <div className="filter-scroll">
-      <button
-        className={`chip${!activeTag ? ' chip-active' : ''}`}
-        onClick={() => onChangeActiveTag(null)}
-      >{S.common.all}<span className="chip-count">{totalCount}</span></button>
+      {featuredTag && renderTagChip(featuredTag)}
+      {showAll && (
+        <button
+          className={`chip${!activeTag ? ' chip-active' : ''}`}
+          onClick={() => onChangeActiveTag(null)}
+        >{S.common.all}<span className="chip-count">{totalCount}</span></button>
+      )}
       {showUntagged && (
         <button
           className={`chip${isUntagged ? ' chip-active' : ''}`}
           onClick={() => onChangeActiveTag(isUntagged ? null : { id: '__untagged__' })}
         >{S.collection.untagged}<span className="chip-count">{untaggedCount}</span></button>
       )}
-      {tags.map(tag => (
-        <button
-          key={tag.id}
-          className={`chip${activeTag?.id === tag.id ? ' chip-active' : ''}`}
-          onClick={() => onChangeActiveTag(activeTag?.id === tag.id ? null : tag)}
-        >{tag.is_private && <LockIcon size={10} color="currentColor" />}{tag.name}<span className="chip-count">{tagCounts.get(tag.id) ?? 0}</span></button>
-      ))}
+      {otherTags.map(renderTagChip)}
     </div>
   )
   if (!onManagePress) return scroll

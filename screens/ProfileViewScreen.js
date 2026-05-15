@@ -13,6 +13,7 @@ import { supabase } from '../lib/supabase';
 import { fetchAllItems, fetchItemCount } from '../shared/itemsApi';
 import { UUID_RE } from '../shared/identifiers';
 import { S } from '../shared/strings';
+import { FEATURED_TAG_NAME, isFeaturedTag, sortTagsFeaturedFirst, findFeaturedTag } from '../shared/featuredTag';
 import ItemDetailModal from './ItemDetailModal';
 import Avatar from './Avatar';
 import ItemGrid from './ItemGrid';
@@ -24,7 +25,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
   const [resolvedUserId, setResolvedUserId] = useState(null);
   const [items, setItems] = useState([]);
   const [itemCount, setItemCount] = useState(null);
-  const [activeTag, setActiveTag] = useState(null);
+  const [activeTag, setActiveTag] = useState({ id: '__featured__', name: FEATURED_TAG_NAME, is_private: false });
   const [selectedItem, setSelectedItem] = useState(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
@@ -52,7 +53,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
     setResolvedUserId(null);
     setItems([]);
     setItemCount(null);
-    setActiveTag(null);
+    setActiveTag({ id: '__featured__', name: FEATURED_TAG_NAME, is_private: false });
     setSelectedItem(null);
     setSearchQuery('');
 
@@ -136,16 +137,22 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
       if (!tag.is_private) tagMap.set(tag.id, tag);
     });
   });
-  const visibleTags = [...tagMap.values()].sort((a, b) => a.name.localeCompare(b.name));
+  const visibleTagsList = [...tagMap.values()];
+  if (!findFeaturedTag(visibleTagsList)) {
+    visibleTagsList.push({ id: '__featured__', name: FEATURED_TAG_NAME, is_private: false });
+  }
+  const visibleTags = sortTagsFeaturedFirst(visibleTagsList);
 
   const tagCounts = new Map();
   for (const item of searchedItems) {
     for (const t of (item.tags ?? [])) tagCounts.set(t.id, (tagCounts.get(t.id) ?? 0) + 1);
   }
 
-  const filteredItems = activeTag
-    ? searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id))
-    : searchedItems;
+  const filteredItems = !activeTag
+    ? searchedItems
+    : isFeaturedTag(activeTag)
+      ? searchedItems.filter(i => (i.tags ?? []).some(t => t.name === FEATURED_TAG_NAME))
+      : searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id));
 
   const headerTitle = profile?.display_name
     ?? (profile?.username ? `@${profile.username}` : (slug ?? '').slice(0, 8));
@@ -205,35 +212,46 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
               )}
             </View>
 
-            {visibleTags.length > 0 && (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                style={styles.filterScroll}
-                contentContainerStyle={styles.filterScrollContent}
-              >
-                <TouchableOpacity
-                  style={[styles.filterChip, !activeTag && styles.filterChipActive]}
-                  onPress={() => setActiveTag(null)}
+            {visibleTags.length > 0 && (() => {
+              const renderTagChip = (tag) => {
+                const featured = isFeaturedTag(tag);
+                const active = featured ? isFeaturedTag(activeTag) : activeTag?.id === tag.id;
+                const count = featured
+                  ? searchedItems.filter(i => (i.tags ?? []).some(t => t.name === FEATURED_TAG_NAME)).length
+                  : (tagCounts.get(tag.id) ?? 0);
+                return (
+                  <TouchableOpacity
+                    key={tag.id}
+                    style={[styles.filterChip, active && styles.filterChipActive]}
+                    onPress={() => setActiveTag(active ? null : tag)}
+                  >
+                    {featured && <Ionicons name="star" size={12} color="#F5C518" />}
+                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
+                    <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{count}</Text>
+                  </TouchableOpacity>
+                );
+              };
+              const featuredTag = visibleTags.find(isFeaturedTag);
+              const otherTags = visibleTags.filter(t => !isFeaturedTag(t));
+              return (
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={styles.filterScroll}
+                  contentContainerStyle={styles.filterScrollContent}
                 >
-                  <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>{S.common.all}</Text>
-                  <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
-                </TouchableOpacity>
-                {visibleTags.map(tag => {
-                  const active = activeTag?.id === tag.id;
-                  return (
-                    <TouchableOpacity
-                      key={tag.id}
-                      style={[styles.filterChip, active && styles.filterChipActive]}
-                      onPress={() => setActiveTag(active ? null : tag)}
-                    >
-                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
-                      <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>
-                    </TouchableOpacity>
-                  );
-                })}
-              </ScrollView>
-            )}
+                  {featuredTag && renderTagChip(featuredTag)}
+                  <TouchableOpacity
+                    style={[styles.filterChip, !activeTag && styles.filterChipActive]}
+                    onPress={() => setActiveTag(null)}
+                  >
+                    <Text style={[styles.filterChipText, !activeTag && styles.filterChipTextActive]}>{S.common.all}</Text>
+                    <Text style={[styles.filterChipCount, !activeTag && styles.filterChipCountActive]}>{searchedItems.length}</Text>
+                  </TouchableOpacity>
+                  {otherTags.map(renderTagChip)}
+                </ScrollView>
+              );
+            })()}
 
             <ItemGrid
               items={filteredItems}

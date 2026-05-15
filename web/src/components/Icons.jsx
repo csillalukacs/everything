@@ -27,6 +27,14 @@ export function PencilIcon({ size = 14, color = 'currentColor' }) {
   )
 }
 
+export function StarIcon({ size = 12, color = '#F5C518' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill={color} stroke={color} strokeWidth="1" strokeLinejoin="round" aria-hidden>
+      <polygon points="12 2 15 9 22 9 17 14 19 22 12 17 5 22 7 14 2 9 9 9" />
+    </svg>
+  )
+}
+
 export function SearchIcon({ size = 16, color = '#999', className }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>

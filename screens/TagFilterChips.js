@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
+import { isFeaturedTag, sortTagsFeaturedFirst } from '../shared/featuredTag';
 
 export default function TagFilterChips({
   tags,
@@ -13,6 +14,25 @@ export default function TagFilterChips({
 }) {
   if (tags.length === 0) return null;
   const isUntagged = activeTag?.id === '__untagged__';
+  const orderedTags = sortTagsFeaturedFirst(tags);
+  const renderTagChip = (tag) => {
+    const active = activeTag?.id === tag.id;
+    const featured = isFeaturedTag(tag);
+    return (
+      <TouchableOpacity
+        key={tag.id}
+        style={[styles.filterChip, active && styles.filterChipActive]}
+        onPress={() => onChangeActiveTag(active ? null : tag)}
+      >
+        {featured && <Ionicons name="star" size={12} color="#F5C518" />}
+        {tag.is_private && !featured && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
+        <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
+        <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>
+      </TouchableOpacity>
+    );
+  };
+  const featuredTag = orderedTags.find(isFeaturedTag);
+  const otherTags = orderedTags.filter(t => !isFeaturedTag(t));
   return (
     <View style={styles.filterRow}>
       <ScrollView
@@ -21,6 +41,7 @@ export default function TagFilterChips({
         style={styles.filterScroll}
         contentContainerStyle={styles.filterScrollContent}
       >
+        {featuredTag && renderTagChip(featuredTag)}
         <TouchableOpacity
           style={[styles.filterChip, !activeTag && styles.filterChipActive]}
           onPress={() => onChangeActiveTag(null)}
@@ -35,20 +56,7 @@ export default function TagFilterChips({
           <Text style={[styles.filterChipText, isUntagged && styles.filterChipTextActive]}>{S.collection.untagged}</Text>
           <Text style={[styles.filterChipCount, isUntagged && styles.filterChipCountActive]}>{untaggedCount}</Text>
         </TouchableOpacity>
-        {tags.map(tag => {
-          const active = activeTag?.id === tag.id;
-          return (
-            <TouchableOpacity
-              key={tag.id}
-              style={[styles.filterChip, active && styles.filterChipActive]}
-              onPress={() => onChangeActiveTag(active ? null : tag)}
-            >
-              {tag.is_private && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
-              <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>{tag.name}</Text>
-              <Text style={[styles.filterChipCount, active && styles.filterChipCountActive]}>{tagCounts.get(tag.id) ?? 0}</Text>
-            </TouchableOpacity>
-          );
-        })}
+        {otherTags.map(renderTagChip)}
       </ScrollView>
       {onManagePress && (
         <TouchableOpacity

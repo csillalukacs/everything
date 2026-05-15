@@ -1,8 +1,9 @@
 import { useMemo, useState } from 'react'
 import { S } from '../../../shared/strings'
 import { filterAndSortTags, validateTagRename } from '../../../shared/tagManagement'
+import { isFeaturedTag } from '../../../shared/featuredTag'
 import LockIcon from '../components/LockIcon'
-import { PencilIcon, SearchIcon } from '../components/Icons'
+import { PencilIcon, SearchIcon, StarIcon } from '../components/Icons'
 
 export default function ManageTagsSheet({
   visible,
@@ -78,9 +79,11 @@ export default function ManageTagsSheet({
             ? <p className="manage-tags-empty">{tags.length === 0 ? S.collection.noTagsYet : S.common.noMatches}</p>
             : listData.map(tag => {
               const isRenaming = renamingTagId === tag.id
+              const featured = isFeaturedTag(tag)
               return (
                 <div key={tag.id} className="manage-tag-row">
                   <div className="manage-tag-info">
+                    {featured && <StarIcon size={14} />}
                     {isRenaming ? (
                       <input
                         type="text"
@@ -109,13 +112,15 @@ export default function ManageTagsSheet({
                       <button className="link-btn" onMouseDown={e => e.preventDefault()} onClick={cancelRenameTag}>{S.common.cancel}</button>
                     ) : (
                       <>
-                        <button
-                          className="manage-tag-lock"
-                          onClick={() => startRenameTag(tag)}
-                          title={S.common.rename}
-                        >
-                          <PencilIcon size={14} color="#2D2D2D" />
-                        </button>
+                        {!featured && (
+                          <button
+                            className="manage-tag-lock"
+                            onClick={() => startRenameTag(tag)}
+                            title={S.common.rename}
+                          >
+                            <PencilIcon size={14} color="#2D2D2D" />
+                          </button>
+                        )}
                         <button
                           className={`manage-tag-lock${tag.is_private ? ' manage-tag-lock-on' : ''}`}
                           onClick={() => onToggleTagPrivacy(tag)}
@@ -123,7 +128,9 @@ export default function ManageTagsSheet({
                         >
                           <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
                         </button>
-                        <button className="manage-tag-delete" onClick={() => onDelete(tag)}>{S.common.delete}</button>
+                        {!featured && (
+                          <button className="manage-tag-delete" onClick={() => onDelete(tag)}>{S.common.delete}</button>
+                        )}
                       </>
                     )}
                   </div>
