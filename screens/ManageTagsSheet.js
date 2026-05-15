@@ -1,6 +1,8 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Dimensions, FlatList, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+
+const SHEET_HEIGHT = Math.min(Dimensions.get('window').height * 0.7, 560);
 import BottomSheet from './BottomSheet';
 import { S } from '../shared/strings';
 import { filterAndSortTags, validateTagRename } from '../shared/tagManagement';
@@ -52,7 +54,7 @@ export default function ManageTagsSheet({
   }
 
   return (
-    <BottomSheet visible={visible} onClose={handleClose} sheetStyle={styles.sheet}>
+    <BottomSheet visible={visible} onClose={handleClose} sheetStyle={styles.sheet} keyboardAvoiding>
       <View style={styles.header}>
         <Text style={styles.title}>{S.collection.manageTags(tags.length)}</Text>
         <TouchableOpacity onPress={handleClose}>
@@ -150,8 +152,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
-    height: '70%',
-    maxHeight: 560,
+    height: SHEET_HEIGHT,
     width: '100%',
     maxWidth: 480,
     alignSelf: 'center',
