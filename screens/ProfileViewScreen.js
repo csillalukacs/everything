@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   ScrollView,
@@ -31,10 +31,20 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
   const [searchQuery, setSearchQuery] = useState('');
   const [refreshing, setRefreshing] = useState(false);
   const [openedInitial, setOpenedInitial] = useState(false);
+  const featuredFallbackCheckedRef = useRef(false);
 
   useEffect(() => {
     setOpenedInitial(false);
+    featuredFallbackCheckedRef.current = false;
   }, [slug, initialItemId]);
+
+  useEffect(() => {
+    if (loading || featuredFallbackCheckedRef.current) return;
+    featuredFallbackCheckedRef.current = true;
+    if (!isFeaturedTag(activeTag)) return;
+    const hasFeatured = items.some(i => (i.tags ?? []).some(isFeaturedTag));
+    if (!hasFeatured) setActiveTag(null);
+  }, [loading, items, activeTag]);
 
   useEffect(() => {
     if (openedInitial || !initialItemId || items.length === 0) return;

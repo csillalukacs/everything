@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
@@ -193,6 +193,21 @@ export default function ProfilePage() {
     }
     load()
   }, [slug])
+
+  const featuredRedirectCheckedRef = useRef(false)
+  useEffect(() => {
+    if (loading || featuredRedirectCheckedRef.current) return
+    featuredRedirectCheckedRef.current = true
+    if (searchParams.get('tag')) return
+    const hasFeatured = items.some(i => (i.tags ?? []).some(isFeaturedTag))
+    if (!hasFeatured) {
+      const next = new URLSearchParams(searchParams)
+      next.set('tag', 'all')
+      setSearchParams(next, { replace: true })
+    }
+  }, [loading, items, searchParams, setSearchParams])
+
+  useEffect(() => { featuredRedirectCheckedRef.current = false }, [slug])
 
   useEffect(() => {
     if (!isOwner || !sessionUserId) return
