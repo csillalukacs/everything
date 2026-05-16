@@ -415,7 +415,7 @@ input {
   overflow: hidden;
   z-index: 200;
   box-shadow: 0 4px 16px rgba(0, 0, 0, 0.06);
-  max-height: 260px;
+  max-height: 320px;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
