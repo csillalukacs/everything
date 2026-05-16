@@ -198,7 +198,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
         </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false}>
+      <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled">
             <View style={styles.avatarSection}>
               <TouchableOpacity onPress={pickAvatar} disabled={uploadingAvatar} activeOpacity={0.8}>
                 <Avatar profile={{ ...profile, user_id: session?.user.id }} size={96} />
