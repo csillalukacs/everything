@@ -1,15 +1,16 @@
 import * as FileSystem from 'expo-file-system/legacy';
-import * as MediaLibrary from 'expo-media-library';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
-  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
 import { Image } from 'expo-image';
 import {
   AlphaType,
@@ -27,10 +28,13 @@ import {
   GestureDetector,
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useCollection } from '../lib/CollectionProvider';
 import { thumbOf } from '../shared/items';
 import { S } from '../shared/strings';
 
-const INITIAL_SIZE = 120;
+const LOGICAL_SIZE = 1000;
+const INITIAL_DIM = 200;
 const SCAN_SIZE = 64;
 
 async function loadSkiaImageCached(url) {
@@ -81,13 +85,33 @@ function computeTightBounds(skImg, itemWidth, itemHeight) {
   };
 }
 
-export default function CanvasScreen({ visible, onClose, items }) {
-  const [placedItems, setPlacedItems] = useState([]);
+function stripRuntime(items) {
+  return items.map(({ skImage, tightBounds, pending, ...rest }) => rest);
+}
+
+export default function CanvasScreen({
+  onClose,
+  collageId,
+  tagId,
+  tagItems,
+  initialTitle,
+  initialIsPrivate,
+  initialLayout,
+}) {
+  const insets = useSafeAreaInsets();
+  const { createCollage, updateCollage, uploadLocalPhoto } = useCollection();
+  const [placedItems, setPlacedItems] = useState(() => {
+    const seed = initialLayout?.items ?? [];
+    return seed.map(p => ({ ...p, skImage: null, tightBounds: null }));
+  });
   const [selectedId, setSelectedId] = useState(null);
+  const [title, setTitle] = useState(initialTitle ?? '');
+  const [isPrivate, setIsPrivate] = useState(initialIsPrivate ?? false);
+  const [dirty, setDirty] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [canvasSize, setCanvasSize] = useState({ width: 0, height: 0 });
   const canvasRef = useCanvasRef();
 
-  // Refs so gesture callbacks always see latest state
   const placedItemsRef = useRef([]);
   const selectedIdRef = useRef(null);
   const panStartRef = useRef(null);
@@ -97,67 +121,78 @@ export default function CanvasScreen({ visible, onClose, items }) {
   useEffect(() => { placedItemsRef.current = placedItems; }, [placedItems]);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
 
-  // Load Skia image whenever a new item with skImage=null is added
+  // Square logical canvas centered inside the available space.
+  const view = useMemo(() => {
+    const drawSize = Math.max(0, Math.min(canvasSize.width, canvasSize.height));
+    return {
+      drawSize,
+      scale: drawSize / LOGICAL_SIZE,
+      offsetX: (canvasSize.width - drawSize) / 2,
+      offsetY: (canvasSize.height - drawSize) / 2,
+    };
+  }, [canvasSize]);
+
+  // Load Skia image whenever a placed item with skImage=null is added/seeded.
   useEffect(() => {
-    placedItems.forEach(item => {
-      if (item.skImage === null) {
-        loadSkiaImageCached(item.imageUrl).then(data => {
-          if (!data) return;
-          const skImg = Skia.Image.MakeImageFromEncoded(data);
-          if (skImg) {
-            const maxDim = Math.max(skImg.width(), skImg.height());
-            const scale = INITIAL_SIZE / maxDim;
-            const w = skImg.width() * scale;
-            const h = skImg.height() * scale;
-            const tightBounds = computeTightBounds(skImg, w, h);
-            setPlacedItems(prev => prev.map(p =>
-              p.id === item.id
-                ? { ...p, skImage: skImg, width: w, height: h, tightBounds }
-                : p
-            ));
-          }
-        });
-      }
+    placedItems.forEach(p => {
+      if (p.skImage !== null) return;
+      loadSkiaImageCached(p.image_url).then(data => {
+        if (!data) return;
+        const skImg = Skia.Image.MakeImageFromEncoded(data);
+        if (!skImg) return;
+        let width = p.width;
+        let height = p.height;
+        if (p.pending || !width || !height) {
+          const maxDim = Math.max(skImg.width(), skImg.height());
+          const s = INITIAL_DIM / maxDim;
+          width = skImg.width() * s;
+          height = skImg.height() * s;
+        }
+        const tightBounds = computeTightBounds(skImg, width, height);
+        setPlacedItems(prev => prev.map(q =>
+          q.id === p.id ? { ...q, skImage: skImg, width, height, tightBounds, pending: false } : q,
+        ));
+      });
     });
   }, [placedItems.map(p => p.id).join(',')]);
 
-  // Reset state when modal closes
-  useEffect(() => {
-    if (!visible) {
-      setPlacedItems([]);
-      setSelectedId(null);
-    }
-  }, [visible]);
+  function screenToLogical(sx, sy) {
+    if (!view.scale) return { x: 0, y: 0 };
+    return { x: (sx - view.offsetX) / view.scale, y: (sy - view.offsetY) / view.scale };
+  }
 
   function addToCanvas(collectionItem) {
-    const id = String(Date.now());
+    const id = `p_${Date.now()}_${Math.floor(Math.random() * 1000)}`;
     setPlacedItems(prev => [...prev, {
       id,
-      imageUrl: collectionItem.image_url,
+      item_id: collectionItem.id,
+      image_url: collectionItem.image_url,
+      thumb_url: collectionItem.thumb_url ?? null,
       skImage: null,
-      x: canvasSize.width / 2,
-      y: canvasSize.height / 2,
+      pending: true,
+      x: LOGICAL_SIZE / 2,
+      y: LOGICAL_SIZE / 2,
       scale: 1,
       rotation: 0,
-      width: INITIAL_SIZE,
-      height: INITIAL_SIZE,
+      width: INITIAL_DIM,
+      height: INITIAL_DIM,
+      tightBounds: null,
     }]);
     setSelectedId(id);
+    setDirty(true);
   }
 
   function hitTest(touchX, touchY) {
+    const { x: lx, y: ly } = screenToLogical(touchX, touchY);
     const items = placedItemsRef.current;
     for (let i = items.length - 1; i >= 0; i--) {
       const item = items[i];
-      if (!item.skImage) continue;
-
-      const dx = touchX - item.x;
-      const dy = touchY - item.y;
+      const dx = lx - item.x;
+      const dy = ly - item.y;
       const cos = Math.cos(-item.rotation);
       const sin = Math.sin(-item.rotation);
       const localX = (cos * dx - sin * dy) / item.scale;
       const localY = (sin * dx + cos * dy) / item.scale;
-
       const b = item.tightBounds ?? { minX: -item.width / 2, minY: -item.height / 2, maxX: item.width / 2, maxY: item.height / 2 };
       if (localX >= b.minX && localX <= b.maxX && localY >= b.minY && localY <= b.maxY) return item.id;
     }
@@ -168,6 +203,7 @@ export default function CanvasScreen({ visible, onClose, items }) {
     const id = selectedIdRef.current;
     if (!id) return;
     setPlacedItems(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    setDirty(true);
   }
 
   const tapGesture = Gesture.Tap().runOnJS(true).onEnd((e) => {
@@ -190,12 +226,13 @@ export default function CanvasScreen({ visible, onClose, items }) {
     .onChange((e) => {
       if (!panStartRef.current) return;
       const id = selectedIdRef.current;
-      if (!id) return;
+      if (!id || !view.scale) return;
+      const dx = e.translationX / view.scale;
+      const dy = e.translationY / view.scale;
       setPlacedItems(prev => prev.map(p =>
-        p.id === id
-          ? { ...p, x: panStartRef.current.x + e.translationX, y: panStartRef.current.y + e.translationY }
-          : p
+        p.id === id ? { ...p, x: panStartRef.current.x + dx, y: panStartRef.current.y + dy } : p,
       ));
+      setDirty(true);
     });
 
   const pinchGesture = Gesture.Pinch().runOnJS(true)
@@ -224,51 +261,114 @@ export default function CanvasScreen({ visible, onClose, items }) {
     rotationGesture,
   );
 
-  async function handleExport() {
+  function requestClose() {
+    if (saving) return;
+    if (!dirty) { onClose(); return; }
+    Alert.alert(
+      S.collages.discardChangesTitle,
+      S.collages.discardChangesMessage,
+      [
+        { text: S.collages.keepEditing, style: 'cancel' },
+        { text: S.collages.discardChangesAction, style: 'destructive', onPress: onClose },
+      ],
+    );
+  }
+
+  async function bakeCover() {
+    if (!canvasRef.current || !view.drawSize) return null;
+    setSelectedId(null);
+    // One frame so the selection border disappears from the snapshot.
+    await new Promise(r => setTimeout(r, 16));
+    const rect = Skia.XYWHRect(view.offsetX, view.offsetY, view.drawSize, view.drawSize);
+    const snapshot = canvasRef.current.makeImageSnapshot(rect);
+    if (!snapshot) return null;
+    const base64 = snapshot.encodeToBase64(ImageFormat.PNG, 100);
+    const uri = `${FileSystem.cacheDirectory}collage_${Date.now()}.png`;
+    await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+    return uploadLocalPhoto(uri);
+  }
+
+  async function handleSave() {
+    if (saving) return;
+    setSaving(true);
     try {
-      if (!canvasRef.current) {
-        Alert.alert(S.canvas.error, S.canvas.canvasNotReady);
+      const cover = await bakeCover();
+      const layout = {
+        canvas: { size: LOGICAL_SIZE },
+        items: stripRuntime(placedItems),
+      };
+      const patch = {
+        title: title.trim(),
+        layout,
+        is_private: isPrivate,
+        ...(cover ? { cover_url: cover.image_url, cover_thumb_url: cover.thumb_url } : {}),
+      };
+      const row = collageId
+        ? await updateCollage(collageId, patch)
+        : await createCollage({
+            tagId,
+            title: patch.title,
+            layout,
+            isPrivate,
+            coverUrl: cover?.image_url ?? null,
+            coverThumbUrl: cover?.thumb_url ?? null,
+          });
+      if (!row) {
+        Alert.alert(S.collages.saveFailed);
         return;
       }
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') {
-        Alert.alert(S.canvas.permissionNeeded, S.canvas.permissionMessage);
-        return;
-      }
-      const snapshot = canvasRef.current.makeImageSnapshot();
-      if (!snapshot) {
-        Alert.alert(S.canvas.error, S.canvas.failedSnapshot);
-        return;
-      }
-      const base64 = snapshot.encodeToBase64(ImageFormat.PNG, 100);
-      const uri = FileSystem.cacheDirectory + `canvas_${Date.now()}.png`;
-      await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
-      await MediaLibrary.saveToLibraryAsync(uri);
-      Alert.alert(S.canvas.saved, S.canvas.savedMessage);
+      setDirty(false);
+      onClose();
     } catch (e) {
-      Alert.alert(S.canvas.exportFailed, e.message);
+      console.error('Save collage failed:', e);
+      Alert.alert(S.collages.saveFailed, e.message);
+    } finally {
+      setSaving(false);
     }
   }
 
-  const canvasReady = canvasSize.width > 0 && canvasSize.height > 0;
+  const canvasReady = view.drawSize > 0;
+  const selectedItem = placedItems.find(p => p.id === selectedId);
 
   return (
-    <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <GestureHandlerRootView style={{ flex: 1 }}>
-        <View style={styles.container}>
-
-          {/* Header */}
+    <GestureHandlerRootView style={{ flex: 1 }}>
+      <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
           <View style={styles.header}>
-            <TouchableOpacity onPress={onClose} style={styles.headerBtn}>
-              <Text style={styles.headerBtnText}>{S.common.cancel}</Text>
+            <TouchableOpacity onPress={requestClose} style={styles.iconBtn} hitSlop={8}>
+              <Ionicons name="chevron-back" size={24} color="#2D2D2D" />
             </TouchableOpacity>
-            <Text style={styles.headerTitle}>{S.canvas.title}</Text>
-            <TouchableOpacity onPress={handleExport} style={styles.headerBtn}>
-              <Text style={[styles.headerBtnText, styles.exportText]}>{S.canvas.export}</Text>
+            <TextInput
+              style={styles.titleInput}
+              value={title}
+              onChangeText={(v) => { setTitle(v); setDirty(true); }}
+              placeholder={S.collages.titlePlaceholder}
+              placeholderTextColor="#bbb"
+              autoCorrect={false}
+              returnKeyType="done"
+            />
+            <TouchableOpacity
+              onPress={() => { setIsPrivate(v => !v); setDirty(true); }}
+              style={styles.iconBtn}
+              hitSlop={8}
+            >
+              <Ionicons
+                name={isPrivate ? 'lock-closed' : 'lock-open-outline'}
+                size={20}
+                color={isPrivate ? '#2D2D2D' : '#ccc'}
+              />
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={handleSave}
+              style={styles.saveBtn}
+              disabled={saving}
+              hitSlop={4}
+            >
+              <Text style={[styles.saveText, saving && styles.saveTextDisabled]}>
+                {saving ? S.collages.saving : S.collages.save}
+              </Text>
             </TouchableOpacity>
           </View>
 
-          {/* Canvas area */}
           <View
             style={styles.canvasContainer}
             onLayout={e => {
@@ -282,60 +382,96 @@ export default function CanvasScreen({ visible, onClose, items }) {
                   ref={canvasRef}
                   style={{ width: canvasSize.width, height: canvasSize.height }}
                 >
-                  {/* White background */}
-                  <Rect x={0} y={0} width={canvasSize.width} height={canvasSize.height} color="white" />
-
-                  {/* Placed items */}
-                  {placedItems.map(item => {
-                    const hw = item.width / 2;
-                    const hh = item.height / 2;
-
-                    if (!item.skImage) {
+                  <Rect x={0} y={0} width={canvasSize.width} height={canvasSize.height} color="#E8E3DD" />
+                  <Group
+                    transform={[
+                      { translateX: view.offsetX },
+                      { translateY: view.offsetY },
+                      { scale: view.scale },
+                    ]}
+                  >
+                    <Rect x={0} y={0} width={LOGICAL_SIZE} height={LOGICAL_SIZE} color="white" />
+                    {placedItems.map(item => {
+                      const hw = item.width / 2;
+                      const hh = item.height / 2;
+                      const isSelected = item.id === selectedId;
+                      const pad = 3 / item.scale / (view.scale || 1);
+                      const strokeW = 1.5 / item.scale / (view.scale || 1);
                       return (
-                        <Rect key={item.id} x={item.x - hw} y={item.y - hh} width={item.width} height={item.height} color="#E8E3DD" />
+                        <Group
+                          key={item.id}
+                          transform={[
+                            { translateX: item.x },
+                            { translateY: item.y },
+                            { rotate: item.rotation },
+                            { scale: item.scale },
+                          ]}
+                        >
+                          {item.skImage ? (
+                            <SkiaImage
+                              image={item.skImage}
+                              x={-hw}
+                              y={-hh}
+                              width={item.width}
+                              height={item.height}
+                              fit="contain"
+                            />
+                          ) : (
+                            <Rect
+                              x={-hw}
+                              y={-hh}
+                              width={item.width}
+                              height={item.height}
+                              color="#E8E3DD"
+                            />
+                          )}
+                          {isSelected && (() => {
+                            const b = item.skImage && item.tightBounds
+                              ? item.tightBounds
+                              : { minX: -hw, minY: -hh, maxX: hw, maxY: hh };
+                            return (
+                              <Rect
+                                x={b.minX - pad}
+                                y={b.minY - pad}
+                                width={b.maxX - b.minX + pad * 2}
+                                height={b.maxY - b.minY + pad * 2}
+                                color="#2D2D2D"
+                                style="stroke"
+                                strokeWidth={strokeW}
+                              />
+                            );
+                          })()}
+                        </Group>
                       );
-                    }
-                    const isSelected = item.id === selectedId;
-                    return (
-                      <Group
-                        key={item.id}
-                        transform={[
-                          { translateX: item.x },
-                          { translateY: item.y },
-                          { rotate: item.rotation },
-                          { scale: item.scale },
-                        ]}
-                      >
-                        <SkiaImage
-                          image={item.skImage}
-                          x={-hw}
-                          y={-hh}
-                          width={item.width}
-                          height={item.height}
-                          fit="contain"
-                        />
-                        {isSelected && (() => {
-                          const b = item.tightBounds ?? { minX: -hw, minY: -hh, maxX: hw, maxY: hh };
-                          const pad = 3 / item.scale;
-                          return <Rect x={b.minX - pad} y={b.minY - pad} width={b.maxX - b.minX + pad * 2} height={b.maxY - b.minY + pad * 2} color="#2D2D2D" style="stroke" strokeWidth={1.5 / item.scale} />;
-                        })()}
-                      </Group>
-                    );
-                  })}
+                    })}
+                  </Group>
                 </Canvas>
               </GestureDetector>
             )}
+            {canvasReady && placedItems.filter(p => !p.skImage).map(item => {
+              const screenX = view.offsetX + item.x * view.scale;
+              const screenY = view.offsetY + item.y * view.scale;
+              return (
+                <View
+                  key={`spinner_${item.id}`}
+                  pointerEvents="none"
+                  style={[styles.spinner, { left: screenX - 10, top: screenY - 10 }]}
+                >
+                  <ActivityIndicator size="small" color="#999" />
+                </View>
+              );
+            })}
           </View>
 
-          {/* Bottom bar */}
-          <View style={styles.bottomBar}>
-            {selectedId ? (
+          <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+            {selectedItem ? (
               <View style={styles.selectionBar}>
                 <TouchableOpacity
                   style={styles.removeBtn}
                   onPress={() => {
                     setPlacedItems(prev => prev.filter(p => p.id !== selectedId));
                     setSelectedId(null);
+                    setDirty(true);
                   }}
                 >
                   <Text style={styles.removeBtnText}>{S.common.remove}</Text>
@@ -350,24 +486,27 @@ export default function CanvasScreen({ visible, onClose, items }) {
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.trayContent}
               >
-                {items.map(item => (
+                {(tagItems ?? []).map(item => (
                   <TouchableOpacity
                     key={item.id}
                     style={styles.trayItem}
                     onPress={() => addToCanvas(item)}
                   >
                     {item.image_url && (
-                      <Image source={{ uri: thumbOf(item) }} style={styles.trayImage} cachePolicy="memory-disk" contentFit="cover" />
+                      <Image
+                        source={{ uri: thumbOf(item) }}
+                        style={styles.trayImage}
+                        cachePolicy="memory-disk"
+                        contentFit="cover"
+                      />
                     )}
                   </TouchableOpacity>
                 ))}
               </ScrollView>
             )}
-          </View>
-
         </View>
-      </GestureHandlerRootView>
-    </Modal>
+      </View>
+    </GestureHandlerRootView>
   );
 }
 
@@ -375,38 +514,49 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5F0EB',
-    paddingTop: 60,
   },
   header: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 20,
-    paddingBottom: 12,
+    paddingHorizontal: 12,
+    paddingBottom: 10,
+    gap: 6,
   },
-  headerBtn: {
+  iconBtn: {
     padding: 4,
-    minWidth: 60,
   },
-  headerBtnText: {
+  titleInput: {
+    flex: 1,
     fontSize: 16,
     color: '#2D2D2D',
+    paddingHorizontal: 8,
+    paddingVertical: 6,
   },
-  exportText: {
+  saveBtn: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+  },
+  saveText: {
+    fontSize: 16,
     fontWeight: '500',
-    textAlign: 'right',
-  },
-  headerTitle: {
-    fontSize: 16,
     color: '#2D2D2D',
-    letterSpacing: 1,
+  },
+  saveTextDisabled: {
+    color: '#999',
   },
   canvasContainer: {
     flex: 1,
     backgroundColor: '#E8E3DD',
   },
+  spinner: {
+    position: 'absolute',
+    width: 20,
+    height: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   bottomBar: {
-    height: 100,
+    minHeight: 100,
     backgroundColor: '#fff',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E5E5E5',
@@ -417,6 +567,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
+    paddingVertical: 16,
   },
   removeBtn: {
     paddingVertical: 10,

@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
+  Alert,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -14,6 +15,7 @@ import BatchEditSheet from '../../screens/BatchEditSheet';
 import FilterSheet from '../../screens/FilterSheet';
 import ProfileScreen from '../../screens/ProfileScreen';
 import ManageTagsSheet from '../../screens/ManageTagsSheet';
+import CollagesSheet from '../../screens/CollagesSheet';
 import ItemGrid from '../../screens/ItemGrid';
 import SearchBar from '../../screens/SearchBar';
 import BatchBar from '../../screens/BatchBar';
@@ -46,6 +48,7 @@ export default function Collection() {
     deleteTag,
     toggleTagPrivacy,
     renameTag,
+    countCollagesForTag,
     refresh,
     setBatchModeActive,
   } = useCollection();
@@ -57,6 +60,7 @@ export default function Collection() {
   const [selectedIds, setSelectedIds] = useState(new Set());
   const [batchEditVisible, setBatchEditVisible] = useState(false);
   const [manageTagsVisible, setManageTagsVisible] = useState(false);
+  const [collagesSheetVisible, setCollagesSheetVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
@@ -246,6 +250,19 @@ export default function Collection() {
         onManagePress={() => setManageTagsVisible(true)}
       />
 
+      {activeTag && activeTag.id !== '__untagged__' && (
+        <View style={styles.tagActionsRow}>
+          <TouchableOpacity
+            style={styles.tagActionBtn}
+            onPress={() => setCollagesSheetVisible(true)}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="grid-outline" size={14} color="#2D2D2D" />
+            <Text style={styles.tagActionText}>{S.collages.title}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <ItemGrid
         items={filteredItems}
         selectedIds={selectedIds}
@@ -318,11 +335,32 @@ export default function Collection() {
         tags={tags}
         totalTagCounts={totalTagCounts}
         onRename={renameTag}
-        onDelete={tag => {
-          deleteTag(tag.id);
-          if (activeTag?.id === tag.id) setActiveTag(null);
+        onDelete={async tag => {
+          const doDelete = () => {
+            deleteTag(tag.id);
+            if (activeTag?.id === tag.id) setActiveTag(null);
+          };
+          const collageCount = await countCollagesForTag(tag.id);
+          if (collageCount > 0) {
+            Alert.alert(
+              S.collection.deleteTagWithCollages(tag.name, collageCount),
+              undefined,
+              [
+                { text: S.common.cancel, style: 'cancel' },
+                { text: S.common.delete, style: 'destructive', onPress: doDelete },
+              ],
+            );
+          } else {
+            doDelete();
+          }
         }}
         onToggleTagPrivacy={toggleTagPrivacy}
+      />
+
+      <CollagesSheet
+        visible={collagesSheetVisible}
+        onClose={() => setCollagesSheetVisible(false)}
+        tag={activeTag && activeTag.id !== '__untagged__' ? activeTag : null}
       />
     </View>
   );
@@ -385,5 +423,26 @@ const styles = StyleSheet.create({
     height: 7,
     borderRadius: 4,
     backgroundColor: '#2D2D2D',
+  },
+  tagActionsRow: {
+    flexDirection: 'row',
+    gap: 8,
+    marginTop: -8,
+    marginBottom: 16,
+  },
+  tagActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    height: 30,
+    borderRadius: 16,
+    borderWidth: 1.5,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+  },
+  tagActionText: {
+    fontSize: 13,
+    color: '#2D2D2D',
   },
 });

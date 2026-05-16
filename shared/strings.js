@@ -129,6 +129,8 @@ export const S = {
     noTagsYet: 'no tags yet',
     searchTags: 'search tags',
     tagNameTaken: 'tag name already exists',
+    deleteTagWithCollages: (tag, n) =>
+      `Delete "${tag}" and ${n} ${plural(n, 'collage')}?`,
   },
 
   // Advanced search syntax help (popover anchored to the search bar)
@@ -235,6 +237,25 @@ export const S = {
     saved: 'Saved',
     savedMessage: 'Canvas saved to your photo library.',
     exportFailed: 'Export failed',
+  },
+
+  // Collages (mobile only) — saved arrangements of items, scoped to a tag.
+  collages: {
+    title: 'collages',
+    titleForTag: (tag) => `collages · ${tag}`,
+    newCollage: 'new collage',
+    untitled: 'untitled',
+    titlePlaceholder: 'title',
+    save: 'save',
+    saving: 'saving…',
+    saveFailed: 'Save failed',
+    deleteConfirm: (title) => `Delete "${title || 'untitled'}"?`,
+    deleteConfirmAction: 'Delete',
+    empty: 'no collages yet',
+    discardChangesTitle: 'Discard changes?',
+    discardChangesMessage: 'You have unsaved changes.',
+    discardChangesAction: 'Discard',
+    keepEditing: 'Keep editing',
   },
 
   // Camera (mobile only)
