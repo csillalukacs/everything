@@ -67,11 +67,8 @@ export default function Collection() {
   const defaultSortForContext = isFeaturedTag(activeTag) ? 'random' : 'newest';
   const sortMode = explicitSortMode ?? defaultSortForContext;
 
-  useEffect(() => {
-    if (sortMode === 'random') setRandomSeed(newRandomSeed());
-  }, [sortMode]);
-
   function handleChangeSort(mode) {
+    if (mode === 'random') setRandomSeed(newRandomSeed());
     setExplicitSortMode(mode === defaultSortForContext ? null : mode);
   }
 

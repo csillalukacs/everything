@@ -99,10 +99,6 @@ export default function ProfilePage() {
   const sortParam = explicitSortParam ?? defaultSortForContext
 
   useEffect(() => {
-    if (sortParam === 'random') setRandomSeed(newRandomSeed())
-  }, [sortParam])
-
-  useEffect(() => {
     async function load() {
       const slugIsUuid = UUID_RE.test(slug)
       const { data: { session } } = await supabase.auth.getSession()
@@ -653,7 +649,10 @@ export default function ProfilePage() {
           ariaLabel={S.a11y.sort}
           active={sortParam !== defaultSortForContext}
           value={sortParam}
-          onChange={v => updateParams({ sort: v === defaultSortForContext ? null : v })}
+          onChange={v => {
+            if (v === 'random') setRandomSeed(newRandomSeed())
+            updateParams({ sort: v === defaultSortForContext ? null : v })
+          }}
           options={[
             { value: 'newest', label: S.filters.sort.newest },
             { value: 'oldest', label: S.filters.sort.oldest },
