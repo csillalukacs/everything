@@ -150,14 +150,14 @@ export const S = {
     ],
   },
 
-  // Filters / sorting (web)
+  // Filters / sorting
   filters: {
     allYears: 'all years',
     allCities: 'all cities',
     sort: {
       label: 'sort',
-      newest: 'newest',
-      oldest: 'oldest',
+      newest: 'added (newest)',
+      oldest: 'added (oldest)',
       lastEdited: 'last edited',
       nameAZ: 'name a–z',
       nameZA: 'name z–a',
