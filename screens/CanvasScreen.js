@@ -100,7 +100,7 @@ export default function CanvasScreen({
   initialLayout,
 }) {
   const insets = useSafeAreaInsets();
-  const { createCollage, updateCollage, uploadLocalPhoto } = useCollection();
+  const { createCollage, updateCollage, uploadSkiaImage } = useCollection();
   const [placedItems, setPlacedItems] = useState(() => {
     const seed = initialLayout?.items ?? [];
     return seed.map(p => ({ ...p, skImage: null, tightBounds: null }));
@@ -288,13 +288,17 @@ export default function CanvasScreen({
     );
   }
 
-  async function snapshotToFile(prefix) {
+  async function takeSnapshot() {
     if (!canvasRef.current || !view.drawSize) return null;
     setSelectedId(null);
     // One frame so the selection border disappears from the snapshot.
     await new Promise(r => setTimeout(r, 16));
     const rect = Skia.XYWHRect(view.offsetX, view.offsetY, view.drawSize, view.drawSize);
-    const snapshot = canvasRef.current.makeImageSnapshot(rect);
+    return canvasRef.current.makeImageSnapshot(rect);
+  }
+
+  async function snapshotToFile(prefix) {
+    const snapshot = await takeSnapshot();
     if (!snapshot) return null;
     const base64 = snapshot.encodeToBase64(ImageFormat.PNG, 100);
     const uri = `${FileSystem.cacheDirectory}${prefix}_${Date.now()}.png`;
@@ -303,9 +307,9 @@ export default function CanvasScreen({
   }
 
   async function bakeCover() {
-    const uri = await snapshotToFile('collage');
-    if (!uri) return null;
-    return uploadLocalPhoto(uri);
+    const snapshot = await takeSnapshot();
+    if (!snapshot) return null;
+    return uploadSkiaImage(snapshot);
   }
 
   async function handleExport() {
