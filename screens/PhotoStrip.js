@@ -7,20 +7,26 @@ export default function PhotoStrip({ photos, selectedIdx, onSelect, editable, on
   const displayedEntry = photos[selectedIdx] ?? {};
   const displayedDate = displayedEntry.added_at;
   const hasMultiple = photos.filter(p => p?.url).length > 1;
-  const canFeature = editable && selectedIdx > 0 && onMakeFeatured;
-  if (!hasMultiple && !displayedDate && !canFeature) return null;
+  const showFeatureSlot = editable && hasMultiple && onMakeFeatured;
+  const canFeature = showFeatureSlot && selectedIdx > 0;
+  if (!hasMultiple && !displayedDate && !showFeatureSlot) return null;
 
   return (
     <View style={styles.photoExtras}>
-      {(displayedDate || canFeature) ? (
+      {(displayedDate || showFeatureSlot) ? (
         <View style={styles.photoMetaRow}>
           {displayedDate ? (
             <Text style={styles.photoDate}>
               {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
             </Text>
           ) : <View style={{ flex: 1 }} />}
-          {canFeature && (
-            <TouchableOpacity onPress={() => onMakeFeatured(selectedIdx)} style={styles.coverButton} hitSlop={6}>
+          {showFeatureSlot && (
+            <TouchableOpacity
+              onPress={() => onMakeFeatured(selectedIdx)}
+              style={[styles.coverButton, !canFeature && styles.coverButtonHidden]}
+              hitSlop={6}
+              disabled={!canFeature}
+            >
               <Ionicons name="star-outline" size={12} color="#2D2D2D" />
               <Text style={styles.coverButtonText}>{S.itemForm.useAsCover}</Text>
             </TouchableOpacity>
@@ -91,6 +97,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#E0E0E0',
     backgroundColor: '#fff',
+  },
+  coverButtonHidden: {
+    opacity: 0,
   },
   coverButtonText: {
     fontSize: 12,

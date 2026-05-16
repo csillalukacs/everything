@@ -183,20 +183,21 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 </>
               )}
             </div>
-            {(showThumbnails || displayedDate || (editing && safeDisplayedIdx > 0)) && (
+            {(showThumbnails || displayedDate || (editing && showThumbnails)) && (
               <div className="photo-extras">
-                {(displayedDate || (editing && safeDisplayedIdx > 0)) && (
+                {(displayedDate || (editing && showThumbnails)) && (
                   <div className="photo-meta-row">
                     {displayedDate ? (
                       <p className="photo-date">
                         {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
                       </p>
                     ) : <span className="photo-date-spacer" />}
-                    {editing && safeDisplayedIdx > 0 && (
+                    {editing && showThumbnails && (
                       <button
                         type="button"
-                        className="cover-btn"
+                        className={`cover-btn${safeDisplayedIdx > 0 ? '' : ' cover-btn-hidden'}`}
                         onClick={() => makeFeatured(safeDisplayedIdx)}
+                        disabled={safeDisplayedIdx === 0}
                       >☆ {S.itemForm.useAsCover}</button>
                     )}
                   </div>

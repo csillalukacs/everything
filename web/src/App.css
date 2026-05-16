@@ -1052,6 +1052,10 @@ input {
   background: #F5F0EB;
 }
 
+.cover-btn-hidden {
+  visibility: hidden;
+}
+
 .thumbnail-row {
   display: flex;
   gap: 8px;
