@@ -392,12 +392,11 @@ export default function ProfilePage() {
     if (!error) setAllTags(prev => prev.map(t => t.id === tag.id ? { ...t, is_private: newPrivate } : t))
   }
 
-  async function handleBatchEdit({ addTags, acquired, removeTagId }) {
-    if (addTags.length === 0 && !acquired && !removeTagId) { setBatchEditVisible(false); return }
+  async function handleBatchEdit({ addTags, acquiredPatch, removeTagId }) {
+    if (addTags.length === 0 && !acquiredPatch && !removeTagId) { setBatchEditVisible(false); return }
     const resolved = addTags.length > 0 ? await ensureTags(addTags) : []
     if (resolved === null) return
     const ids = [...selectedIds]
-    const acquiredPatch = acquired ? acquiredFields(acquired) : null
 
     setItems(prev => prev.map(item => {
       if (!selectedIds.has(item.id)) return item

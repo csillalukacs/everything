@@ -138,12 +138,12 @@ export default function Collection() {
     if (item) await deleteItem(item.id);
   }
 
-  async function handleBatchEdit({ addTags, acquired }) {
-    if (addTags.length === 0 && !acquired) { setBatchEditVisible(false); return; }
+  async function handleBatchEdit({ addTags, acquiredPatch }) {
+    if (addTags.length === 0 && !acquiredPatch) { setBatchEditVisible(false); return; }
     const ids = [...selectedIds];
     setBatchEditVisible(false);
     setSelectedIds(new Set());
-    await batchEditItems(ids, { addTags, acquired });
+    await batchEditItems(ids, { addTags, acquiredPatch });
   }
 
   async function handleBatchDelete() {

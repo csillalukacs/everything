@@ -37,17 +37,24 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
     setRemoveActiveTag(false)
   }
 
-  function buildAcquired() {
+  function buildAcquiredPatch() {
     const y = year.trim()
     const yearNum = y ? parseInt(y, 10) : null
     const validYear = yearNum && yearNum >= 1800 && yearNum <= 2100 ? yearNum : null
     if (!validYear && !acquired) return null
-    return { year: validYear, location: acquired?.location ?? null, lat: acquired?.lat ?? null, lng: acquired?.lng ?? null }
+    const patch = {}
+    if (validYear) patch.acquired_year = validYear
+    if (acquired) {
+      patch.acquired_location = acquired.location ?? null
+      patch.acquired_lat = acquired.lat ?? null
+      patch.acquired_lng = acquired.lng ?? null
+    }
+    return patch
   }
 
   function handleApply() {
     const removeTagId = removeActiveTag && removableTag ? removableTag.id : null
-    onApply({ addTags: pendingTags, acquired: buildAcquired(), removeTagId })
+    onApply({ addTags: pendingTags, acquiredPatch: buildAcquiredPatch(), removeTagId })
     reset()
   }
 
