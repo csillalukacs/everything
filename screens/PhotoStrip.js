@@ -3,18 +3,29 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { Image } from 'expo-image';
 import { S } from '../shared/strings';
 
-export default function PhotoStrip({ photos, selectedIdx, onSelect, editable, onRemove }) {
+export default function PhotoStrip({ photos, selectedIdx, onSelect, editable, onRemove, onMakeFeatured }) {
   const displayedEntry = photos[selectedIdx] ?? {};
   const displayedDate = displayedEntry.added_at;
   const hasMultiple = photos.filter(p => p?.url).length > 1;
-  if (!hasMultiple && !displayedDate) return null;
+  const canFeature = editable && selectedIdx > 0 && onMakeFeatured;
+  if (!hasMultiple && !displayedDate && !canFeature) return null;
 
   return (
     <View style={styles.photoExtras}>
-      {displayedDate ? (
-        <Text style={styles.photoDate}>
-          {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
-        </Text>
+      {(displayedDate || canFeature) ? (
+        <View style={styles.photoMetaRow}>
+          {displayedDate ? (
+            <Text style={styles.photoDate}>
+              {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
+            </Text>
+          ) : <View style={{ flex: 1 }} />}
+          {canFeature && (
+            <TouchableOpacity onPress={() => onMakeFeatured(selectedIdx)} style={styles.coverButton} hitSlop={6}>
+              <Ionicons name="star-outline" size={12} color="#2D2D2D" />
+              <Text style={styles.coverButtonText}>{S.itemForm.useAsCover}</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       ) : null}
       {hasMultiple && (
         <ScrollView
@@ -59,10 +70,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     marginTop: -8,
   },
+  photoMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 8,
+  },
   photoDate: {
     fontSize: 12,
     color: '#999',
-    marginBottom: 8,
+    flex: 1,
+  },
+  coverButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
+    backgroundColor: '#fff',
+  },
+  coverButtonText: {
+    fontSize: 12,
+    color: '#2D2D2D',
   },
   thumbnailScroll: {
     flexGrow: 0,

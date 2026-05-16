@@ -59,6 +59,7 @@ export const S = {
     acquiredSeparator: ' · ',
     addedOn: (date) => `added ${date}`,
     photoFrom: (date) => `photo from ${date}`,
+    useAsCover: 'use as cover',
     deleteItem: 'delete thing',
   },
 

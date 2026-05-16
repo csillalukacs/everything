@@ -1021,6 +1021,37 @@ input {
   margin-bottom: 8px;
 }
 
+.photo-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.photo-meta-row .photo-date {
+  margin-bottom: 0;
+  flex: 1;
+}
+
+.photo-date-spacer {
+  flex: 1;
+}
+
+.cover-btn {
+  font-size: 12px;
+  color: #2D2D2D;
+  background: #fff;
+  border: 1px solid #E0E0E0;
+  border-radius: 14px;
+  padding: 5px 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.cover-btn:hover {
+  background: #F5F0EB;
+}
+
 .thumbnail-row {
   display: flex;
   gap: 8px;

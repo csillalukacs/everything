@@ -267,9 +267,9 @@ export default function Today() {
     setRevealedIds(prev => (prev.includes(id) ? prev : [...prev, id]));
   }
 
-  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls) {
+  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt) {
     if (!selectedItem) return;
-    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImageUrls);
+    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt);
     if (updated) setSelectedItem(updated);
   }
 

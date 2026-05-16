@@ -15,6 +15,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
   const [editPhoto, setEditPhoto] = useState(null)
+  const [editPhotoThumb, setEditPhotoThumb] = useState(null)
   const [editPreview, setEditPreview] = useState(null)
   const [editImageAddedAt, setEditImageAddedAt] = useState(null)
   const [editPreviousImages, setEditPreviousImages] = useState([])
@@ -34,6 +35,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setEditName(item.name ?? '')
     setEditDescription(item.description ?? '')
     setEditPhoto(item.image_url)
+    setEditPhotoThumb(item.thumb_url ?? null)
     setEditPreview(item.image_url)
     setEditImageAddedAt(item.image_added_at ?? item.created_at)
     setEditPreviousImages(item.previous_images ?? [])
@@ -50,6 +52,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   function cancelEdit() {
     setEditing(false)
     setEditPhoto(null)
+    setEditPhotoThumb(null)
     setEditPreview(null)
     setEditDescription('')
     setDisplayedIdx(0)
@@ -58,13 +61,28 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   function handleImageChange(f) {
     if (!f) return
     if (typeof editPhoto === 'string' && editPhoto.startsWith('http')) {
-      const kept = { url: editPhoto, thumb_url: item?.thumb_url ?? null, added_at: editImageAddedAt ?? item?.created_at }
+      const kept = { url: editPhoto, thumb_url: editPhotoThumb ?? null, added_at: editImageAddedAt ?? item?.created_at }
       setEditPreviousImages(prev => [kept, ...prev])
     }
     setEditImageAddedAt(new Date().toISOString())
     setDisplayedIdx(0)
     setEditPhoto(f)
+    setEditPhotoThumb(null)
     setEditPreview(URL.createObjectURL(f))
+  }
+
+  function makeFeatured(displayIdx) {
+    if (displayIdx <= 0) return
+    const prevIdx = displayIdx - 1
+    const chosen = editPreviousImages[prevIdx]
+    if (!chosen?.url) return
+    const demoted = { url: editPhoto, thumb_url: editPhotoThumb, added_at: editImageAddedAt }
+    setEditPhoto(chosen.url)
+    setEditPhotoThumb(chosen.thumb_url ?? null)
+    setEditPreview(chosen.url)
+    setEditImageAddedAt(chosen.added_at ?? null)
+    setEditPreviousImages(prev => prev.map((e, i) => i === prevIdx ? demoted : e))
+    setDisplayedIdx(0)
   }
 
   function removePreviousPhoto(idx) {
@@ -95,6 +113,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setSaving(false)
     setEditing(false)
     setEditPhoto(null)
+    setEditPhotoThumb(null)
     setEditPreview(null)
     setEditDescription('')
     setDisplayedIdx(0)
@@ -164,12 +183,23 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 </>
               )}
             </div>
-            {(showThumbnails || displayedDate) && (
+            {(showThumbnails || displayedDate || (editing && safeDisplayedIdx > 0)) && (
               <div className="photo-extras">
-                {displayedDate && (
-                  <p className="photo-date">
-                    {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
-                  </p>
+                {(displayedDate || (editing && safeDisplayedIdx > 0)) && (
+                  <div className="photo-meta-row">
+                    {displayedDate ? (
+                      <p className="photo-date">
+                        {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
+                      </p>
+                    ) : <span className="photo-date-spacer" />}
+                    {editing && safeDisplayedIdx > 0 && (
+                      <button
+                        type="button"
+                        className="cover-btn"
+                        onClick={() => makeFeatured(safeDisplayedIdx)}
+                      >☆ {S.itemForm.useAsCover}</button>
+                    )}
+                  </div>
                 )}
                 {showThumbnails && (
                   <div className="thumbnail-row">

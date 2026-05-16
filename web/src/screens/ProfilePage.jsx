@@ -322,6 +322,9 @@ export default function ProfilePage() {
       if (!uploaded) return
       image_url = uploaded.image_url
       thumb_url = uploaded.thumb_url
+    } else if (selectedItem && image_url && image_url !== selectedItem.image_url) {
+      const match = (selectedItem.previous_images ?? []).find(p => p?.url === image_url)
+      if (match) thumb_url = match.thumb_url ?? null
     }
     const { data, error } = await supabase
       .from('items')

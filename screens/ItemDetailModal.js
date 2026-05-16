@@ -42,6 +42,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
   const [editPhoto, setEditPhoto] = useState(null);
+  const [editPhotoThumb, setEditPhotoThumb] = useState(null);
   const [editImageAddedAt, setEditImageAddedAt] = useState(null);
   const [editPreviousImages, setEditPreviousImages] = useState([]);
   const [displayedIdx, setDisplayedIdx] = useState(0);
@@ -108,6 +109,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditName(item.name ?? '');
     setEditDescription(item.description ?? '');
     setEditPhoto(item.image_url);
+    setEditPhotoThumb(item.thumb_url ?? null);
     setEditImageAddedAt(item.image_added_at ?? item.created_at);
     setEditPreviousImages(item.previous_images ?? []);
     setDisplayedIdx(0);
@@ -130,12 +132,13 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   async function handleCaptured(uri) {
     setCameraVisible(false);
     if (editPhoto && editPhoto.startsWith('http')) {
-      const kept = { url: editPhoto, thumb_url: item?.thumb_url ?? null, added_at: editImageAddedAt ?? item?.created_at };
+      const kept = { url: editPhoto, thumb_url: editPhotoThumb ?? null, added_at: editImageAddedAt ?? item?.created_at };
       setEditPreviousImages(prev => [kept, ...prev]);
     }
     setEditImageAddedAt(new Date().toISOString());
     setDisplayedIdx(0);
     setEditPhoto(uri);
+    setEditPhotoThumb(null);
     setRemovingBg(true);
     ocrPromiseRef.current = ocrImage(uri);
     try {
@@ -144,6 +147,19 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     } finally {
       setRemovingBg(false);
     }
+  }
+
+  function makeFeatured(displayIdx) {
+    if (displayIdx <= 0) return;
+    const prevIdx = displayIdx - 1;
+    const chosen = editPreviousImages[prevIdx];
+    if (!chosen?.url) return;
+    const demoted = { url: editPhoto, thumb_url: editPhotoThumb, added_at: editImageAddedAt };
+    setEditPhoto(chosen.url);
+    setEditPhotoThumb(chosen.thumb_url ?? null);
+    setEditImageAddedAt(chosen.added_at ?? null);
+    setEditPreviousImages(prev => prev.map((e, i) => i === prevIdx ? demoted : e));
+    setDisplayedIdx(0);
   }
 
   function removePreviousPhoto(idx) {
@@ -213,6 +229,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       onSelect={setDisplayedIdx}
       editable={editing}
       onRemove={removePreviousPhoto}
+      onMakeFeatured={makeFeatured}
     />
   );
   const itemTags = item.tags ?? [];
