@@ -1,4 +1,5 @@
 import * as FileSystem from 'expo-file-system/legacy';
+import * as MediaLibrary from 'expo-media-library';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -274,7 +275,7 @@ export default function CanvasScreen({
     );
   }
 
-  async function bakeCover() {
+  async function snapshotToFile(prefix) {
     if (!canvasRef.current || !view.drawSize) return null;
     setSelectedId(null);
     // One frame so the selection border disappears from the snapshot.
@@ -283,9 +284,31 @@ export default function CanvasScreen({
     const snapshot = canvasRef.current.makeImageSnapshot(rect);
     if (!snapshot) return null;
     const base64 = snapshot.encodeToBase64(ImageFormat.PNG, 100);
-    const uri = `${FileSystem.cacheDirectory}collage_${Date.now()}.png`;
+    const uri = `${FileSystem.cacheDirectory}${prefix}_${Date.now()}.png`;
     await FileSystem.writeAsStringAsync(uri, base64, { encoding: FileSystem.EncodingType.Base64 });
+    return uri;
+  }
+
+  async function bakeCover() {
+    const uri = await snapshotToFile('collage');
+    if (!uri) return null;
     return uploadLocalPhoto(uri);
+  }
+
+  async function handleExport() {
+    try {
+      const { status } = await MediaLibrary.requestPermissionsAsync();
+      if (status !== 'granted') {
+        Alert.alert(S.canvas.permissionNeeded, S.canvas.permissionMessage);
+        return;
+      }
+      const uri = await snapshotToFile('canvas');
+      if (!uri) { Alert.alert(S.canvas.error, S.canvas.failedSnapshot); return; }
+      await MediaLibrary.saveToLibraryAsync(uri);
+      Alert.alert(S.canvas.saved, S.canvas.savedMessage);
+    } catch (e) {
+      Alert.alert(S.canvas.exportFailed, e.message);
+    }
   }
 
   async function handleSave() {
@@ -356,6 +379,9 @@ export default function CanvasScreen({
                 size={20}
                 color={isPrivate ? '#2D2D2D' : '#ccc'}
               />
+            </TouchableOpacity>
+            <TouchableOpacity onPress={handleExport} style={styles.iconBtn} hitSlop={8}>
+              <Ionicons name="download-outline" size={20} color="#999" />
             </TouchableOpacity>
             <TouchableOpacity
               onPress={handleSave}
