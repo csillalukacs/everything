@@ -134,10 +134,14 @@ export default function CanvasScreen({
   }, [canvasSize]);
 
   // Load Skia image whenever a placed item with skImage=null is added/seeded.
+  // Show the thumbnail first (fast — often already cached by the grid), then upgrade
+  // to the full-resolution image in the background so the export bake is crisp.
   useEffect(() => {
     placedItems.forEach(p => {
       if (p.skImage !== null) return;
-      loadSkiaImageCached(p.image_url).then(data => {
+      const thumbUrl = p.thumb_url || p.image_url;
+      const fullUrl = p.image_url && p.image_url !== thumbUrl ? p.image_url : null;
+      loadSkiaImageCached(thumbUrl).then(data => {
         if (!data) return;
         const skImg = Skia.Image.MakeImageFromEncoded(data);
         if (!skImg) return;
@@ -153,6 +157,15 @@ export default function CanvasScreen({
         setPlacedItems(prev => prev.map(q =>
           q.id === p.id ? { ...q, skImage: skImg, width, height, tightBounds, pending: false } : q,
         ));
+        if (!fullUrl) return;
+        loadSkiaImageCached(fullUrl).then(fullData => {
+          if (!fullData) return;
+          const fullImg = Skia.Image.MakeImageFromEncoded(fullData);
+          if (!fullImg) return;
+          setPlacedItems(prev => prev.map(q =>
+            q.id === p.id ? { ...q, skImage: fullImg } : q,
+          ));
+        });
       });
     });
   }, [placedItems.map(p => p.id).join(',')]);
