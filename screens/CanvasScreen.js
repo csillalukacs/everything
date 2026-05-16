@@ -192,7 +192,6 @@ export default function CanvasScreen({
       height: INITIAL_DIM,
       tightBounds: null,
     }]);
-    setSelectedId(id);
     setDirty(true);
   }
 
@@ -507,47 +506,45 @@ export default function CanvasScreen({
           </View>
 
           <View style={[styles.bottomBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
-            {selectedItem ? (
-              <View style={styles.selectionBar}>
-                <TouchableOpacity
-                  style={styles.removeBtn}
-                  onPress={() => {
-                    setPlacedItems(prev => prev.filter(p => p.id !== selectedId));
-                    setSelectedId(null);
-                    setDirty(true);
-                  }}
-                >
-                  <Text style={styles.removeBtnText}>{S.common.remove}</Text>
-                </TouchableOpacity>
-                <TouchableOpacity onPress={() => setSelectedId(null)} style={styles.doneBtn}>
-                  <Text style={styles.doneBtnText}>{S.common.done}</Text>
-                </TouchableOpacity>
-              </View>
-            ) : (
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.trayContent}
+            <View style={[styles.selectionBar, !selectedItem && styles.hidden]}>
+              <TouchableOpacity
+                style={styles.removeBtn}
+                onPress={() => {
+                  setPlacedItems(prev => prev.filter(p => p.id !== selectedId));
+                  setSelectedId(null);
+                  setDirty(true);
+                }}
               >
-                {(tagItems ?? []).map(item => (
-                  <TouchableOpacity
-                    key={item.id}
-                    style={styles.trayItem}
-                    onPress={() => addToCanvas(item)}
-                  >
-                    {item.image_url && (
-                      <Image
-                        source={{ uri: thumbOf(item) }}
-                        style={styles.trayImage}
-                        cachePolicy="memory-disk"
-                        contentFit="cover"
-                      />
-                    )}
-                  </TouchableOpacity>
-                ))}
-              </ScrollView>
-            )}
-        </View>
+                <Text style={styles.removeBtnText}>{S.common.remove}</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => setSelectedId(null)} style={styles.doneBtn}>
+                <Text style={styles.doneBtnText}>{S.common.done}</Text>
+              </TouchableOpacity>
+            </View>
+            <ScrollView
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.trayContent}
+              style={[styles.tray, selectedItem && styles.hidden]}
+            >
+              {(tagItems ?? []).map(item => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={styles.trayItem}
+                  onPress={() => addToCanvas(item)}
+                >
+                  {item.image_url && (
+                    <Image
+                      source={{ uri: thumbOf(item) }}
+                      style={styles.trayImage}
+                      cachePolicy="memory-disk"
+                      contentFit="cover"
+                    />
+                  )}
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
       </View>
     </GestureHandlerRootView>
   );
@@ -599,18 +596,23 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   bottomBar: {
-    minHeight: 100,
+    height: 92,
     backgroundColor: '#fff',
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#E5E5E5',
   },
   selectionBar: {
-    flex: 1,
+    ...StyleSheet.absoluteFillObject,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
-    paddingVertical: 16,
+  },
+  tray: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  hidden: {
+    display: 'none',
   },
   removeBtn: {
     paddingVertical: 10,
