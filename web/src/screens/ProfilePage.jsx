@@ -33,7 +33,7 @@ export default function ProfilePage() {
   const fromParam = searchParams.get('from') || null
   const toParam = searchParams.get('to') || null
   const itemIdParam = searchParams.get('item') || null
-  const sortParam = searchParams.get('sort') || 'newest'
+  const explicitSortParam = searchParams.get('sort') || null
   const tagParam = searchParams.get('tag') || null
 
   const [userId, setUserId] = useState(null)
@@ -55,10 +55,6 @@ export default function ProfilePage() {
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [randomSeed, setRandomSeed] = useState(() => newRandomSeed())
-
-  useEffect(() => {
-    if (sortParam === 'random') setRandomSeed(newRandomSeed())
-  }, [sortParam])
 
   const batchMode = selectedIds.size > 0
 
@@ -98,6 +94,13 @@ export default function ProfilePage() {
     }
     return null
   }, [tagParam, allTags, items])
+
+  const defaultSortForContext = isFeaturedTag(activeTag) ? 'random' : 'newest'
+  const sortParam = explicitSortParam ?? defaultSortForContext
+
+  useEffect(() => {
+    if (sortParam === 'random') setRandomSeed(newRandomSeed())
+  }, [sortParam])
 
   useEffect(() => {
     async function load() {
@@ -648,9 +651,9 @@ export default function ProfilePage() {
         )}
         <FilterDropdown
           ariaLabel={S.a11y.sort}
-          active={sortParam !== 'newest'}
+          active={sortParam !== defaultSortForContext}
           value={sortParam}
-          onChange={v => updateParams({ sort: v === 'newest' ? null : v })}
+          onChange={v => updateParams({ sort: v === defaultSortForContext ? null : v })}
           options={[
             { value: 'newest', label: S.filters.sort.newest },
             { value: 'oldest', label: S.filters.sort.oldest },

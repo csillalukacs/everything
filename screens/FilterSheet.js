@@ -35,7 +35,7 @@ export default function FilterSheet({
   onChangeSort,
 }) {
   const hasAny = availableYears.length > 0 || hasMissingYear || availableCities.length > 0 || hasMissingCity;
-  const filtersActive = !!(activeYear || activeCity) || (sortMode && sortMode !== 'newest');
+  const filtersActive = !!(activeYear || activeCity);
 
   return (
     <BottomSheet visible={visible} onClose={onClose} sheetStyle={styles.sheet}>
@@ -43,7 +43,7 @@ export default function FilterSheet({
         <Text style={styles.title}>filters</Text>
         <View style={styles.headerActions}>
           {filtersActive && (
-            <TouchableOpacity onPress={() => { onChangeYear(null); onChangeCity(null); onChangeSort?.('newest'); }}>
+            <TouchableOpacity onPress={() => { onChangeYear(null); onChangeCity(null); }}>
               <Text style={styles.clear}>{S.common.clear}</Text>
             </TouchableOpacity>
           )}
@@ -53,6 +53,25 @@ export default function FilterSheet({
         </View>
       </View>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent}>
+            {onChangeSort && (
+              <>
+                <Text style={[styles.sectionTitle, styles.sectionTitleFirst]}>{S.filters.sort.label}</Text>
+                <View style={styles.chips}>
+                  {SORT_OPTIONS.map(opt => {
+                    const active = (sortMode ?? 'newest') === opt.value;
+                    return (
+                      <TouchableOpacity
+                        key={`s-${opt.value}`}
+                        style={[styles.chip, active && styles.chipActive]}
+                        onPress={() => onChangeSort(opt.value)}
+                      >
+                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+              </>
+            )}
             {(availableYears.length > 0 || hasMissingYear) && (
               <>
                 <Text style={styles.sectionTitle}>year</Text>
@@ -117,25 +136,6 @@ export default function FilterSheet({
                 </View>
               </>
             )}
-            {onChangeSort && (
-              <>
-                <Text style={styles.sectionTitle}>{S.filters.sort.label}</Text>
-                <View style={styles.chips}>
-                  {SORT_OPTIONS.map(opt => {
-                    const active = (sortMode ?? 'newest') === opt.value;
-                    return (
-                      <TouchableOpacity
-                        key={`s-${opt.value}`}
-                        style={[styles.chip, active && styles.chipActive]}
-                        onPress={() => onChangeSort(opt.value)}
-                      >
-                        <Text style={[styles.chipText, active && styles.chipTextActive]}>{opt.label}</Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
-              </>
-            )}
             {!hasAny && !onChangeSort && (
               <Text style={styles.empty}>no filters available</Text>
             )}
@@ -192,6 +192,9 @@ const styles = StyleSheet.create({
     marginTop: 16,
     marginBottom: 10,
     letterSpacing: 0.5,
+  },
+  sectionTitleFirst: {
+    marginTop: 0,
   },
   chips: {
     flexDirection: 'row',

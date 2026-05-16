@@ -22,6 +22,7 @@ import Avatar from '../../screens/Avatar';
 import { cityOf } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { sortItems, newRandomSeed } from '../../shared/sortItems';
+import { isFeaturedTag } from '../../shared/featuredTag';
 import { S } from '../../shared/strings';
 
 const TAB_BAR_HEIGHT = 70;
@@ -60,12 +61,18 @@ export default function Collection() {
   const [filterSheetVisible, setFilterSheetVisible] = useState(false);
   const [settingsVisible, setSettingsVisible] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
-  const [sortMode, setSortMode] = useState('newest');
+  const [explicitSortMode, setExplicitSortMode] = useState(null);
   const [randomSeed, setRandomSeed] = useState(() => newRandomSeed());
 
+  const defaultSortForContext = isFeaturedTag(activeTag) ? 'random' : 'newest';
+  const sortMode = explicitSortMode ?? defaultSortForContext;
+
+  useEffect(() => {
+    if (sortMode === 'random') setRandomSeed(newRandomSeed());
+  }, [sortMode]);
+
   function handleChangeSort(mode) {
-    if (mode === 'random') setRandomSeed(newRandomSeed());
-    setSortMode(mode);
+    setExplicitSortMode(mode === defaultSortForContext ? null : mode);
   }
 
   const onRefresh = useCallback(async () => {
@@ -215,8 +222,8 @@ export default function Collection() {
             onPress={() => setFilterSheetVisible(true)}
             hitSlop={8}
           >
-            <Ionicons name="options-outline" size={20} color={(activeYear || activeCity || sortMode !== 'newest') ? '#2D2D2D' : '#999'} />
-            {(activeYear || activeCity || sortMode !== 'newest') && <View style={styles.filterIconDot} />}
+            <Ionicons name="options-outline" size={20} color={(activeYear || activeCity) ? '#2D2D2D' : '#999'} />
+            {(activeYear || activeCity) && <View style={styles.filterIconDot} />}
           </TouchableOpacity>
         }
       />
