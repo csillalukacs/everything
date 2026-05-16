@@ -18,6 +18,7 @@ import Avatar from '../components/Avatar'
 import SearchBar from '../components/SearchBar'
 import TagFilterChips from '../components/TagFilterChips'
 import { TrashIcon } from '../components/Icons'
+import CollagesStrip from '../components/CollagesStrip'
 import ManageTagsSheet from './ManageTagsSheet'
 import { itemsCacheKey, tagsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
@@ -692,6 +693,8 @@ export default function ProfilePage() {
         showUntagged={isOwner}
         onManagePress={isOwner ? () => setManageTagsVisible(true) : undefined}
       />
+
+      <CollagesStrip userId={userId} />
 
       <div className="grid">
         {sortedItems.map(item => {
