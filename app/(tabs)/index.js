@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -76,6 +76,17 @@ export default function Collection() {
     setRefreshing(true);
     try { await refresh(); } finally { setRefreshing(false); }
   }, [refresh]);
+
+  const featuredDefaultedRef = useRef(false);
+  useEffect(() => {
+    if (featuredDefaultedRef.current) return;
+    if (itemsLoading) return;
+    const featured = tags.find(isFeaturedTag);
+    if (!featured) return;
+    featuredDefaultedRef.current = true;
+    const hasFeaturedItems = items.some(i => (i.tags ?? []).some(isFeaturedTag));
+    if (hasFeaturedItems) setActiveTag(featured);
+  }, [itemsLoading, tags, items]);
 
   useEffect(() => {
     if (params.city) {
