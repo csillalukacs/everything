@@ -255,6 +255,23 @@ input {
   font-family: Georgia, 'Times New Roman', serif;
 }
 
+.profile-count-link {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+  letter-spacing: inherit;
+}
+
+.profile-count-link:hover {
+  color: #2D2D2D;
+  text-decoration: underline;
+  text-underline-offset: 6px;
+  text-decoration-thickness: 1px;
+}
+
 .profile-edit-btn {
   background: none;
   border: none;
@@ -789,53 +806,7 @@ input {
 
 /* ---- Collages strip ---- */
 
-.collages-strip {
-  margin-bottom: 24px;
-}
-
-.collages-strip-title {
-  font-size: 13px;
-  color: #999;
-  font-weight: 400;
-  letter-spacing: 0.5px;
-  margin: 0 0 10px;
-  text-transform: lowercase;
-}
-
-.collages-strip-row {
-  display: flex;
-  gap: 10px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
-}
-
-.collages-strip-tile {
-  position: relative;
-  flex: 0 0 auto;
-  width: 120px;
-  height: 120px;
-  border-radius: 12px;
-  overflow: hidden;
-  border: 1.5px solid #E0E0E0;
-  background: #fff;
-  padding: 0;
-  cursor: pointer;
-  transition: transform 0.12s ease;
-}
-
-.collages-strip-tile:hover {
-  transform: translateY(-1px);
-}
-
-.collages-strip-tile img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  display: block;
-}
-
-.collages-strip-lock {
+.collage-tile-lock {
   position: absolute;
   top: 6px;
   left: 6px;
@@ -846,6 +817,35 @@ input {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.collages-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+
+.collages-grid-tile {
+  position: relative;
+  aspect-ratio: 1;
+  border-radius: 12px;
+  overflow: hidden;
+  border: 1.5px solid #E0E0E0;
+  background: #fff;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.12s ease;
+}
+
+.collages-grid-tile:hover {
+  transform: translateY(-2px);
+}
+
+.collages-grid-tile img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
 }
 
 .collage-viewer {

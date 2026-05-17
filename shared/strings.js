@@ -96,6 +96,7 @@ export const S = {
     collection: 'collection',
     account: 'account',
     objectCount: (n) => `${n} ${plural(n, 'thing')}`,
+    collageCount: (n) => `${n} ${plural(n, 'collage')}`,
     edit: 'edit profile',                                // web edit-profile dialog title
     settings: 'settings',                                // web settings page title + link
     displayName: 'display name',

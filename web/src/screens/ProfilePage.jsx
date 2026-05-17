@@ -14,11 +14,10 @@ import AddItemModal from './AddItemModal'
 import BatchEditSheet from './BatchEditSheet'
 import FilterDropdown from './FilterDropdown'
 import LockIcon from '../components/LockIcon'
-import Avatar from '../components/Avatar'
 import SearchBar from '../components/SearchBar'
 import TagFilterChips from '../components/TagFilterChips'
 import { TrashIcon } from '../components/Icons'
-import CollagesStrip from '../components/CollagesStrip'
+import ProfileHeader from '../components/ProfileHeader'
 import ManageTagsSheet from './ManageTagsSheet'
 import { itemsCacheKey, tagsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
@@ -41,6 +40,7 @@ export default function ProfilePage() {
   const [notFound, setNotFound] = useState(false)
   const [items, setItems] = useState([])
   const [itemCount, setItemCount] = useState(null)
+  const [collageCount, setCollageCount] = useState(0)
   const [allTags, setAllTags] = useState([])
   const [profileName, setProfileName] = useState(null)
   const [username, setUsername] = useState(null)
@@ -181,6 +181,16 @@ export default function ProfilePage() {
       fetchItemCount(supabase, { userId: resolvedId, publicOnly })
         .then(setItemCount)
         .catch(e => console.error('fetchItemCount error:', e))
+
+      supabase
+        .from('collages')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', resolvedId)
+        .not('cover_url', 'is', null)
+        .then(({ count, error }) => {
+          if (error) { console.error('fetch collage count error:', error); return }
+          setCollageCount(count ?? 0)
+        })
 
       try {
         const fetchedItems = await fetchAllItems(supabase, { userId: resolvedId, publicOnly })
@@ -585,40 +595,18 @@ export default function ProfilePage() {
 
   return (
     <div className="app">
-      <header className="header">
-        <div className="profile-header-row">
-          <Avatar
-            profile={{
-              user_id: userId,
-              display_name: profileName,
-              username,
-              avatar_url: avatarUrl,
-              avatar_thumb_url: avatarThumbUrl,
-            }}
-            size={64}
-          />
-          <div>
-            <div className="profile-name-row">
-              <h1 className="profile-name">{profileName ?? username ?? userId.split('-')[0]}{itemCount != null ? ` · ${S.profile.objectCount(itemCount)}` : ''}</h1>
-            </div>
-            {username && <p className="profile-username-readonly">@{username}</p>}
-            {home?.location && (
-              <p className="profile-home-readonly">
-                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                  <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
-                  <circle cx="12" cy="10" r="3" />
-                </svg>
-                {home.location.split(',')[0]}
-              </p>
-            )}
-          </div>
-        </div>
-        <div className="header-links" style={{ marginTop: 8 }}>
-          {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
-          {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
-          <Link to="/" className="link-btn">{S.appName}</Link>
-        </div>
-      </header>
+      <ProfileHeader
+        slug={slug}
+        userId={userId}
+        profileName={profileName}
+        username={username}
+        avatarUrl={avatarUrl}
+        avatarThumbUrl={avatarThumbUrl}
+        home={home}
+        itemCount={itemCount}
+        collageCount={collageCount}
+        isOwner={isOwner}
+      />
 
       <div className="search-row">
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
@@ -693,8 +681,6 @@ export default function ProfilePage() {
         showUntagged={isOwner}
         onManagePress={isOwner ? () => setManageTagsVisible(true) : undefined}
       />
-
-      <CollagesStrip userId={userId} />
 
       <div className="grid">
         {sortedItems.map(item => {
