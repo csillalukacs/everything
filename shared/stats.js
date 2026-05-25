@@ -1,4 +1,5 @@
 import { cityOf } from './items';
+import { FEATURED_TAG_NAME } from './featuredTag';
 import { S } from './strings';
 
 export const PIE_PALETTE = [
@@ -12,13 +13,14 @@ export function buildTagDistribution(items) {
   const appearances = new Map();
   for (const item of items) {
     for (const tag of item.tags ?? []) {
+      if (tag.name === FEATURED_TAG_NAME) continue;
       appearances.set(tag.name, (appearances.get(tag.name) ?? 0) + 1);
     }
   }
   const tagCounts = new Map();
   let untaggedCount = 0;
   for (const item of items) {
-    const tags = item.tags ?? [];
+    const tags = (item.tags ?? []).filter(t => t.name !== FEATURED_TAG_NAME);
     if (tags.length === 0) { untaggedCount++; continue; }
     let chosen = tags[0].name;
     let chosenCount = appearances.get(chosen) ?? 0;
