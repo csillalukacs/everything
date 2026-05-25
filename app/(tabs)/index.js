@@ -131,9 +131,11 @@ export default function Collection() {
   }
 
   async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt) {
-    if (!selectedItem) return;
+    if (!selectedItem) return false;
     const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt);
-    if (updated) setSelectedItem(updated);
+    if (!updated) return false;
+    setSelectedItem(updated);
+    return true;
   }
 
   async function handleDelete() {

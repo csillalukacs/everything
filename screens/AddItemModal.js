@@ -3,6 +3,7 @@ import { useMemo, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
+  Alert,
   Image,
   Keyboard,
   KeyboardAvoidingView,
@@ -75,22 +76,42 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
     return { year: validYear, location: acquired?.location ?? null, lat: acquired?.lat ?? null, lng: acquired?.lng ?? null };
   }
 
+  async function attemptSave() {
+    const ocrText = await (ocrPromiseRef.current ?? Promise.resolve(null));
+    const uploadPromise = uploadPromiseRef.current;
+    let timeoutId;
+    const timeoutPromise = new Promise(resolve => {
+      timeoutId = setTimeout(() => resolve(false), 60000);
+    });
+    const savePromise = (async () => {
+      try {
+        return await onSave(name.trim(), photo, tags, isPrivate, description.trim(), buildAcquired(), ocrText, uploadPromise);
+      } catch (e) {
+        console.error('Add save error:', e);
+        return false;
+      }
+    })();
+    const ok = await Promise.race([savePromise, timeoutPromise]);
+    clearTimeout(timeoutId);
+    return !!ok;
+  }
+
   async function handleSave() {
     if (!photo) return;
     setSaving(true);
-    const ocrText = await (ocrPromiseRef.current ?? Promise.resolve(null));
-    const uploadPromise = uploadPromiseRef.current;
-    await onSave(name.trim(), photo, tags, isPrivate, description.trim(), buildAcquired(), ocrText, uploadPromise);
-    setName('');
-    setDescription('');
-    setPhoto(null);
-    setTags([]);
-    setIsPrivate(false);
-    setYear('');
-    setAcquired(null);
-    ocrPromiseRef.current = null;
-    uploadPromiseRef.current = null;
+    const ok = await attemptSave();
     setSaving(false);
+    if (ok) return;
+    // Failed or timed out — force fresh upload on retry; keep form state.
+    uploadPromiseRef.current = null;
+    Alert.alert(
+      S.common.saveFailedTitle,
+      S.common.saveFailedMessage,
+      [
+        { text: S.common.cancel, style: 'cancel' },
+        { text: S.common.retry, onPress: handleSave },
+      ],
+    );
   }
 
   function handleClose() {

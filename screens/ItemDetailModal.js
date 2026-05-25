@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
+  Alert,
   Dimensions,
   KeyboardAvoidingView,
   Modal,
@@ -200,12 +201,41 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     } catch {}
   }
 
+  async function attemptUpdate() {
+    const ocrText = ocrPromiseRef.current ? await ocrPromiseRef.current : undefined;
+    let timeoutId;
+    const timeoutPromise = new Promise(resolve => {
+      timeoutId = setTimeout(() => resolve(false), 60000);
+    });
+    const savePromise = (async () => {
+      try {
+        return await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), ocrText, editPreviousImages, editImageAddedAt);
+      } catch (e) {
+        console.error('Edit save error:', e);
+        return false;
+      }
+    })();
+    const ok = await Promise.race([savePromise, timeoutPromise]);
+    clearTimeout(timeoutId);
+    return !!ok;
+  }
+
   async function handleSave() {
     setSaving(true);
-    const ocrText = ocrPromiseRef.current ? await ocrPromiseRef.current : undefined;
-    await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), ocrText, editPreviousImages, editImageAddedAt);
-    ocrPromiseRef.current = null;
+    const ok = await attemptUpdate();
     setSaving(false);
+    if (!ok) {
+      Alert.alert(
+        S.common.saveFailedTitle,
+        S.common.saveFailedMessage,
+        [
+          { text: S.common.cancel, style: 'cancel' },
+          { text: S.common.retry, onPress: handleSave },
+        ],
+      );
+      return;
+    }
+    ocrPromiseRef.current = null;
     setEditing(false);
     setEditDescription('');
     setDisplayedIdx(0);

@@ -40,6 +40,9 @@ export const S = {
     deselectAll: 'deselect all',
     noMatches: 'no matches',
     clear: 'clear',
+    retry: 'retry',
+    saveFailedTitle: 'save failed',
+    saveFailedMessage: 'check your connection and try again',
   },
 
   // Auth

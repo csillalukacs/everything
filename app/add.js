@@ -8,7 +8,9 @@ export default function AddRoute() {
 
   async function handleSave(name, photoUri, tagNames, isPrivate, description, acquired, ocrText, uploadPromise) {
     const created = await addItem(name, photoUri, tagNames, isPrivate, description, acquired, ocrText, uploadPromise);
-    if (created) router.back();
+    if (!created) return false;
+    router.back();
+    return true;
   }
 
   return (
