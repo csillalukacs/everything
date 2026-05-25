@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { memo, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { thumbOf } from '../shared/items';
@@ -10,6 +11,33 @@ const EMPTY_SELECTION = new Set();
 function cardSize(numColumns) {
   return (SCREEN_WIDTH - 48 - GRID_GAP * (numColumns - 1)) / numColumns;
 }
+
+const Card = memo(function Card({ item, size, isSelected, batchMode, onPress, onLongPress }) {
+  return (
+    <TouchableOpacity
+      style={[styles.card, { width: size }, isSelected && styles.cardSelected]}
+      onPress={() => onPress(item)}
+      onLongPress={onLongPress ? () => onLongPress(item) : undefined}
+      delayLongPress={400}
+    >
+      {item.image_url && (
+        <View style={styles.cardImageContainer}>
+          <Image source={{ uri: thumbOf(item) }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
+        </View>
+      )}
+      {item.is_private && !batchMode && (
+        <View style={styles.privateBadge}>
+          <Ionicons name="lock-closed" size={10} color="#fff" />
+        </View>
+      )}
+      {batchMode && (
+        <View style={[styles.selectionCircle, isSelected && styles.selectionCircleActive]}>
+          {isSelected && <Text style={styles.selectionCheck}>✓</Text>}
+        </View>
+      )}
+    </TouchableOpacity>
+  );
+});
 
 export default function ItemGrid({
   items,
@@ -25,13 +53,41 @@ export default function ItemGrid({
 }) {
   const batchMode = selectedIds.size > 0;
   const size = cardSize(numColumns);
+  const rowHeight = size + GRID_GAP;
+
+  const keyExtractor = useCallback(item => item.id, []);
+
+  const renderItem = useCallback(
+    ({ item }) => (
+      <Card
+        item={item}
+        size={size}
+        isSelected={selectedIds.has(item.id)}
+        batchMode={batchMode}
+        onPress={onItemPress}
+        onLongPress={onItemLongPress}
+      />
+    ),
+    [size, selectedIds, batchMode, onItemPress, onItemLongPress]
+  );
+
+  const getItemLayout = useCallback(
+    (_, index) => ({ length: rowHeight, offset: rowHeight * Math.floor(index / numColumns), index }),
+    [rowHeight, numColumns]
+  );
+
+  const contentContainerStyle = useMemo(
+    () => [styles.listContent, paddingBottom != null && { paddingBottom }, items.length === 0 && styles.listContentEmpty],
+    [paddingBottom, items.length]
+  );
+
   return (
     <FlatList
       data={items}
-      keyExtractor={item => item.id}
+      keyExtractor={keyExtractor}
       numColumns={numColumns}
       columnWrapperStyle={items.length > 0 ? styles.row : undefined}
-      contentContainerStyle={[styles.listContent, paddingBottom != null && { paddingBottom }, items.length === 0 && styles.listContentEmpty]}
+      contentContainerStyle={contentContainerStyle}
       style={styles.list}
       refreshControl={
         onRefresh ? <RefreshControl refreshing={!!refreshing} onRefresh={onRefresh} tintColor="#999" /> : undefined
@@ -47,33 +103,12 @@ export default function ItemGrid({
           </View>
         ) : null
       }
-      renderItem={({ item }) => {
-        const isSelected = selectedIds.has(item.id);
-        return (
-          <TouchableOpacity
-            style={[styles.card, { width: size }, isSelected && styles.cardSelected]}
-            onPress={() => onItemPress(item)}
-            onLongPress={onItemLongPress ? () => onItemLongPress(item) : undefined}
-            delayLongPress={400}
-          >
-            {item.image_url && (
-              <View style={styles.cardImageContainer}>
-                <Image source={{ uri: thumbOf(item) }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
-              </View>
-            )}
-            {item.is_private && !batchMode && (
-              <View style={styles.privateBadge}>
-                <Ionicons name="lock-closed" size={10} color="#fff" />
-              </View>
-            )}
-            {batchMode && (
-              <View style={[styles.selectionCircle, isSelected && styles.selectionCircleActive]}>
-                {isSelected && <Text style={styles.selectionCheck}>✓</Text>}
-              </View>
-            )}
-          </TouchableOpacity>
-        );
-      }}
+      renderItem={renderItem}
+      getItemLayout={getItemLayout}
+      removeClippedSubviews
+      initialNumToRender={numColumns * 6}
+      maxToRenderPerBatch={numColumns * 4}
+      windowSize={9}
     />
   );
 }
@@ -145,10 +180,6 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.25)',
     alignItems: 'center',
     justifyContent: 'center',
-  },
-  selectionCircleActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
   },
   selectionCheck: {
     color: '#fff',
