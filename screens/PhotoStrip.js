@@ -1,131 +1,71 @@
 import { Ionicons } from '@expo/vector-icons';
-import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
-import { S } from '../shared/strings';
 
-export default function PhotoStrip({ photos, selectedIdx, onSelect, editable, onRemove, onMakeFeatured }) {
-  const displayedEntry = photos[selectedIdx] ?? {};
-  const displayedDate = displayedEntry.added_at;
+export default function PhotoStrip({ photos, selectedIdx, onSelect, editable, onRemove, style }) {
   const hasMultiple = photos.filter(p => p?.url).length > 1;
-  const showFeatureSlot = editable && hasMultiple && onMakeFeatured;
-  const canFeature = showFeatureSlot && selectedIdx > 0;
-  if (!hasMultiple && !displayedDate && !showFeatureSlot) return null;
+  if (!hasMultiple) return null;
 
   return (
-    <View style={styles.photoExtras}>
-      {(displayedDate || showFeatureSlot) ? (
-        <View style={styles.photoMetaRow}>
-          {displayedDate ? (
-            <Text style={styles.photoDate}>
-              {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
-            </Text>
-          ) : <View style={{ flex: 1 }} />}
-          {showFeatureSlot && (
+    <ScrollView
+      horizontal
+      showsHorizontalScrollIndicator={false}
+      style={[styles.container, style]}
+      contentContainerStyle={styles.row}
+    >
+      {photos.map((entry, idx) => {
+        if (!entry?.url) return null;
+        const selected = idx === selectedIdx;
+        const removable = editable && idx > 0;
+        return (
+          <View key={`${entry.url}-${idx}`} style={styles.thumbnailWrap}>
             <TouchableOpacity
-              onPress={() => onMakeFeatured(selectedIdx)}
-              style={[styles.coverButton, !canFeature && styles.coverButtonHidden]}
-              hitSlop={6}
-              disabled={!canFeature}
+              onPress={() => onSelect(idx)}
+              style={[styles.thumbnail, selected && styles.thumbnailSelected]}
+              activeOpacity={0.8}
             >
-              <Ionicons name="star-outline" size={12} color="#2D2D2D" />
-              <Text style={styles.coverButtonText}>{S.itemForm.useAsCover}</Text>
+              <Image source={{ uri: entry.thumb_url || entry.url }} style={styles.thumbnailImage} cachePolicy="memory-disk" contentFit="cover" />
             </TouchableOpacity>
-          )}
-        </View>
-      ) : null}
-      {hasMultiple && (
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          style={styles.thumbnailScroll}
-          contentContainerStyle={styles.thumbnailRow}
-        >
-          {photos.map((entry, idx) => {
-            if (!entry?.url) return null;
-            const selected = idx === selectedIdx;
-            const removable = editable && idx > 0;
-            return (
-              <View key={`${entry.url}-${idx}`} style={styles.thumbnailWrap}>
-                <TouchableOpacity
-                  onPress={() => onSelect(idx)}
-                  style={[styles.thumbnail, selected && styles.thumbnailSelected]}
-                  activeOpacity={0.8}
-                >
-                  <Image source={{ uri: entry.thumb_url || entry.url }} style={styles.thumbnailImage} cachePolicy="memory-disk" contentFit="cover" />
-                </TouchableOpacity>
-                {removable && (
-                  <TouchableOpacity
-                    onPress={() => onRemove(idx - 1)}
-                    style={styles.thumbnailRemove}
-                    hitSlop={6}
-                  >
-                    <Ionicons name="close" size={14} color="#fff" />
-                  </TouchableOpacity>
-                )}
-              </View>
-            );
-          })}
-        </ScrollView>
-      )}
-    </View>
+            {removable && (
+              <TouchableOpacity
+                onPress={() => onRemove(idx - 1)}
+                style={styles.thumbnailRemove}
+                hitSlop={6}
+              >
+                <Ionicons name="close" size={12} color="#fff" />
+              </TouchableOpacity>
+            )}
+          </View>
+        );
+      })}
+    </ScrollView>
   );
 }
 
 const styles = StyleSheet.create({
-  photoExtras: {
-    marginBottom: 16,
-    marginTop: -8,
-  },
-  photoMetaRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    marginBottom: 8,
-  },
-  photoDate: {
-    fontSize: 12,
-    color: '#999',
-    flex: 1,
-  },
-  coverButton: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E0E0E0',
-    backgroundColor: '#fff',
-  },
-  coverButtonHidden: {
-    opacity: 0,
-  },
-  coverButtonText: {
-    fontSize: 12,
-    color: '#2D2D2D',
-  },
-  thumbnailScroll: {
+  container: {
     flexGrow: 0,
   },
-  thumbnailRow: {
+  row: {
     gap: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 4,
+    paddingVertical: 6,
+    alignItems: 'center',
   },
   thumbnailWrap: {
     position: 'relative',
   },
   thumbnail: {
-    width: 56,
-    height: 56,
+    width: 48,
+    height: 48,
     borderRadius: 10,
     overflow: 'hidden',
-    backgroundColor: '#E8E3DD',
+    backgroundColor: 'rgba(255,255,255,0.6)',
     borderWidth: 2,
     borderColor: 'transparent',
   },
   thumbnailSelected: {
-    borderColor: '#2D2D2D',
+    borderColor: '#fff',
   },
   thumbnailImage: {
     width: '100%',
@@ -133,11 +73,11 @@ const styles = StyleSheet.create({
   },
   thumbnailRemove: {
     position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 20,
-    height: 20,
-    borderRadius: 10,
+    top: -4,
+    right: -4,
+    width: 18,
+    height: 18,
+    borderRadius: 9,
     backgroundColor: '#2D2D2D',
     alignItems: 'center',
     justifyContent: 'center',

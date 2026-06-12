@@ -171,7 +171,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                     <LockIcon size={14} color="#fff" open={!editPrivate} />
                   </button>
                   <div className="image-overlay" onClick={() => fileInputRef.current?.click()}>
-                    {S.common.changeImage}
+                    {S.common.newPhoto}
                     <input
                       ref={fileInputRef}
                       type="file"

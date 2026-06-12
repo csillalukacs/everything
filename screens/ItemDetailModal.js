@@ -20,6 +20,7 @@ import { Image } from 'expo-image';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
 import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 import { cropToContent } from '../lib/cropToContent';
@@ -37,6 +38,7 @@ import { isFeaturedTag } from '../shared/featuredTag';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { items, session, profile } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [editing, setEditing] = useState(false);
@@ -54,6 +56,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [saving, setSaving] = useState(false);
   const [removingBg, setRemovingBg] = useState(false);
   const [cameraVisible, setCameraVisible] = useState(false);
+  const [infoVisible, setInfoVisible] = useState(false);
+  const [menuVisible, setMenuVisible] = useState(false);
   const ocrPromiseRef = useRef(null);
   const scrollRef = useRef(null);
   const translateX = useSharedValue(0);
@@ -92,6 +96,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   useEffect(() => {
     setDisplayedIdx(0);
+    setInfoVisible(false);
+    setMenuVisible(false);
     if (!pendingDir.current) return;
     translateX.value = pendingDir.current === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH;
     translateX.value = withTiming(0, { duration: 220 });
@@ -150,19 +156,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     }
   }
 
-  function makeFeatured(displayIdx) {
-    if (displayIdx <= 0) return;
-    const prevIdx = displayIdx - 1;
-    const chosen = editPreviousImages[prevIdx];
-    if (!chosen?.url) return;
-    const demoted = { url: editPhoto, thumb_url: editPhotoThumb, added_at: editImageAddedAt };
-    setEditPhoto(chosen.url);
-    setEditPhotoThumb(chosen.thumb_url ?? null);
-    setEditImageAddedAt(chosen.added_at ?? null);
-    setEditPreviousImages(prev => prev.map((e, i) => i === prevIdx ? demoted : e));
-    setDisplayedIdx(0);
-  }
-
   function removePreviousPhoto(idx) {
     setEditPreviousImages(prev => prev.filter((_, i) => i !== idx));
     setDisplayedIdx(curr => {
@@ -203,13 +196,27 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 
   async function attemptUpdate() {
     const ocrText = ocrPromiseRef.current ? await ocrPromiseRef.current : undefined;
+    let savePhoto = editPhoto;
+    let savePrevious = editPreviousImages;
+    let saveImageAddedAt = editImageAddedAt;
+    const selectedIdx = Math.min(displayedIdx, editPreviousImages.length);
+    if (selectedIdx > 0) {
+      const prevIdx = selectedIdx - 1;
+      const chosen = editPreviousImages[prevIdx];
+      if (chosen?.url) {
+        const demoted = { url: editPhoto, thumb_url: editPhotoThumb, added_at: editImageAddedAt };
+        savePhoto = chosen.url;
+        saveImageAddedAt = chosen.added_at ?? null;
+        savePrevious = editPreviousImages.map((e, i) => i === prevIdx ? demoted : e);
+      }
+    }
     let timeoutId;
     const timeoutPromise = new Promise(resolve => {
       timeoutId = setTimeout(() => resolve(false), 60000);
     });
     const savePromise = (async () => {
       try {
-        return await onSave(editName.trim(), editPhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), ocrText, editPreviousImages, editImageAddedAt);
+        return await onSave(editName.trim(), savePhoto, editTags, editPrivate, editDescription.trim(), buildAcquired(), ocrText, savePrevious, saveImageAddedAt);
       } catch (e) {
         console.error('Edit save error:', e);
         return false;
@@ -251,6 +258,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       ];
   const safeDisplayedIdx = Math.min(displayedIdx, allPhotos.length - 1);
   const displayPhoto = allPhotos[safeDisplayedIdx]?.url;
+  const displayedDate = allPhotos[safeDisplayedIdx]?.added_at;
 
   const photoStrip = (
     <PhotoStrip
@@ -259,9 +267,34 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       onSelect={setDisplayedIdx}
       editable={editing}
       onRemove={removePreviousPhoto}
-      onMakeFeatured={makeFeatured}
+      style={styles.photoStrip}
     />
   );
+  const infoCorner = displayedDate ? (
+    <View style={styles.infoCornerWrap} pointerEvents="box-none">
+      {infoVisible && (
+        <View style={styles.tooltipBubble}>
+          <Text style={styles.tooltipText}>
+            {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
+          </Text>
+        </View>
+      )}
+      <TouchableOpacity
+        style={styles.infoCorner}
+        onPress={() => setInfoVisible(v => !v)}
+        hitSlop={6}
+      >
+        <Ionicons name="information-circle-outline" size={20} color="#2D2D2D" />
+      </TouchableOpacity>
+    </View>
+  ) : null;
+  const bottomBar = (photoStrip || infoCorner) ? (
+    <View style={[styles.bottomBar, editing && styles.bottomBarEditing]} pointerEvents="box-none">
+      {photoStrip}
+      <View style={{ flex: 1 }} />
+      {infoCorner}
+    </View>
+  ) : null;
   const itemTags = item.tags ?? [];
 
   return (
@@ -271,43 +304,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         style={styles.container}
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
-        <View style={styles.header}>
-          <TouchableOpacity onPress={editing ? cancelEdit : onClose} style={styles.headerButton}>
-            {editing
-              ? <Text style={styles.headerButtonText}>{S.common.cancel}</Text>
-              : <Ionicons name="chevron-down" size={28} color="#2D2D2D" />
-            }
-          </TouchableOpacity>
-          {!editing && (
-            <View style={styles.navButtons}>
-              <TouchableOpacity onPress={onPrev} disabled={!onPrev} style={styles.navButton}>
-                <Ionicons name="chevron-back" size={24} color={onPrev ? '#2D2D2D' : '#CCC'} />
-              </TouchableOpacity>
-              <TouchableOpacity onPress={onNext} disabled={!onNext} style={styles.navButton}>
-                <Ionicons name="chevron-forward" size={24} color={onNext ? '#2D2D2D' : '#CCC'} />
-              </TouchableOpacity>
-            </View>
-          )}
-          {editing ? (
-            <TouchableOpacity onPress={handleSave} style={styles.headerButton} disabled={saving}>
-              <Text style={[styles.headerButtonText, styles.saveText]}>
-                {saving ? S.common.saving : S.common.save}
-              </Text>
-            </TouchableOpacity>
-          ) : (
-            <View style={styles.rightButtons}>
-              <TouchableOpacity onPress={handleShare} style={styles.headerButton}>
-                <Ionicons name="share-outline" size={24} color="#2D2D2D" />
-              </TouchableOpacity>
-              {onSave && (
-                <TouchableOpacity onPress={enterEdit} style={styles.headerButton}>
-                  <Text style={styles.headerButtonText}>{S.common.edit}</Text>
-                </TouchableOpacity>
-              )}
-            </View>
-          )}
-        </View>
-
         {editing ? (
           <ScrollView
             ref={scrollRef}
@@ -329,7 +325,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 <TouchableOpacity style={styles.photoOverlay} onPress={() => setCameraVisible(true)}>
                   <View style={styles.photoAction}>
                     <Ionicons name="camera-outline" size={22} color="#fff" />
-                    <Text style={styles.photoActionText}>{S.common.changePhoto}</Text>
+                    <Text style={styles.photoActionText}>{S.common.newPhoto}</Text>
                   </View>
                 </TouchableOpacity>
               )}
@@ -339,13 +335,12 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               >
                 <Ionicons
                   name={editPrivate ? 'lock-closed' : 'lock-open-outline'}
-                  size={16}
-                  color="#fff"
+                  size={18}
+                  color={editPrivate ? '#fff' : '#2D2D2D'}
                 />
               </TouchableOpacity>
+              {bottomBar}
             </View>
-
-            {photoStrip}
 
             <CameraCaptureModal
               visible={cameraVisible}
@@ -373,7 +368,19 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               />
             </View>
           </ScrollView>
-        ) : (
+        ) : null}
+        {editing && (
+          <View style={[styles.editFooter, { paddingBottom: insets.bottom + 24 }]}>
+            <TouchableOpacity onPress={cancelEdit} style={styles.editFooterButton}>
+              <Text style={styles.editFooterCancel}>{S.common.cancel}</Text>
+            </TouchableOpacity>
+            <View style={styles.editFooterDivider} />
+            <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.editFooterButton}>
+              <Text style={styles.editFooterSave}>{saving ? S.common.saving : S.common.save}</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+        {!editing && (
           <GestureDetector gesture={swipeGesture}>
           <Animated.View style={[{ flex: 1 }, swipeStyle]}>
             <View style={styles.imageContainer}>
@@ -381,8 +388,45 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" recyclingKey={displayPhoto} />
                 : <View style={styles.imagePlaceholder} />
               }
+              <TouchableOpacity style={styles.imageBack} onPress={onClose} hitSlop={8}>
+                <Ionicons name="chevron-down" size={22} color="#2D2D2D" />
+              </TouchableOpacity>
+              <View style={styles.imageMenuWrap} pointerEvents="box-none">
+                <TouchableOpacity style={styles.imageMenuButton} onPress={() => setMenuVisible(v => !v)} hitSlop={8}>
+                  <Ionicons name="ellipsis-horizontal" size={20} color="#2D2D2D" />
+                </TouchableOpacity>
+                {menuVisible && (
+                  <View style={styles.imageMenu}>
+                    <TouchableOpacity
+                      style={styles.imageMenuItem}
+                      onPress={() => { setMenuVisible(false); handleShare(); }}
+                    >
+                      <Ionicons name="share-outline" size={18} color="#2D2D2D" />
+                      <Text style={styles.imageMenuItemText}>{S.common.share}</Text>
+                    </TouchableOpacity>
+                    {onSave && (
+                      <TouchableOpacity
+                        style={styles.imageMenuItem}
+                        onPress={() => { setMenuVisible(false); enterEdit(); }}
+                      >
+                        <Ionicons name="pencil-outline" size={18} color="#2D2D2D" />
+                        <Text style={styles.imageMenuItemText}>{S.common.edit}</Text>
+                      </TouchableOpacity>
+                    )}
+                    {onDelete && (
+                      <TouchableOpacity
+                        style={styles.imageMenuItem}
+                        onPress={() => { setMenuVisible(false); onDelete(); }}
+                      >
+                        <Ionicons name="trash-outline" size={18} color="#E74C3C" />
+                        <Text style={[styles.imageMenuItemText, styles.imageMenuItemDanger]}>{S.common.delete}</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </View>
+              {bottomBar}
             </View>
-            {photoStrip}
             <View style={styles.info}>
               {item.profile && (
                 <TouchableOpacity
@@ -461,11 +505,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 {S.itemForm.addedOn(new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
               </Text>
             </View>
-            {onDelete && (
-              <TouchableOpacity style={styles.deleteButton} onPress={onDelete}>
-                <Text style={styles.deleteText}>{S.itemForm.deleteItem}</Text>
-              </TouchableOpacity>
-            )}
           </Animated.View>
           </GestureDetector>
         )}
@@ -483,41 +522,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingBottom: 40,
   },
-  header: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: 24,
-    minHeight: 36,
-  },
-  navButtons: {
-    flexDirection: 'row',
-    gap: 4,
-  },
-  rightButtons: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  navButton: {
-    padding: 4,
-  },
-  headerButton: {
-    padding: 4,
-  },
-  headerButtonText: {
-    fontSize: 16,
-    color: '#2D2D2D',
-  },
-  saveText: {
-    fontWeight: '500',
-  },
   imageContainer: {
     width: '100%',
     aspectRatio: 1,
-    borderRadius: 20,
-    overflow: 'hidden',
-    backgroundColor: '#E8E3DD',
+    backgroundColor: 'transparent',
     marginBottom: 20,
   },
   image: {
@@ -613,15 +621,133 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: 10,
     right: 10,
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: 'rgba(0,0,0,0.45)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff',
     alignItems: 'center',
     justifyContent: 'center',
   },
   privacyCornerOn: {
     backgroundColor: '#2D2D2D',
+  },
+  editFooter: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    backgroundColor: '#2D2D2D',
+    marginHorizontal: -24,
+    marginBottom: -40,
+  },
+  editFooterButton: {
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+  },
+  editFooterDivider: {
+    width: 1,
+    alignSelf: 'stretch',
+    marginVertical: 10,
+    backgroundColor: 'rgba(255,255,255,0.2)',
+  },
+  editFooterCancel: {
+    fontSize: 18,
+    color: 'rgba(255,255,255,0.7)',
+  },
+  editFooterSave: {
+    fontSize: 18,
+    color: '#fff',
+    fontWeight: '500',
+  },
+  bottomBar: {
+    position: 'absolute',
+    left: 10,
+    right: 10,
+    bottom: 10,
+    flexDirection: 'row',
+    alignItems: 'flex-end',
+    gap: 8,
+  },
+  bottomBarEditing: {
+    bottom: 60,
+  },
+  photoStrip: {
+    flexShrink: 1,
+  },
+  infoCornerWrap: {
+    alignItems: 'flex-end',
+    paddingBottom: 6,
+  },
+  infoCorner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  tooltipBubble: {
+    marginBottom: 6,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(0,0,0,0.8)',
+  },
+  tooltipText: {
+    fontSize: 12,
+    color: '#fff',
+  },
+  imageBack: {
+    position: 'absolute',
+    top: 10,
+    left: 0,
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageMenuWrap: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    alignItems: 'flex-end',
+  },
+  imageMenuButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  imageMenu: {
+    marginTop: 4,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 140,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  imageMenuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  imageMenuItemText: {
+    fontSize: 14,
+    color: '#2D2D2D',
+  },
+  imageMenuItemDanger: {
+    color: '#E74C3C',
   },
   date: {
     fontSize: 13,
@@ -635,14 +761,6 @@ const styles = StyleSheet.create({
   acquiredLink: {
     textDecorationLine: 'underline',
     textDecorationColor: '#ccc',
-  },
-  deleteButton: {
-    paddingVertical: 16,
-    alignItems: 'center',
-  },
-  deleteText: {
-    fontSize: 16,
-    color: '#E74C3C',
   },
   editFields: {
     gap: 12,
