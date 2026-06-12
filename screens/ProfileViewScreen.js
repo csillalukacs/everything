@@ -269,7 +269,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
               onItemPress={setSelectedItem}
               refreshing={refreshing}
               onRefresh={onRefresh}
-              numColumns={2}
+              numColumns={3}
               emptyText={S.profileView.nothingPublic}
             />
           </>
