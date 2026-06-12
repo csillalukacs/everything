@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
+import { useRouter } from 'expo-router';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import { thumbOf } from '../../shared/items';
@@ -146,6 +147,7 @@ function DailyCard({ item, revealed, shouldShine, onReveal, onOpen }) {
 
 export default function Today() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const { session, items, itemsLoading, tags, refresh, updateItem, deleteItem } = useCollection();
   const userId = session?.user?.id;
 
@@ -326,6 +328,7 @@ export default function Today() {
         onDelete={handleDelete}
         onSave={handleUpdate}
         allTags={tags}
+        onTagPress={tag => { setSelectedItem(null); router.navigate({ pathname: '/', params: { tag: tag.name } }); }}
         onPrev={(() => { const idx = revealedSample.findIndex(i => i.id === selectedItem?.id); return idx > 0 ? () => setSelectedItem(revealedSample[idx - 1]) : null; })()}
         onNext={(() => { const idx = revealedSample.findIndex(i => i.id === selectedItem?.id); return idx < revealedSample.length - 1 ? () => setSelectedItem(revealedSample[idx + 1]) : null; })()}
       />

@@ -93,6 +93,16 @@ export default function Collection() {
   }, [itemsLoading, tags, items]);
 
   useEffect(() => {
+    if (!params.tag) return;
+    const found = tags.find(t => t.name === String(params.tag));
+    if (!found) return;
+    setActiveTag(found);
+    setActiveCity(null);
+    setActiveYear(null);
+    router.setParams({ tag: undefined });
+  }, [params.tag, tags, router]);
+
+  useEffect(() => {
     if (params.city) {
       setActiveCity(String(params.city));
       setActiveTag(null);

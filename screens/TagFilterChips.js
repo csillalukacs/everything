@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useEffect, useRef } from 'react';
 import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
 import { isFeaturedTag, sortTagsFeaturedFirst } from '../shared/featuredTag';
@@ -13,9 +14,20 @@ export default function TagFilterChips({
   tagCounts,
   onManagePress,
 }) {
+  const scrollRef = useRef(null);
+  const chipOffsets = useRef({});
+
+  useEffect(() => {
+    if (!activeTag || !scrollRef.current) return;
+    const x = chipOffsets.current[activeTag.id];
+    if (x == null) return;
+    scrollRef.current.scrollTo({ x: Math.max(0, x - 24), animated: true });
+  }, [activeTag]);
+
   if (tags.length === 0) return null;
   const isUntagged = activeTag?.id === '__untagged__';
   const orderedTags = sortTagsFeaturedFirst(tags);
+
   const renderTagChip = (tag) => {
     const active = activeTag?.id === tag.id;
     const featured = isFeaturedTag(tag);
@@ -24,6 +36,7 @@ export default function TagFilterChips({
         key={tag.id}
         style={[styles.filterChip, active && styles.filterChipActive]}
         onPress={() => onChangeActiveTag(active ? null : tag)}
+        onLayout={e => { chipOffsets.current[tag.id] = e.nativeEvent.layout.x; }}
       >
         {featured && <AppleIcon size={14} />}
         {tag.is_private && !featured && <Ionicons name="lock-closed" size={10} color={active ? '#fff' : '#ccc'} />}
@@ -37,6 +50,7 @@ export default function TagFilterChips({
   return (
     <View style={styles.filterRow}>
       <ScrollView
+        ref={scrollRef}
         horizontal
         showsHorizontalScrollIndicator={false}
         style={styles.filterScroll}
