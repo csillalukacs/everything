@@ -71,9 +71,11 @@ export default function ItemGrid({
     [size, selectedIds, batchMode, onItemPress, onItemLongPress]
   );
 
+  // FlatList with numColumns wraps items into rows, so VirtualizedList calls
+  // getItemLayout with the row index — offset is simply rowHeight * index.
   const getItemLayout = useCallback(
-    (_, index) => ({ length: rowHeight, offset: rowHeight * Math.floor(index / numColumns), index }),
-    [rowHeight, numColumns]
+    (_, index) => ({ length: rowHeight, offset: rowHeight * index, index }),
+    [rowHeight]
   );
 
   const contentContainerStyle = useMemo(
