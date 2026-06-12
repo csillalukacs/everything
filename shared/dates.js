@@ -21,6 +21,26 @@ export function relativeTime(s, now = new Date()) {
     : `${MONTH_NAMES[then.getMonth()]} ${then.getDate()}, ${then.getFullYear()}`;
 }
 
+// Day-granular relative label for a 'YYYY-MM-DD' day key (parsed in local time so it
+// doesn't drift across the UTC boundary the way relativeTime would on a bare date).
+export function relativeDay(dayStr, now = new Date()) {
+  if (!dayStr) return '';
+  const [y, m, d] = String(dayStr).split('-').map(Number);
+  if (!y) return '';
+  const then = startOfDay(new Date(y, m - 1, d));
+  const today = startOfDay(now);
+  const diffDays = Math.round((today - then) / 86400000);
+  if (diffDays <= 0) return 'today';
+  if (diffDays === 1) return 'yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  if (diffDays < 14) return 'last week';
+  if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+  return then.toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric',
+    year: then.getFullYear() === today.getFullYear() ? undefined : 'numeric',
+  });
+}
+
 export function startOfDay(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);

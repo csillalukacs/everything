@@ -194,6 +194,18 @@ export const S = {
     feedEmpty: 'nothing here yet',
     loading: 'loading…',
     addedNewItem: 'added a new thing',
+    usedItem: 'used',
+  },
+
+  // Usage tracking (item detail + edit)
+  usage: {
+    useToday: 'use today',
+    usedToday: 'used today',
+    neverUsed: 'never used',
+    lastUsed: (rel) => `last used ${rel}`,
+    timesUsed: (n) => `used ${n} ${plural(n, 'time')}`,
+    backfillTitle: 'log past use',
+    backfillHint: 'tap days you used this',
   },
 
   // Stats

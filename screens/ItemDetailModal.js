@@ -18,8 +18,9 @@ import {
 } from 'react-native';
 import { Image } from 'expo-image';
 import { GestureDetector, Gesture, GestureHandlerRootView } from 'react-native-gesture-handler';
-import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming } from 'react-native-reanimated';
+import Animated, { useSharedValue, useAnimatedStyle, withSpring, withTiming, withSequence } from 'react-native-reanimated';
 import { runOnJS } from 'react-native-worklets';
+import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -27,8 +28,12 @@ import { cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
 import { useCollection } from '../lib/CollectionProvider';
 import { locationSuggestionsFromItems } from '../shared/items';
+import { dayKey, relativeDay } from '../shared/dates';
+import { fetchItemUsages } from '../shared/usagesApi';
+import { supabase } from '../lib/supabase';
 import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
+import UsageBackfill from './UsageBackfill';
 import Avatar from './Avatar';
 import TagInput from './TagInput';
 import PhotoStrip from './PhotoStrip';
@@ -39,8 +44,13 @@ import { isFeaturedTag } from '../shared/featuredTag';
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, session, profile } = useCollection();
+  const { items, session, profile, markUsedToday, unmarkUsedToday, addUsage, removeUsageOn } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
+  // Usage rollups live on the provider's copy of the item so they update in place.
+  const liveItem = useMemo(() => items.find(i => i.id === item?.id) ?? item, [items, item]);
+  const [usageBusy, setUsageBusy] = useState(false);
+  const [usedDays, setUsedDays] = useState(() => new Set());
+  const useTodayScale = useSharedValue(1);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -108,6 +118,42 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     transform: [{ translateX: translateX.value }],
   }));
 
+  const useTodayStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: useTodayScale.value }],
+  }));
+
+  const isOwnerItem = session?.user?.id && item?.user_id === session.user.id;
+  const todayKey = dayKey(new Date());
+  const usedToday = liveItem?.last_used_on === todayKey;
+  const usageCount = liveItem?.usage_count ?? 0;
+
+  async function handleUseTodayToggle() {
+    if (usageBusy || !liveItem) return;
+    setUsageBusy(true);
+    if (usedToday) {
+      await unmarkUsedToday(liveItem);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      useTodayScale.value = withSequence(
+        withTiming(1.12, { duration: 120 }),
+        withSpring(1, { damping: 6, stiffness: 180 }),
+      );
+      await markUsedToday(liveItem);
+    }
+    setUsageBusy(false);
+  }
+
+  async function handleBackfillToggle(key, adding) {
+    if (!liveItem) return;
+    setUsedDays(prev => {
+      const next = new Set(prev);
+      if (adding) next.add(key); else next.delete(key);
+      return next;
+    });
+    if (adding) await addUsage(liveItem, key);
+    else await removeUsageOn(liveItem, key);
+  }
+
   useEffect(() => {
     if (visible && autoEdit) enterEdit();
   }, [visible]);
@@ -126,6 +172,10 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditAcquired(item.acquired_location
       ? { location: item.acquired_location, lat: item.acquired_lat, lng: item.acquired_lng }
       : null);
+    setUsedDays(new Set());
+    fetchItemUsages(supabase, item.id)
+      .then(rows => setUsedDays(new Set(rows.map(r => r.used_on))))
+      .catch(e => console.error('fetchItemUsages error:', e));
     setEditing(true);
   }
 
@@ -367,6 +417,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 onYearChange={setEditYear}
                 locationSuggestions={locationSuggestions}
               />
+              <UsageBackfill usedDays={usedDays} onToggle={handleBackfillToggle} />
             </View>
           </ScrollView>
         ) : null}
@@ -471,6 +522,32 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                       </Wrapper>
                     );
                   })}
+                </View>
+              )}
+              {isOwnerItem && (
+                <View style={styles.usageRow}>
+                  <Animated.View style={useTodayStyle}>
+                    <TouchableOpacity
+                      style={[styles.useTodayBtn, usedToday && styles.useTodayBtnOn]}
+                      onPress={handleUseTodayToggle}
+                      disabled={usageBusy}
+                      activeOpacity={0.8}
+                    >
+                      <Ionicons
+                        name={usedToday ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                        size={18}
+                        color={usedToday ? '#fff' : '#2D2D2D'}
+                      />
+                      <Text style={[styles.useTodayText, usedToday && styles.useTodayTextOn]}>
+                        {usedToday ? S.usage.usedToday : S.usage.useToday}
+                      </Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+                  <Text style={styles.usageStat}>
+                    {usageCount === 0
+                      ? S.usage.neverUsed
+                      : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(liveItem.last_used_on))}`}
+                  </Text>
                 </View>
               )}
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
@@ -776,5 +853,38 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     lineHeight: 21,
+  },
+  usageRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flexWrap: 'wrap',
+  },
+  useTodayBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: '#2D2D2D',
+  },
+  useTodayBtnOn: {
+    backgroundColor: '#2D2D2D',
+  },
+  useTodayText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#2D2D2D',
+  },
+  useTodayTextOn: {
+    color: '#fff',
+  },
+  usageStat: {
+    fontSize: 13,
+    color: '#999',
+    flexShrink: 1,
   },
 });

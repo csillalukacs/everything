@@ -5,7 +5,7 @@ import { Image } from 'expo-image';
 import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
-import { fetchPublicFeed } from '../../shared/itemsApi';
+import { fetchFeedEvents } from '../../shared/itemsApi';
 import { thumbOf } from '../../shared/items';
 import { relativeTime } from '../../shared/dates';
 import { S } from '../../shared/strings';
@@ -20,7 +20,7 @@ export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, updateItem, deleteItem } = useCollection();
-  const [feedItems, setFeedItems] = useState([]);
+  const [feedEvents, setFeedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
@@ -45,9 +45,9 @@ export default function Feed() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchPublicFeed(supabase, { limit: 50 })
-      .then(rows => { if (!cancelled) setFeedItems(rows); })
-      .catch(e => console.error('fetchPublicFeed error:', e))
+    fetchFeedEvents(supabase, { limit: 50 })
+      .then(rows => { if (!cancelled) setFeedEvents(rows); })
+      .catch(e => console.error('fetchFeedEvents error:', e))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
@@ -55,10 +55,10 @@ export default function Feed() {
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const rows = await fetchPublicFeed(supabase, { limit: 50 });
-      setFeedItems(rows);
+      const rows = await fetchFeedEvents(supabase, { limit: 50 });
+      setFeedEvents(rows);
     } catch (e) {
-      console.error('fetchPublicFeed error:', e);
+      console.error('fetchFeedEvents error:', e);
     } finally {
       setRefreshing(false);
     }
@@ -90,18 +90,20 @@ export default function Feed() {
           <View style={styles.empty}>
             <ActivityIndicator color="#999" />
           </View>
-        ) : feedItems.length === 0 ? (
+        ) : feedEvents.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>{S.feed.feedEmpty}</Text>
           </View>
         ) : (
           <View style={styles.feedList}>
-            {feedItems.map(item => {
+            {feedEvents.map(event => {
+              const item = event.item;
               const name = item.profile?.display_name || item.profile?.username || 'someone';
-              const time = relativeTime(item.created_at);
+              const time = relativeTime(event.at);
+              const action = event.type === 'usage' ? S.feed.usedItem : S.feed.addedNewItem;
               return (
                 <TouchableOpacity
-                  key={item.id}
+                  key={event.key}
                   style={styles.feedRow}
                   activeOpacity={0.7}
                   onPress={() => setSelectedItem(item)}
@@ -116,7 +118,7 @@ export default function Feed() {
                         onPress={() => openProfile(item)}
                         suppressHighlighting
                       >{name}</Text>
-                      <Text style={styles.posterAction}> {S.feed.addedNewItem}</Text>
+                      <Text style={styles.posterAction}> {action}</Text>
                       {time && <Text style={styles.posterTime}> · {time}</Text>}
                     </Text>
                     {item.name && <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>}

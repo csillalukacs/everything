@@ -44,6 +44,56 @@ export async function fetchPublicFeed(client, { limit = 50 } = {}) {
   }));
 }
 
+// Unified cross-user feed: item-add events merged with "used today" usage events,
+// each carrying its item + the poster's profile, sorted newest-first by insert time.
+// Returns events shaped { type: 'add' | 'usage', key, at, used_on?, item }.
+export async function fetchFeedEvents(client, { limit = 50 } = {}) {
+  const [addsRes, usagesRes] = await Promise.all([
+    client
+      .from('items')
+      .select('*, tags(id, name, is_private)')
+      .eq('is_private', false)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+    client
+      .from('item_usages')
+      .select('id, used_on, created_at, item:items!inner(*, tags(id, name, is_private))')
+      .eq('on_feed', true)
+      .eq('item.is_private', false)
+      .order('created_at', { ascending: false })
+      .limit(limit),
+  ]);
+  if (addsRes.error) throw addsRes.error;
+  if (usagesRes.error) throw usagesRes.error;
+
+  const addEvents = (addsRes.data ?? []).map(item => ({
+    type: 'add', key: `add-${item.id}`, at: item.created_at, item,
+  }));
+  const usageEvents = (usagesRes.data ?? [])
+    .filter(u => u.item)
+    .map(u => ({ type: 'usage', key: `use-${u.id}`, at: u.created_at, used_on: u.used_on, item: u.item }));
+
+  const events = [...addEvents, ...usageEvents]
+    .sort((a, b) => new Date(b.at) - new Date(a.at))
+    .slice(0, limit);
+  if (!events.length) return [];
+
+  const userIds = [...new Set(events.map(e => e.item.user_id))];
+  const { data: profiles, error: pErr } = await client
+    .from('profiles')
+    .select('user_id, display_name, username, avatar_url, avatar_thumb_url')
+    .in('user_id', userIds);
+  if (pErr) throw pErr;
+
+  const profileMap = new Map((profiles ?? []).map(p => [p.user_id, p]));
+  for (const e of events) {
+    const profile = profileMap.get(e.item.user_id) ?? null;
+    e.profile = profile;
+    e.item = { ...e.item, profile };
+  }
+  return events;
+}
+
 export async function fetchItemCount(client, { userId, publicOnly = false } = {}) {
   let query = client
     .from('items')
