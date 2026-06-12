@@ -11,7 +11,6 @@ export default function ProfileHeader({
   avatarThumbUrl,
   home,
   itemCount,
-  collageCount,
   isOwner,
 }) {
   const displayName = profileName ?? username ?? userId?.split('-')[0] ?? ''
@@ -37,14 +36,6 @@ export default function ProfileHeader({
                   {' · '}
                   <Link to={`/u/${slug}`} className="profile-count-link">
                     {S.profile.objectCount(itemCount)}
-                  </Link>
-                </>
-              )}
-              {collageCount > 0 && (
-                <>
-                  {' · '}
-                  <Link to={`/u/${slug}/collages`} className="profile-count-link">
-                    {S.profile.collageCount(collageCount)}
                   </Link>
                 </>
               )}
