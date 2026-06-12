@@ -424,17 +424,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
             </View>
           </ScrollView>
         ) : null}
-        {editing && (
-          <View style={[styles.editFooter, { paddingBottom: insets.bottom + 24 }]}>
-            <TouchableOpacity onPress={cancelEdit} style={styles.editFooterButton}>
-              <Text style={styles.editFooterCancel}>{S.common.cancel}</Text>
-            </TouchableOpacity>
-            <View style={styles.editFooterDivider} />
-            <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.editFooterButton}>
-              <Text style={styles.editFooterSave}>{saving ? S.common.saving : S.common.save}</Text>
-            </TouchableOpacity>
-          </View>
-        )}
         {!editing && (
           <GestureDetector gesture={swipeGesture}>
           <Animated.View style={[{ flex: 1 }, swipeStyle]}>
@@ -619,6 +608,17 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           </GestureDetector>
         )}
       </KeyboardAvoidingView>
+      {editing && (
+        <View style={[styles.editFooter, { paddingBottom: insets.bottom + 24 }]}>
+          <TouchableOpacity onPress={cancelEdit} style={styles.editFooterButton}>
+            <Text style={styles.editFooterCancel}>{S.common.cancel}</Text>
+          </TouchableOpacity>
+          <View style={styles.editFooterDivider} />
+          <TouchableOpacity onPress={handleSave} disabled={saving} style={styles.editFooterButton}>
+            <Text style={styles.editFooterSave}>{saving ? S.common.saving : S.common.save}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
       <RetireSheet
         visible={retireSheetVisible}
         onClose={() => setRetireSheetVisible(false)}
