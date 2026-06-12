@@ -317,7 +317,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           >
             <View style={styles.imageContainer}>
               {displayPhoto
-                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" />
+                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" recyclingKey={displayPhoto} />
                 : <View style={styles.imagePlaceholder} />
               }
               {removingBg ? (
@@ -378,7 +378,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           <Animated.View style={[{ flex: 1 }, swipeStyle]}>
             <View style={styles.imageContainer}>
               {displayPhoto
-                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" />
+                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" recyclingKey={displayPhoto} />
                 : <View style={styles.imagePlaceholder} />
               }
             </View>
