@@ -204,9 +204,10 @@ export const S = {
     neverUsed: 'never used',
     lastUsed: (rel) => `last used ${rel}`,
     timesUsed: (n) => `used ${n} ${plural(n, 'time')}`,
-    logPast: 'log a past day',
+    historyTitle: 'usage history',
+    addEntry: 'add entry',
     addDate: 'add',
-    loggedDays: 'days used',
+    noHistory: 'no past days logged yet',
   },
 
   // Graveyard — retired items (sold, consumed, lost, …) rest here.

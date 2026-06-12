@@ -1678,18 +1678,23 @@ input {
   color: #999;
 }
 
-.usage-days-row {
+.usage-history-header {
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  justify-content: space-between;
 }
 
-.log-past-btn {
+.usage-history-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #2D2D2D;
+}
+
+.add-entry-btn {
   position: relative;
   display: inline-flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   padding: 6px 12px;
   border-radius: 20px;
   background: #fff;
@@ -1699,13 +1704,9 @@ input {
   cursor: pointer;
 }
 
-.log-past-icon {
-  font-size: 13px;
-}
-
 /* Hidden date input; the picker is opened programmatically via showPicker() on the button click,
    so it must not intercept the click itself. */
-.log-past-input {
+.add-entry-input {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -1714,15 +1715,30 @@ input {
   pointer-events: none;
 }
 
-.usage-day-chip {
-  display: inline-flex;
+.usage-history-list {
+  display: flex;
+  flex-direction: column;
+  height: 132px;
+  overflow-y: auto;
+}
+
+.usage-history-row {
+  display: flex;
   align-items: center;
-  gap: 6px;
-  padding: 6px 8px 6px 12px;
-  border-radius: 20px;
-  background: #E8E3DD;
+  justify-content: space-between;
+  padding: 11px 0;
+  border-bottom: 1px solid #E8E3DD;
+}
+
+.usage-history-date {
+  font-size: 14px;
   color: #2D2D2D;
+}
+
+.usage-history-empty {
   font-size: 13px;
+  color: #999;
+  padding: 4px 0;
 }
 
 .usage-day-chip-x {

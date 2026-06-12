@@ -54,6 +54,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [usedDays, setUsedDays] = useState(() => new Set());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [pickerDate, setPickerDate] = useState(() => new Date());
+  const [armedDay, setArmedDay] = useState(null);
   const useTodayScale = useSharedValue(1);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -114,6 +115,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setInfoVisible(false);
     setMenuVisible(false);
     setRetireSheetVisible(false);
+    setArmedDay(null);
     if (!pendingDir.current) return;
     translateX.value = pendingDir.current === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH;
     translateX.value = withTiming(0, { duration: 220 });
@@ -587,24 +589,48 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                         : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(liveItem.last_used_on))}`}
                     </Text>
                   </View>
-                  <View style={styles.usageDaysRow}>
+                  <View style={styles.historyHeader}>
+                    <Text style={styles.historyTitle}>{S.usage.historyTitle}</Text>
                     <TouchableOpacity
-                      style={styles.logPastBtn}
+                      style={styles.addEntryBtn}
                       onPress={() => { setPickerDate(new Date()); setDatePickerVisible(true); }}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="calendar-outline" size={15} color="#2D2D2D" />
-                      <Text style={styles.logPastText}>{S.usage.logPast}</Text>
+                      <Ionicons name="add" size={16} color="#2D2D2D" />
+                      <Text style={styles.addEntryText}>{S.usage.addEntry}</Text>
                     </TouchableOpacity>
-                    {pastDays.map(key => (
-                      <View key={key} style={styles.usageDayChip}>
-                        <Text style={styles.usageDayChipText}>{dayKeyLabel(key)}</Text>
-                        <TouchableOpacity onPress={() => toggleUsageDay(key, false)} hitSlop={8}>
-                          <Ionicons name="close" size={13} color="#999" />
-                        </TouchableOpacity>
-                      </View>
-                    ))}
                   </View>
+                  {pastDays.length > 0 ? (
+                    <ScrollView
+                      style={styles.historyList}
+                      nestedScrollEnabled
+                      showsVerticalScrollIndicator={false}
+                    >
+                      {pastDays.map(key => (
+                        <TouchableOpacity
+                          key={key}
+                          style={styles.historyRow}
+                          activeOpacity={0.7}
+                          delayLongPress={300}
+                          onLongPress={() => { Haptics.selectionAsync(); setArmedDay(key); }}
+                          onPress={() => setArmedDay(null)}
+                        >
+                          <Text style={styles.historyDate}>{dayKeyLabel(key)}</Text>
+                          {armedDay === key && (
+                            <TouchableOpacity
+                              style={styles.historyDeleteBtn}
+                              onPress={() => { setArmedDay(null); toggleUsageDay(key, false); }}
+                            >
+                              <Ionicons name="trash-outline" size={14} color="#E74C3C" />
+                              <Text style={styles.historyDeleteText}>{S.common.delete}</Text>
+                            </TouchableOpacity>
+                          )}
+                        </TouchableOpacity>
+                      ))}
+                    </ScrollView>
+                  ) : (
+                    <Text style={styles.historyEmpty}>{S.usage.noHistory}</Text>
+                  )}
                 </View>
               )}
               {isRetired(item) && (
@@ -1009,40 +1035,65 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
-  usageDaysRow: {
+  historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    flexWrap: 'wrap',
-    gap: 8,
+    justifyContent: 'space-between',
   },
-  logPastBtn: {
+  historyTitle: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: '#2D2D2D',
+  },
+  addEntryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 4,
     paddingVertical: 6,
-    paddingHorizontal: 12,
+    paddingLeft: 8,
+    paddingRight: 12,
     borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E8E3DD',
     backgroundColor: '#fff',
   },
-  logPastText: {
+  addEntryText: {
     fontSize: 13,
     color: '#2D2D2D',
   },
-  usageDayChip: {
+  historyList: {
+    height: 132,
+  },
+  historyRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    paddingVertical: 6,
-    paddingLeft: 12,
-    paddingRight: 8,
-    borderRadius: 20,
-    backgroundColor: '#E8E3DD',
+    justifyContent: 'space-between',
+    paddingVertical: 11,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E8E3DD',
   },
-  usageDayChipText: {
-    fontSize: 13,
+  historyDate: {
+    fontSize: 14,
     color: '#2D2D2D',
+  },
+  historyDeleteBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: '#FBEAE8',
+  },
+  historyDeleteText: {
+    fontSize: 13,
+    color: '#E74C3C',
+    fontWeight: '500',
+  },
+  historyEmpty: {
+    fontSize: 13,
+    color: '#999',
+    paddingVertical: 4,
   },
   pickerSheet: {
     backgroundColor: '#F5F0EB',

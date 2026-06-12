@@ -56,6 +56,11 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const isOwnerItem = !!sessionUserId && item?.user_id === sessionUserId
   const todayKey = dayKey(new Date())
   const usedToday = lastUsedOn === todayKey
+  // Logged days other than today (the "use today" button covers today), most recent first.
+  const pastDays = useMemo(
+    () => [...usedDays].filter(k => k !== todayKey).sort().reverse(),
+    [usedDays, todayKey],
+  )
 
   function applyUsage(count, last) {
     setUsageCount(count)
@@ -431,10 +436,11 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                           : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(lastUsedOn))}`}
                       </span>
                     </div>
-                    <div className="usage-days-row">
+                    <div className="usage-history-header">
+                      <span className="usage-history-title">{S.usage.historyTitle}</span>
                       <button
                         type="button"
-                        className="log-past-btn"
+                        className="add-entry-btn"
                         onClick={() => {
                           const el = pastDateInputRef.current
                           if (!el) return
@@ -442,12 +448,11 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                           else el.focus()
                         }}
                       >
-                        <span className="log-past-icon">📅</span>
-                        {S.usage.logPast}
+                        + {S.usage.addEntry}
                         <input
                           ref={pastDateInputRef}
                           type="date"
-                          className="log-past-input"
+                          className="add-entry-input"
                           max={todayKey}
                           value=""
                           onChange={e => {
@@ -456,18 +461,24 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                           }}
                         />
                       </button>
-                      {[...usedDays].filter(k => k !== todayKey).sort().reverse().map(key => (
-                        <span key={key} className="usage-day-chip">
-                          {dayKeyLabel(key)}
-                          <button
-                            type="button"
-                            className="usage-day-chip-x"
-                            onClick={() => handleBackfillToggle(key, false)}
-                            aria-label="remove"
-                          >×</button>
-                        </span>
-                      ))}
                     </div>
+                    {pastDays.length > 0 ? (
+                      <div className="usage-history-list">
+                        {pastDays.map(key => (
+                          <div key={key} className="usage-history-row">
+                            <span className="usage-history-date">{dayKeyLabel(key)}</span>
+                            <button
+                              type="button"
+                              className="usage-day-chip-x"
+                              onClick={() => handleBackfillToggle(key, false)}
+                              aria-label="remove"
+                            >×</button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="usage-history-empty">{S.usage.noHistory}</div>
+                    )}
                   </div>
                 )}
                 {(item.acquired_location || item.acquired_year) && (
