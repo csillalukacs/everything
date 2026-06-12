@@ -488,6 +488,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     marginBottom: 24,
+    minHeight: 36,
   },
   navButtons: {
     flexDirection: 'row',
