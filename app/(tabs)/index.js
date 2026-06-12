@@ -21,7 +21,7 @@ import SearchBar from '../../screens/SearchBar';
 import BatchBar from '../../screens/BatchBar';
 import TagFilterChips from '../../screens/TagFilterChips';
 import Avatar from '../../screens/Avatar';
-import { cityOf } from '../../shared/items';
+import { cityOf, isRetired } from '../../shared/items';
 import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { sortItems, newRandomSeed } from '../../shared/sortItems';
 import { isFeaturedTag } from '../../shared/featuredTag';
@@ -42,6 +42,7 @@ export default function Collection() {
     profile,
     updateItem,
     deleteItem,
+    retireItem,
     batchEditItems,
     batchDeleteItems,
     batchTogglePrivacy,
@@ -118,10 +119,14 @@ export default function Collection() {
     router.setParams({ item: undefined });
   }, [params.item, items, router]);
 
-  const availableYears = [...new Set(items.map(i => i.acquired_year).filter(y => y != null))].sort((a, b) => b - a);
-  const availableCities = [...new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))].sort();
-  const hasMissingYear = items.some(i => i.acquired_year == null);
-  const hasMissingCity = items.some(i => cityOf(i.acquired_location) == null);
+  // Retired (graveyard) items are excluded from the collection; they live in /graveyard.
+  const activeItems = useMemo(() => items.filter(i => !isRetired(i)), [items]);
+  const retiredCount = items.length - activeItems.length;
+
+  const availableYears = [...new Set(activeItems.map(i => i.acquired_year).filter(y => y != null))].sort((a, b) => b - a);
+  const availableCities = [...new Set(activeItems.map(i => cityOf(i.acquired_location)).filter(Boolean))].sort();
+  const hasMissingYear = activeItems.some(i => i.acquired_year == null);
+  const hasMissingCity = activeItems.some(i => cityOf(i.acquired_location) == null);
 
   const batchMode = selectedIds.size > 0;
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
@@ -154,6 +159,12 @@ export default function Collection() {
     if (item) await deleteItem(item.id);
   }
 
+  async function handleRetire(reason, epitaph) {
+    const item = selectedItem;
+    setSelectedItem(null);
+    if (item) await retireItem(item, { reason, epitaph });
+  }
+
   async function handleBatchEdit({ addTags, acquiredPatch }) {
     if (addTags.length === 0 && !acquiredPatch) { setBatchEditVisible(false); return; }
     const ids = [...selectedIds];
@@ -173,8 +184,8 @@ export default function Collection() {
   }
 
   const sortedItems = useMemo(
-    () => sortItems(items, sortMode, randomSeed),
-    [items, sortMode, randomSeed],
+    () => sortItems(activeItems, sortMode, randomSeed),
+    [activeItems, sortMode, randomSeed],
   );
 
   const queryAst = useMemo(() => parseQuery(searchQuery), [searchQuery]);
@@ -207,7 +218,7 @@ export default function Collection() {
   }
 
   const totalTagCounts = new Map();
-  for (const item of items) {
+  for (const item of activeItems) {
     for (const t of (item.tags ?? [])) totalTagCounts.set(t.id, (totalTagCounts.get(t.id) ?? 0) + 1);
   }
 
@@ -228,6 +239,11 @@ export default function Collection() {
           </Text>
         </View>
         <View style={styles.headerActions}>
+          {retiredCount > 0 && (
+            <TouchableOpacity onPress={() => router.push('/graveyard')} style={styles.headerIconBtn}>
+              <Text style={styles.graveyardIcon}>{S.graveyard.emoji}</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity onPress={() => router.push('/stats')} style={styles.headerIconBtn}>
             <Ionicons name="bar-chart-outline" size={22} color="#999" />
           </TouchableOpacity>
@@ -303,6 +319,7 @@ export default function Collection() {
         onClose={() => setSelectedItem(null)}
         onDelete={handleDelete}
         onSave={handleUpdate}
+        onRetire={handleRetire}
         allTags={tags}
         onTagPress={tag => { setActiveTag(tag); setSelectedItem(null); }}
         onYearPress={year => { setActiveYear(year); setActiveTag(null); setActiveCity(null); setSelectedItem(null); }}
@@ -416,6 +433,9 @@ const styles = StyleSheet.create({
   },
   headerIconBtn: {
     padding: 4,
+  },
+  graveyardIcon: {
+    fontSize: 20,
   },
   filterIconBtn: {
     width: 40,

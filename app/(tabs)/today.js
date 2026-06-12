@@ -19,7 +19,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
-import { thumbOf } from '../../shared/items';
+import { thumbOf, isRetired } from '../../shared/items';
 import { dayKey } from '../../shared/dates';
 import { dailyCacheKey } from '../../shared/cacheKeys';
 import { S } from '../../shared/strings';
@@ -150,6 +150,8 @@ export default function Today() {
   const router = useRouter();
   const { session, items, itemsLoading, tags, refresh, updateItem, deleteItem } = useCollection();
   const userId = session?.user?.id;
+  // Retired (graveyard) items are excluded from the daily reveal.
+  const activeItems = useMemo(() => items.filter(i => !isRetired(i)), [items]);
 
   const [sampleIds, setSampleIds] = useState([]);
   const [revealedIds, setRevealedIds] = useState([]);
@@ -187,16 +189,16 @@ export default function Today() {
   // - Adding/removing other items does NOT change the selection.
   useEffect(() => {
     if (!loaded || !userId) return;
-    if (items.length === 0) return; // wait until items have loaded
+    if (activeItems.length === 0) return; // wait until items have loaded
 
-    const itemsById = new Map(items.map(i => [i.id, i]));
+    const itemsById = new Map(activeItems.map(i => [i.id, i]));
     const present = sampleIds.filter(id => itemsById.has(id));
-    const target = Math.min(DAILY_COUNT, items.length);
+    const target = Math.min(DAILY_COUNT, activeItems.length);
 
     if (present.length === target && present.length === sampleIds.length) return;
 
     const presentSet = new Set(present);
-    const candidates = items.filter(i => !presentSet.has(i.id));
+    const candidates = activeItems.filter(i => !presentSet.has(i.id));
     shuffleInPlace(candidates);
     const additions = candidates.slice(0, target - present.length).map(i => i.id);
     const next = [...present, ...additions];
@@ -204,7 +206,7 @@ export default function Today() {
     setSampleIds(next);
     const nextSet = new Set(next);
     setRevealedIds(prev => prev.filter(id => nextSet.has(id)));
-  }, [items, sampleIds, loaded, userId, today]);
+  }, [activeItems, sampleIds, loaded, userId, today]);
 
   // Persist whenever the daily state changes.
   useEffect(() => {
@@ -216,9 +218,9 @@ export default function Today() {
   }, [sampleIds, revealedIds, loaded, userId, today]);
 
   const sample = useMemo(() => {
-    const byId = new Map(items.map(i => [i.id, i]));
+    const byId = new Map(activeItems.map(i => [i.id, i]));
     return sampleIds.map(id => byId.get(id)).filter(Boolean);
-  }, [sampleIds, items]);
+  }, [sampleIds, activeItems]);
 
   const revealedSet = useMemo(() => new Set(revealedIds), [revealedIds]);
   const revealedSample = useMemo(

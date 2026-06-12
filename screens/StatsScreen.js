@@ -20,7 +20,7 @@ import {
   formatWeekLabel,
   formatMonthLabel,
 } from '../shared/dates';
-import { thumbOf } from '../shared/items';
+import { thumbOf, isRetired } from '../shared/items';
 import { S } from '../shared/strings';
 import { buildTagDistribution, computeYearStats, buildMapGroups } from '../shared/stats';
 import { Bar, PieChart, StatCard } from './StatsComponents';
@@ -41,7 +41,9 @@ try {
 
 export default function StatsScreen() {
   const router = useRouter();
-  const { items, itemCount, itemsLoading, session, refresh } = useCollection();
+  const { items: allItems, itemCount, itemsLoading, session, refresh } = useCollection();
+  // Stats reflect the active collection only — retired (graveyard) things are excluded.
+  const items = useMemo(() => allItems.filter(i => !isRetired(i)), [allItems]);
   const [home, setHome] = useState(null);
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [refreshing, setRefreshing] = useState(false);

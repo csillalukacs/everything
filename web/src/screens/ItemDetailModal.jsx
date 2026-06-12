@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { S } from '../../../shared/strings'
-import { locationSuggestionsFromItems } from '../../../shared/items'
+import { locationSuggestionsFromItems, isRetired } from '../../../shared/items'
 import { dayKey, relativeDay } from '../../../shared/dates'
 import { recordUsage, removeUsage, fetchItemUsages } from '../../../shared/usagesApi'
 import { supabase } from '../lib/supabase'
@@ -13,7 +13,7 @@ import UsageBackfill from '../components/UsageBackfill'
 import { AppleIcon } from '../components/Icons'
 import { isFeaturedTag } from '../../../shared/featuredTag'
 
-export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], items = [], sessionUserId, onUsageChange, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], items = [], sessionUserId, onUsageChange, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [usageCount, setUsageCount] = useState(0)
   const [lastUsedOn, setLastUsedOn] = useState(null)
@@ -34,9 +34,12 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [editYear, setEditYear] = useState('')
   const [editAcquired, setEditAcquired] = useState(null)
   const [saving, setSaving] = useState(false)
+  const [retiring, setRetiring] = useState(false)
+  const [retireReason, setRetireReason] = useState(null)
+  const [retireEpitaph, setRetireEpitaph] = useState('')
   const fileInputRef = useRef(null)
 
-  useEffect(() => { setDisplayedIdx(0) }, [item?.id])
+  useEffect(() => { setDisplayedIdx(0); setRetiring(false); setRetireReason(null); setRetireEpitaph('') }, [item?.id])
 
   useEffect(() => {
     setUsageCount(item?.usage_count ?? 0)
@@ -198,7 +201,19 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setDisplayedIdx(0)
   }
 
+  function cancelRetire() {
+    setRetiring(false)
+    setRetireReason(null)
+    setRetireEpitaph('')
+  }
+
+  function confirmRetire() {
+    onRetire?.(retireReason ?? null, retireEpitaph.trim() || null)
+    cancelRetire()
+  }
+
   const itemTags = item.tags ?? []
+  const retired = isRetired(item)
   const allPhotos = editing
     ? [{ url: editPreview, added_at: editImageAddedAt }, ...editPreviousImages]
     : [
@@ -224,7 +239,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               <button onClick={onNext} disabled={!onNext} className="nav-btn">›</button>
             </div>
           )}
-          {onSave && (
+          {onSave && !retired && (
             <button
               className="link-btn link-btn-dark"
               onClick={editing ? handleSave : enterEdit}
@@ -382,8 +397,20 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                     })}
                   </div>
                 )}
+                {retired && (
+                  <div className="tombstone">
+                    <span className="tombstone-emoji">{S.graveyard.emoji}</span>
+                    <div>
+                      <div className="tombstone-retired">
+                        {S.graveyard.retiredOn(new Date(item.retired_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
+                      </div>
+                      {item.retire_reason && <div className="tombstone-reason">{S.graveyard.reasonLine(item.retire_reason)}</div>}
+                      {item.epitaph && <div className="tombstone-epitaph">“{item.epitaph}”</div>}
+                    </div>
+                  </div>
+                )}
                 {item.description && <p className="detail-description">{item.description}</p>}
-                {isOwnerItem && (
+                {isOwnerItem && !retired && (
                   <div className="usage-row">
                     <button
                       type="button"
@@ -430,7 +457,43 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 <p className="detail-date">
                   {S.itemForm.addedOn(new Date(item.created_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
                 </p>
-                {onDelete && <button className="delete-btn" onClick={onDelete}>{S.itemForm.deleteItem}</button>}
+                {retiring ? (
+                  <div className="retire-panel">
+                    <div className="retire-panel-title">{S.graveyard.emoji} {S.graveyard.retireTitle}</div>
+                    <div className="retire-reason-chips">
+                      {S.graveyard.reasonOptions.map(opt => (
+                        <button
+                          key={opt}
+                          type="button"
+                          className={`chip${retireReason === opt ? ' chip-active' : ''}`}
+                          onClick={() => setRetireReason(retireReason === opt ? null : opt)}
+                        >{opt}</button>
+                      ))}
+                    </div>
+                    <textarea
+                      className="description-input"
+                      placeholder={S.graveyard.epitaphPlaceholder}
+                      value={retireEpitaph}
+                      onChange={e => setRetireEpitaph(e.target.value)}
+                    />
+                    <div className="retire-panel-actions">
+                      <button className="link-btn" onClick={cancelRetire}>{S.common.cancel}</button>
+                      <button className="link-btn link-btn-dark" onClick={confirmRetire}>{S.graveyard.confirmRetire}</button>
+                    </div>
+                  </div>
+                ) : (
+                  (onRetire || onResurrect || onDelete) && (
+                    <div className="detail-actions">
+                      {onResurrect && retired && (
+                        <button className="retire-btn" onClick={onResurrect}>{S.graveyard.emoji} {S.graveyard.resurrect}</button>
+                      )}
+                      {onRetire && !retired && (
+                        <button className="retire-btn" onClick={() => setRetiring(true)}>{S.graveyard.emoji} {S.graveyard.retire}</button>
+                      )}
+                      {onDelete && <button className="delete-btn" onClick={onDelete}>{S.itemForm.deleteItem}</button>}
+                    </div>
+                  )
+                )}
               </>
             )}
           </div>

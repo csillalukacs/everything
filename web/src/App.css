@@ -2350,3 +2350,157 @@ button.stats-bar-col {
   color: #999;
   font-size: 16px;
 }
+
+/* Graveyard */
+.graveyard-entry {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 16px;
+  padding: 8px 14px;
+  border: 1.5px solid #E0E0E0;
+  border-radius: 20px;
+  background: #fff;
+  color: #2D2D2D;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.graveyard-entry:hover {
+  border-color: #2D2D2D;
+}
+
+.graveyard-bar {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.graveyard-back {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.graveyard-title {
+  font-size: 22px;
+  font-weight: 300;
+  letter-spacing: 1px;
+  color: #2D2D2D;
+  margin: 0;
+}
+
+.graveyard-count {
+  font-size: 13px;
+  color: #999;
+}
+
+.graveyard-empty {
+  text-align: center;
+  color: #999;
+  padding: 60px 0;
+}
+
+.graveyard-empty-emoji {
+  font-size: 44px;
+  margin-bottom: 8px;
+}
+
+.graveyard-empty p {
+  margin: 4px 0;
+  color: #2D2D2D;
+}
+
+.graveyard-empty-hint {
+  color: #999 !important;
+  font-size: 13px;
+}
+
+/* Tombstone block in item detail */
+.tombstone {
+  display: flex;
+  gap: 12px;
+  padding: 14px;
+  border-radius: 12px;
+  background: #E8E3DD;
+  border: 1px solid #DDD5CC;
+}
+
+.tombstone-emoji {
+  font-size: 22px;
+  line-height: 1.2;
+}
+
+.tombstone-retired {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2D2D2D;
+}
+
+.tombstone-reason {
+  font-size: 13px;
+  color: #777;
+  margin-top: 3px;
+}
+
+.tombstone-epitaph {
+  font-size: 14px;
+  font-style: italic;
+  color: #555;
+  margin-top: 6px;
+  line-height: 1.4;
+}
+
+/* Retire action + panel */
+.detail-actions {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-top: auto;
+}
+
+.detail-actions .delete-btn {
+  margin-top: 0;
+}
+
+.retire-btn {
+  color: #2D2D2D;
+  font-size: 15px;
+  padding: 8px 0;
+  text-align: left;
+  background: none;
+  border: none;
+  cursor: pointer;
+}
+
+.retire-btn:hover {
+  color: #000;
+}
+
+.retire-panel {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-top: 12px;
+  border-top: 1px solid #E8E3DD;
+}
+
+.retire-panel-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: #2D2D2D;
+}
+
+.retire-reason-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.retire-panel-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 16px;
+}

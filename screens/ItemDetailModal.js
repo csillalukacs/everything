@@ -27,7 +27,7 @@ const SCREEN_WIDTH = Dimensions.get('window').width;
 import { cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
 import { useCollection } from '../lib/CollectionProvider';
-import { locationSuggestionsFromItems } from '../shared/items';
+import { locationSuggestionsFromItems, isRetired } from '../shared/items';
 import { dayKey, relativeDay } from '../shared/dates';
 import { fetchItemUsages } from '../shared/usagesApi';
 import { supabase } from '../lib/supabase';
@@ -39,9 +39,10 @@ import TagInput from './TagInput';
 import PhotoStrip from './PhotoStrip';
 import ItemFieldsEditor from './ItemFieldsEditor';
 import AppleIcon from './AppleIcon';
+import RetireSheet from './RetireSheet';
 import { isFeaturedTag } from '../shared/featuredTag';
 
-export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, session, profile, markUsedToday, unmarkUsedToday, addUsage, removeUsageOn } = useCollection();
@@ -68,6 +69,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [cameraVisible, setCameraVisible] = useState(false);
   const [infoVisible, setInfoVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
+  const [retireSheetVisible, setRetireSheetVisible] = useState(false);
   const ocrPromiseRef = useRef(null);
   const scrollRef = useRef(null);
   const translateX = useSharedValue(0);
@@ -108,6 +110,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setDisplayedIdx(0);
     setInfoVisible(false);
     setMenuVisible(false);
+    setRetireSheetVisible(false);
     if (!pendingDir.current) return;
     translateX.value = pendingDir.current === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH;
     translateX.value = withTiming(0, { duration: 220 });
@@ -454,13 +457,31 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                         <Ionicons name="share-outline" size={18} color="#BBB" />
                         <Text style={[styles.imageMenuItemText, styles.imageMenuItemDisabledText]}>{S.common.share}</Text>
                       </View>
-                      {onSave && (
+                      {onSave && !isRetired(item) && (
                         <TouchableOpacity
                           style={styles.imageMenuItem}
                           onPress={() => { setMenuVisible(false); enterEdit(); }}
                         >
                           <Ionicons name="pencil-outline" size={18} color="#2D2D2D" />
                           <Text style={styles.imageMenuItemText}>{S.common.edit}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {onResurrect && isRetired(item) && (
+                        <TouchableOpacity
+                          style={styles.imageMenuItem}
+                          onPress={() => { setMenuVisible(false); onResurrect(); }}
+                        >
+                          <Ionicons name="leaf-outline" size={18} color="#2D2D2D" />
+                          <Text style={styles.imageMenuItemText}>{S.graveyard.resurrect}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {onRetire && !isRetired(item) && (
+                        <TouchableOpacity
+                          style={styles.imageMenuItem}
+                          onPress={() => { setMenuVisible(false); setRetireSheetVisible(true); }}
+                        >
+                          <Text style={styles.imageMenuEmoji}>{S.graveyard.emoji}</Text>
+                          <Text style={styles.imageMenuItemText}>{S.graveyard.retire}</Text>
                         </TouchableOpacity>
                       )}
                       {onDelete && (
@@ -550,6 +571,18 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   </Text>
                 </View>
               )}
+              {isRetired(item) && (
+                <View style={styles.tombstone}>
+                  <Text style={styles.tombstoneEmoji}>{S.graveyard.emoji}</Text>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.tombstoneRetired}>
+                      {S.graveyard.retiredOn(new Date(item.retired_at).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
+                    </Text>
+                    {item.retire_reason ? <Text style={styles.tombstoneReason}>{S.graveyard.reasonLine(item.retire_reason)}</Text> : null}
+                    {item.epitaph ? <Text style={styles.tombstoneEpitaph}>“{item.epitaph}”</Text> : null}
+                  </View>
+                </View>
+              )}
               {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               {(item.acquired_location || item.acquired_year) && (
                 <Text style={styles.acquired}>
@@ -586,6 +619,11 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           </GestureDetector>
         )}
       </KeyboardAvoidingView>
+      <RetireSheet
+        visible={retireSheetVisible}
+        onClose={() => setRetireSheetVisible(false)}
+        onConfirm={({ reason, epitaph }) => { setRetireSheetVisible(false); onRetire?.(reason, epitaph); }}
+      />
       </GestureHandlerRootView>
     </Modal>
   );
@@ -826,6 +864,11 @@ const styles = StyleSheet.create({
   imageMenuItemDanger: {
     color: '#E74C3C',
   },
+  imageMenuEmoji: {
+    fontSize: 16,
+    width: 18,
+    textAlign: 'center',
+  },
   imageMenuItemDisabled: {
     opacity: 1,
   },
@@ -853,6 +896,35 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#555',
     lineHeight: 21,
+  },
+  tombstone: {
+    flexDirection: 'row',
+    gap: 12,
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: '#E8E3DD',
+    borderWidth: 1,
+    borderColor: '#DDD5CC',
+  },
+  tombstoneEmoji: {
+    fontSize: 22,
+  },
+  tombstoneRetired: {
+    fontSize: 14,
+    color: '#2D2D2D',
+    fontWeight: '500',
+  },
+  tombstoneReason: {
+    fontSize: 13,
+    color: '#777',
+    marginTop: 3,
+  },
+  tombstoneEpitaph: {
+    fontSize: 14,
+    color: '#555',
+    fontStyle: 'italic',
+    marginTop: 6,
+    lineHeight: 20,
   },
   usageRow: {
     flexDirection: 'row',

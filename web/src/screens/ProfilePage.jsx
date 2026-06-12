@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
-import { cityOf, acquiredFields, thumbOf, imagePathsForItem } from '../../../shared/items'
+import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { UUID_RE } from '../../../shared/identifiers'
@@ -56,10 +56,16 @@ export default function ProfilePage() {
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [randomSeed, setRandomSeed] = useState(() => newRandomSeed())
+  const [graveyardOpen, setGraveyardOpen] = useState(false)
 
   const batchMode = selectedIds.size > 0
 
   const selectedItem = itemIdParam ? (items.find(i => i.id === itemIdParam) ?? null) : null
+
+  // Retired (graveyard) items are excluded from the active collection; they live in
+  // the owner-only graveyard view. selectedItem still resolves against the full list.
+  const activeItems = useMemo(() => items.filter(i => !isRetired(i)), [items])
+  const retiredItems = useMemo(() => items.filter(isRetired), [items])
 
   function updateParams(patch) {
     const next = new URLSearchParams(searchParams)
@@ -378,6 +384,28 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleRetire(reason, epitaph) {
+    const target = selectedItem
+    closeItem()
+    const patch = { retired_at: new Date().toISOString(), retire_reason: reason || null, epitaph: epitaph || null }
+    const { error } = await supabase.from('items').update(patch).eq('id', target.id)
+    if (!error) {
+      setItems(prev => prev.map(i => i.id === target.id ? { ...i, ...patch } : i))
+      setItemCount(c => (c == null ? null : Math.max(0, c - 1)))
+    }
+  }
+
+  async function handleResurrect() {
+    const target = selectedItem
+    closeItem()
+    const patch = { retired_at: null, retire_reason: null, epitaph: null }
+    const { error } = await supabase.from('items').update(patch).eq('id', target.id)
+    if (!error) {
+      setItems(prev => prev.map(i => i.id === target.id ? { ...i, ...patch } : i))
+      setItemCount(c => (c == null ? null : c + 1))
+    }
+  }
+
   function toggleBatchSelect(itemId) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -468,7 +496,7 @@ export default function ProfilePage() {
   }
 
   const tagMap = new Map()
-  items.forEach(item => {
+  activeItems.forEach(item => {
     ;(item.tags ?? []).forEach(tag => {
       if (!tag.is_private) tagMap.set(tag.id, tag)
     })
@@ -480,8 +508,8 @@ export default function ProfilePage() {
   const visibleTags = sortTagsFeaturedFirst(visibleTagsList)
 
   const sortedItems = useMemo(
-    () => sortItems(items, sortParam, randomSeed),
-    [items, sortParam, randomSeed],
+    () => sortItems(activeItems, sortParam, randomSeed),
+    [activeItems, sortParam, randomSeed],
   )
 
   const queryAst = useMemo(() => parseQuery(searchQuery), [searchQuery])
@@ -514,17 +542,17 @@ export default function ProfilePage() {
   })
 
   const availableYears = useMemo(() => {
-    const set = new Set(items.map(i => i.acquired_year).filter(y => y != null))
+    const set = new Set(activeItems.map(i => i.acquired_year).filter(y => y != null))
     return [...set].sort((a, b) => b - a)
-  }, [items])
+  }, [activeItems])
 
   const availableCities = useMemo(() => {
-    const set = new Set(items.map(i => cityOf(i.acquired_location)).filter(Boolean))
+    const set = new Set(activeItems.map(i => cityOf(i.acquired_location)).filter(Boolean))
     return [...set].sort((a, b) => a.localeCompare(b))
-  }, [items])
+  }, [activeItems])
 
-  const hasMissingYear = items.some(i => i.acquired_year == null)
-  const hasMissingCity = items.some(i => cityOf(i.acquired_location) == null)
+  const hasMissingYear = activeItems.some(i => i.acquired_year == null)
+  const hasMissingCity = activeItems.some(i => cityOf(i.acquired_location) == null)
 
   const dateRangeLabel = fromParam || toParam
     ? (fromParam && toParam && fromParam === toParam
@@ -561,7 +589,7 @@ export default function ProfilePage() {
   tagCounts.set('__featured__', featuredCount)
 
   const totalTagCounts = new Map()
-  for (const item of items) {
+  for (const item of activeItems) {
     for (const t of (item.tags ?? [])) totalTagCounts.set(t.id, (totalTagCounts.get(t.id) ?? 0) + 1)
   }
 
@@ -608,6 +636,42 @@ export default function ProfilePage() {
         isOwner={isOwner}
       />
 
+      {isOwner && retiredItems.length > 0 && !graveyardOpen && (
+        <button className="graveyard-entry" onClick={() => setGraveyardOpen(true)}>
+          {S.graveyard.emoji} {S.graveyard.entry} · {retiredItems.length}
+        </button>
+      )}
+
+      {graveyardOpen ? (
+        <div className="graveyard-view">
+          <div className="graveyard-bar">
+            <button className="link-btn graveyard-back" onClick={() => setGraveyardOpen(false)}>‹</button>
+            <h2 className="graveyard-title">{S.graveyard.emoji} {S.graveyard.title}</h2>
+            <span className="graveyard-count">
+              {retiredItems.length === 0 ? S.graveyard.subtitle : S.graveyard.count(retiredItems.length)}
+            </span>
+          </div>
+          {retiredItems.length === 0 ? (
+            <div className="graveyard-empty">
+              <div className="graveyard-empty-emoji">{S.graveyard.emoji}</div>
+              <p>{S.graveyard.empty}</p>
+              <p className="graveyard-empty-hint">{S.graveyard.emptyHint}</p>
+            </div>
+          ) : (
+            <div className="grid">
+              {retiredItems.map(item => (
+                <div key={item.id} className="card" onClick={() => openItem(item)}>
+                  {item.image_url && <img src={thumbOf(item)} alt={item.name || ''} loading="lazy" />}
+                  {item.is_private && (
+                    <div className="card-private-badge"><LockIcon size={10} color="#fff" /></div>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      ) : (
+      <>
       <div className="search-row">
         <SearchBar value={searchQuery} onChange={setSearchQuery} />
         {(availableYears.length > 0 || hasMissingYear) && (
@@ -738,6 +802,8 @@ export default function ProfilePage() {
           <button className="fab" onClick={() => setAddModalVisible(true)}>+</button>
         )
       )}
+      </>
+      )}
 
       <ItemDetailModal
         visible={!!selectedItem}
@@ -745,6 +811,8 @@ export default function ProfilePage() {
         onClose={closeItem}
         onSave={isOwner ? handleUpdate : undefined}
         onDelete={isOwner ? handleDelete : undefined}
+        onRetire={isOwner ? handleRetire : undefined}
+        onResurrect={isOwner ? handleResurrect : undefined}
         sessionUserId={sessionUserId}
         onUsageChange={(id, patch) => setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))}
         allTags={allTags}
@@ -753,12 +821,14 @@ export default function ProfilePage() {
         onYearPress={year => updateParams({ year: String(year), yearMin: null, yearMax: null, city: null, tag: null, from: null, to: null, item: null })}
         onCityPress={city => updateParams({ city, year: null, yearMin: null, yearMax: null, tag: null, from: null, to: null, item: null })}
         onPrev={(() => {
-          const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
-          return idx > 0 ? () => openItem(filteredItems[idx - 1]) : null
+          const list = graveyardOpen ? retiredItems : filteredItems
+          const idx = list.findIndex(i => i.id === selectedItem?.id)
+          return idx > 0 ? () => openItem(list[idx - 1]) : null
         })()}
         onNext={(() => {
-          const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
-          return idx < filteredItems.length - 1 ? () => openItem(filteredItems[idx + 1]) : null
+          const list = graveyardOpen ? retiredItems : filteredItems
+          const idx = list.findIndex(i => i.id === selectedItem?.id)
+          return idx < list.length - 1 ? () => openItem(list[idx + 1]) : null
         })()}
       />
 

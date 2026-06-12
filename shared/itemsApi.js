@@ -10,7 +10,8 @@ export async function fetchAllItems(client, { userId, publicOnly = false, column
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
       .range(from, from + PAGE_SIZE - 1);
-    if (publicOnly) query = query.eq('is_private', false);
+    // Retired (graveyard) items are owner-only; never expose them publicly.
+    if (publicOnly) query = query.eq('is_private', false).is('retired_at', null);
     const { data, error } = await query;
     if (error) throw error;
     all.push(...data);
@@ -25,6 +26,7 @@ export async function fetchPublicFeed(client, { limit = 50 } = {}) {
     .from('items')
     .select('*, tags(id, name, is_private)')
     .eq('is_private', false)
+    .is('retired_at', null)
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
@@ -53,6 +55,7 @@ export async function fetchFeedEvents(client, { limit = 50 } = {}) {
       .from('items')
       .select('*, tags(id, name, is_private)')
       .eq('is_private', false)
+      .is('retired_at', null)
       .order('created_at', { ascending: false })
       .limit(limit),
     client
@@ -60,6 +63,7 @@ export async function fetchFeedEvents(client, { limit = 50 } = {}) {
       .select('id, used_on, created_at, item:items!inner(*, tags(id, name, is_private))')
       .eq('on_feed', true)
       .eq('item.is_private', false)
+      .is('item.retired_at', null)
       .order('created_at', { ascending: false })
       .limit(limit),
   ]);
@@ -98,7 +102,9 @@ export async function fetchItemCount(client, { userId, publicOnly = false } = {}
   let query = client
     .from('items')
     .select('*', { count: 'exact', head: true })
-    .eq('user_id', userId);
+    .eq('user_id', userId)
+    // The object count reflects the active collection — retired things don't count.
+    .is('retired_at', null);
   if (publicOnly) query = query.eq('is_private', false);
   const { count, error } = await query;
   if (error) throw error;

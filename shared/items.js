@@ -11,6 +11,11 @@ export function thumbOf(item) {
   return item?.thumb_url || item?.image_url || null;
 }
 
+// Graveyard: an item is "retired" while it carries a retired_at timestamp.
+export function isRetired(item) {
+  return !!item?.retired_at;
+}
+
 export function imagePathFromUrl(url) {
   if (!url || typeof url !== 'string') return null;
   const idx = url.indexOf(STORAGE_PATH_MARKER);

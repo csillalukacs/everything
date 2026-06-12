@@ -208,6 +208,30 @@ export const S = {
     backfillHint: 'tap days you used this',
   },
 
+  // Graveyard — retired items (sold, consumed, lost, …) rest here.
+  graveyard: {
+    emoji: '🪦',
+    entry: 'graveyard',
+    title: 'graveyard',
+    subtitle: 'things you no longer have',
+    empty: 'the graveyard is empty',
+    emptyHint: 'retired things rest here',
+    count: (n) => `${n} ${plural(n, 'thing')} at rest`,
+    // Retire flow
+    retire: 'retire',
+    retireTitle: 'retire this thing',
+    retireHint: 'move it to the graveyard — you can resurrect it anytime',
+    reasonLabel: 'reason',
+    reasonOptions: ['sold', 'consumed', 'lost', 'stolen', 'given away', 'broke', 'donated'],
+    epitaphLabel: 'epitaph',
+    epitaphPlaceholder: 'a few last words (optional)',
+    confirmRetire: 'retire',
+    // Resurrect + detail display
+    resurrect: 'resurrect',
+    retiredOn: (date) => `retired ${date}`,
+    reasonLine: (reason) => `reason: ${reason}`,
+  },
+
   // Stats
   stats: {
     title: 'stats',
