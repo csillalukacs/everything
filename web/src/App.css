@@ -1623,6 +1623,118 @@ input {
   white-space: pre-wrap;
 }
 
+/* ---- Usage tracking ---- */
+
+.usage-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.use-today-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid #2D2D2D;
+  color: #2D2D2D;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+
+.use-today-btn:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.use-today-btn-on {
+  background: #2D2D2D;
+  color: #fff;
+}
+
+.use-today-pulse {
+  animation: use-today-pop 0.3s ease;
+}
+
+@keyframes use-today-pop {
+  0% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+  100% { transform: scale(1); }
+}
+
+.usage-stat {
+  font-size: 13px;
+  color: #999;
+}
+
+.backfill {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.backfill-title {
+  font-size: 15px;
+  font-weight: 500;
+  color: #2D2D2D;
+}
+
+.backfill-hint {
+  font-size: 13px;
+  color: #999;
+  margin-bottom: 8px;
+}
+
+.backfill-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.backfill-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 48px;
+  padding: 8px 0;
+  border-radius: 12px;
+  background: #fff;
+  border: 1px solid #E8E3DD;
+  cursor: pointer;
+}
+
+.backfill-chip-on {
+  background: #2D2D2D;
+  border-color: #2D2D2D;
+}
+
+.backfill-chip-weekday {
+  font-size: 10px;
+  color: #999;
+}
+
+.backfill-chip-day {
+  font-size: 17px;
+  font-weight: 500;
+  color: #2D2D2D;
+}
+
+.backfill-chip-month {
+  font-size: 10px;
+  color: #999;
+}
+
+.backfill-chip-on .backfill-chip-weekday,
+.backfill-chip-on .backfill-chip-day,
+.backfill-chip-on .backfill-chip-month {
+  color: #fff;
+}
+
 /* ---- Primary button ---- */
 
 .btn-primary {

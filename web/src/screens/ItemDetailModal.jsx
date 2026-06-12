@@ -2,15 +2,24 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { S } from '../../../shared/strings'
 import { locationSuggestionsFromItems } from '../../../shared/items'
+import { dayKey, relativeDay } from '../../../shared/dates'
+import { recordUsage, removeUsage, fetchItemUsages } from '../../../shared/usagesApi'
+import { supabase } from '../lib/supabase'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 import LockIcon from '../components/LockIcon'
 import Avatar from '../components/Avatar'
+import UsageBackfill from '../components/UsageBackfill'
 import { AppleIcon } from '../components/Icons'
 import { isFeaturedTag } from '../../../shared/featuredTag'
 
-export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], items = [], onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, allTags = [], items = [], sessionUserId, onUsageChange, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
+  const [usageCount, setUsageCount] = useState(0)
+  const [lastUsedOn, setLastUsedOn] = useState(null)
+  const [usedDays, setUsedDays] = useState(() => new Set())
+  const [usageBusy, setUsageBusy] = useState(false)
+  const [usagePulse, setUsagePulse] = useState(false)
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -29,6 +38,75 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
 
   useEffect(() => { setDisplayedIdx(0) }, [item?.id])
 
+  useEffect(() => {
+    setUsageCount(item?.usage_count ?? 0)
+    setLastUsedOn(item?.last_used_on ?? null)
+    setUsedDays(new Set())
+  }, [item?.id])
+
+  const isOwnerItem = !!sessionUserId && item?.user_id === sessionUserId
+  const todayKey = dayKey(new Date())
+  const usedToday = lastUsedOn === todayKey
+
+  function applyUsage(count, last) {
+    setUsageCount(count)
+    setLastUsedOn(last)
+    if (item) onUsageChange?.(item.id, { usage_count: count, last_used_on: last })
+  }
+
+  async function reloadRollup() {
+    const { data } = await supabase
+      .from('items')
+      .select('usage_count, last_used_on')
+      .eq('id', item.id)
+      .maybeSingle()
+    if (data) applyUsage(data.usage_count ?? 0, data.last_used_on ?? null)
+  }
+
+  async function handleUseToday() {
+    if (usageBusy || !item) return
+    setUsageBusy(true)
+    try {
+      if (usedToday) {
+        await removeUsage(supabase, { itemId: item.id, usedOn: todayKey })
+        await reloadRollup()
+      } else {
+        setUsagePulse(true)
+        setTimeout(() => setUsagePulse(false), 300)
+        await recordUsage(supabase, { itemId: item.id, userId: item.user_id, usedOn: todayKey, onFeed: true })
+        applyUsage(usageCount + 1, todayKey)
+      }
+    } catch (e) {
+      console.error('handleUseToday error:', e)
+    } finally {
+      setUsageBusy(false)
+    }
+  }
+
+  async function loadUsageDays() {
+    try {
+      const rows = await fetchItemUsages(supabase, item.id)
+      setUsedDays(new Set(rows.map(r => r.used_on)))
+    } catch (e) {
+      console.error('fetchItemUsages error:', e)
+    }
+  }
+
+  async function handleBackfillToggle(key, adding) {
+    setUsedDays(prev => {
+      const next = new Set(prev)
+      if (adding) next.add(key); else next.delete(key)
+      return next
+    })
+    try {
+      if (adding) await recordUsage(supabase, { itemId: item.id, userId: item.user_id, usedOn: key, onFeed: false })
+      else await removeUsage(supabase, { itemId: item.id, usedOn: key })
+      await reloadRollup()
+    } catch (e) {
+      console.error('handleBackfillToggle error:', e)
+    }
+  }
+
   if (!visible || !item) return null
 
   function enterEdit() {
@@ -46,6 +124,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setEditAcquired(item.acquired_location
       ? { location: item.acquired_location, lat: item.acquired_lat, lng: item.acquired_lng }
       : null)
+    loadUsageDays()
     setEditing(true)
   }
 
@@ -260,6 +339,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   value={editYear}
                   onChange={e => setEditYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                 />
+                <UsageBackfill usedDays={usedDays} onToggle={handleBackfillToggle} />
               </>
             ) : (
               <>
@@ -303,6 +383,23 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   </div>
                 )}
                 {item.description && <p className="detail-description">{item.description}</p>}
+                {isOwnerItem && (
+                  <div className="usage-row">
+                    <button
+                      type="button"
+                      className={`use-today-btn${usedToday ? ' use-today-btn-on' : ''}${usagePulse ? ' use-today-pulse' : ''}`}
+                      onClick={handleUseToday}
+                      disabled={usageBusy}
+                    >
+                      {usedToday ? '✓ ' : '+ '}{usedToday ? S.usage.usedToday : S.usage.useToday}
+                    </button>
+                    <span className="usage-stat">
+                      {usageCount === 0
+                        ? S.usage.neverUsed
+                        : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(lastUsedOn))}`}
+                    </span>
+                  </div>
+                )}
                 {(item.acquired_location || item.acquired_year) && (
                   <p className="detail-acquired">
                     {S.itemForm.acquired}

@@ -745,6 +745,8 @@ export default function ProfilePage() {
         onClose={closeItem}
         onSave={isOwner ? handleUpdate : undefined}
         onDelete={isOwner ? handleDelete : undefined}
+        sessionUserId={sessionUserId}
+        onUsageChange={(id, patch) => setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))}
         allTags={allTags}
         items={items}
         onTagPress={tag => updateParams({ tag: tag.name, item: null })}

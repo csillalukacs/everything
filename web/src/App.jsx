@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
-import { fetchPublicFeed } from '../../shared/itemsApi'
+import { fetchFeedEvents } from '../../shared/itemsApi'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
@@ -13,7 +13,7 @@ export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState(null)
-  const [feedItems, setFeedItems] = useState([])
+  const [feedEvents, setFeedEvents] = useState([])
   const [feedLoading, setFeedLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState(null)
 
@@ -29,7 +29,7 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!session) { setUsername(null); setFeedItems([]); return }
+    if (!session) { setUsername(null); setFeedEvents([]); return }
     supabase
       .from('profiles')
       .select('username')
@@ -39,9 +39,9 @@ export default function App() {
 
     let cancelled = false
     setFeedLoading(true)
-    fetchPublicFeed(supabase, { limit: 50 })
-      .then(rows => { if (!cancelled) setFeedItems(rows) })
-      .catch(e => console.error('fetchPublicFeed error:', e))
+    fetchFeedEvents(supabase, { limit: 50 })
+      .then(rows => { if (!cancelled) setFeedEvents(rows) })
+      .catch(e => console.error('fetchFeedEvents error:', e))
       .finally(() => { if (!cancelled) setFeedLoading(false) })
     return () => { cancelled = true }
   }, [session])
@@ -71,19 +71,21 @@ export default function App() {
         <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
           <div className="spinner" />
         </div>
-      ) : feedItems.length === 0 ? (
+      ) : feedEvents.length === 0 ? (
         <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
           <p style={{ color: '#999' }}>{S.feed.feedEmpty}</p>
         </div>
       ) : (
         <div className="feed-list">
-          {feedItems.map(item => {
+          {feedEvents.map(event => {
+            const item = event.item
             const slug = item.profile?.username || item.user_id
             const name = item.profile?.display_name || item.profile?.username || 'someone'
-            const time = relativeTime(item.created_at)
+            const time = relativeTime(event.at)
+            const action = event.type === 'usage' ? S.feed.usedItem : S.feed.addedNewItem
             return (
               <article
-                key={item.id}
+                key={event.key}
                 className="feed-row"
                 onClick={() => setSelectedItem(item)}
                 role="button"
@@ -104,7 +106,7 @@ export default function App() {
                       className="feed-poster-name"
                       onClick={e => e.stopPropagation()}
                     >{name}</Link>
-                    <span className="feed-poster-action"> {S.feed.addedNewItem}</span>
+                    <span className="feed-poster-action"> {action}</span>
                     {time && <span className="feed-poster-time"> · {time}</span>}
                   </p>
                   {item.name && <h2 className="feed-item-name">{item.name}</h2>}
@@ -126,6 +128,7 @@ export default function App() {
       <ItemDetailModal
         visible={!!selectedItem}
         item={selectedItem}
+        sessionUserId={session.user.id}
         onClose={() => setSelectedItem(null)}
       />
     </div>
