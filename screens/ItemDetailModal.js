@@ -259,6 +259,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const safeDisplayedIdx = Math.min(displayedIdx, allPhotos.length - 1);
   const displayPhoto = allPhotos[safeDisplayedIdx]?.url;
   const displayedDate = allPhotos[safeDisplayedIdx]?.added_at;
+  const isOwner = session?.user?.id && session.user.id === item.user_id;
 
   const photoStrip = (
     <PhotoStrip
@@ -391,40 +392,39 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
               <TouchableOpacity style={styles.imageBack} onPress={onClose} hitSlop={8}>
                 <Ionicons name="chevron-down" size={22} color="#2D2D2D" />
               </TouchableOpacity>
-              <View style={styles.imageMenuWrap} pointerEvents="box-none">
-                <TouchableOpacity style={styles.imageMenuButton} onPress={() => setMenuVisible(v => !v)} hitSlop={8}>
-                  <Ionicons name="ellipsis-horizontal" size={20} color="#2D2D2D" />
-                </TouchableOpacity>
-                {menuVisible && (
-                  <View style={styles.imageMenu}>
-                    <TouchableOpacity
-                      style={styles.imageMenuItem}
-                      onPress={() => { setMenuVisible(false); handleShare(); }}
-                    >
-                      <Ionicons name="share-outline" size={18} color="#2D2D2D" />
-                      <Text style={styles.imageMenuItemText}>{S.common.share}</Text>
-                    </TouchableOpacity>
-                    {onSave && (
-                      <TouchableOpacity
-                        style={styles.imageMenuItem}
-                        onPress={() => { setMenuVisible(false); enterEdit(); }}
-                      >
-                        <Ionicons name="pencil-outline" size={18} color="#2D2D2D" />
-                        <Text style={styles.imageMenuItemText}>{S.common.edit}</Text>
-                      </TouchableOpacity>
-                    )}
-                    {onDelete && (
-                      <TouchableOpacity
-                        style={styles.imageMenuItem}
-                        onPress={() => { setMenuVisible(false); onDelete(); }}
-                      >
-                        <Ionicons name="trash-outline" size={18} color="#E74C3C" />
-                        <Text style={[styles.imageMenuItemText, styles.imageMenuItemDanger]}>{S.common.delete}</Text>
-                      </TouchableOpacity>
-                    )}
-                  </View>
-                )}
-              </View>
+              {isOwner && (
+                <View style={styles.imageMenuWrap} pointerEvents="box-none">
+                  <TouchableOpacity style={styles.imageMenuButton} onPress={() => setMenuVisible(v => !v)} hitSlop={8}>
+                    <Ionicons name="ellipsis-horizontal" size={20} color="#2D2D2D" />
+                  </TouchableOpacity>
+                  {menuVisible && (
+                    <View style={styles.imageMenu}>
+                      <View style={[styles.imageMenuItem, styles.imageMenuItemDisabled]}>
+                        <Ionicons name="share-outline" size={18} color="#BBB" />
+                        <Text style={[styles.imageMenuItemText, styles.imageMenuItemDisabledText]}>{S.common.share}</Text>
+                      </View>
+                      {onSave && (
+                        <TouchableOpacity
+                          style={styles.imageMenuItem}
+                          onPress={() => { setMenuVisible(false); enterEdit(); }}
+                        >
+                          <Ionicons name="pencil-outline" size={18} color="#2D2D2D" />
+                          <Text style={styles.imageMenuItemText}>{S.common.edit}</Text>
+                        </TouchableOpacity>
+                      )}
+                      {onDelete && (
+                        <TouchableOpacity
+                          style={styles.imageMenuItem}
+                          onPress={() => { setMenuVisible(false); onDelete(); }}
+                        >
+                          <Ionicons name="trash-outline" size={18} color="#E74C3C" />
+                          <Text style={[styles.imageMenuItemText, styles.imageMenuItemDanger]}>{S.common.delete}</Text>
+                        </TouchableOpacity>
+                      )}
+                    </View>
+                  )}
+                </View>
+              )}
               {bottomBar}
             </View>
             <View style={styles.info}>
@@ -748,6 +748,12 @@ const styles = StyleSheet.create({
   },
   imageMenuItemDanger: {
     color: '#E74C3C',
+  },
+  imageMenuItemDisabled: {
+    opacity: 1,
+  },
+  imageMenuItemDisabledText: {
+    color: '#BBB',
   },
   date: {
     fontSize: 13,

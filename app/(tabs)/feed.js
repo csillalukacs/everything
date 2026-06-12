@@ -9,6 +9,7 @@ import { fetchPublicFeed } from '../../shared/itemsApi';
 import { thumbOf } from '../../shared/items';
 import { relativeTime } from '../../shared/dates';
 import { S } from '../../shared/strings';
+import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
 import Avatar from '../../screens/Avatar';
@@ -18,11 +19,28 @@ const TAB_BAR_HEIGHT = 70;
 export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
+  const { session, updateItem, deleteItem } = useCollection();
   const [feedItems, setFeedItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
+
+  const isOwnItem = !!selectedItem && session?.user?.id === selectedItem.user_id;
+
+  async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt) {
+    if (!selectedItem) return false;
+    const updated = await updateItem(selectedItem.id, name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt);
+    if (!updated) return false;
+    setSelectedItem(updated);
+    return true;
+  }
+
+  async function handleDelete() {
+    const item = selectedItem;
+    setSelectedItem(null);
+    if (item) await deleteItem(item.id);
+  }
 
   useEffect(() => {
     let cancelled = false;
@@ -127,6 +145,8 @@ export default function Feed() {
         visible={!!selectedItem}
         item={selectedItem}
         onClose={() => setSelectedItem(null)}
+        onSave={isOwnItem ? handleUpdate : undefined}
+        onDelete={isOwnItem ? handleDelete : undefined}
       />
 
       <OpenProfileSheet
