@@ -28,12 +28,13 @@ import { cropToContent } from '../lib/cropToContent';
 import { ocrImage } from '../lib/ocr';
 import { useCollection } from '../lib/CollectionProvider';
 import { locationSuggestionsFromItems, isRetired } from '../shared/items';
-import { dayKey, relativeDay } from '../shared/dates';
+import { dayKey, relativeDay, dayKeyLabel } from '../shared/dates';
 import { fetchItemUsages } from '../shared/usagesApi';
 import { supabase } from '../lib/supabase';
 import { S } from '../shared/strings';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import CameraCaptureModal from './CameraCaptureModal';
-import UsageBackfill from './UsageBackfill';
+import BottomSheet from './BottomSheet';
 import Avatar from './Avatar';
 import TagInput from './TagInput';
 import PhotoStrip from './PhotoStrip';
@@ -51,6 +52,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const liveItem = useMemo(() => items.find(i => i.id === item?.id) ?? item, [items, item]);
   const [usageBusy, setUsageBusy] = useState(false);
   const [usedDays, setUsedDays] = useState(() => new Set());
+  const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [pickerDate, setPickerDate] = useState(() => new Date());
   const useTodayScale = useSharedValue(1);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
@@ -146,7 +149,16 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setUsageBusy(false);
   }
 
-  async function handleBackfillToggle(key, adding) {
+  // Load the logged days whenever the modal opens on an item you own, so the view-mode
+  // usage log is populated without entering edit mode.
+  useEffect(() => {
+    if (!visible || !isOwnerItem || !item?.id) return;
+    fetchItemUsages(supabase, item.id)
+      .then(rows => setUsedDays(new Set(rows.map(r => r.used_on))))
+      .catch(e => console.error('fetchItemUsages error:', e));
+  }, [visible, item?.id, isOwnerItem]);
+
+  async function toggleUsageDay(key, adding) {
     if (!liveItem) return;
     setUsedDays(prev => {
       const next = new Set(prev);
@@ -156,6 +168,26 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     if (adding) await addUsage(liveItem, key);
     else await removeUsageOn(liveItem, key);
   }
+
+  function commitPickedDate(date) {
+    setDatePickerVisible(false);
+    if (!date) return;
+    const key = dayKey(date);
+    if (usedDays.has(key)) return;
+    toggleUsageDay(key, true);
+  }
+
+  // Android shows the picker as a one-shot dialog; iOS spins inline inside a sheet (commit on "add").
+  function onAndroidDateChange(event, date) {
+    if (event.type === 'set') commitPickedDate(date);
+    else setDatePickerVisible(false);
+  }
+
+  // Logged days other than today (the "use today" button already covers today), most recent first.
+  const pastDays = useMemo(
+    () => [...usedDays].filter(k => k !== todayKey).sort().reverse(),
+    [usedDays, todayKey],
+  );
 
   useEffect(() => {
     if (visible && autoEdit) enterEdit();
@@ -175,10 +207,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setEditAcquired(item.acquired_location
       ? { location: item.acquired_location, lat: item.acquired_lat, lng: item.acquired_lng }
       : null);
-    setUsedDays(new Set());
-    fetchItemUsages(supabase, item.id)
-      .then(rows => setUsedDays(new Set(rows.map(r => r.used_on))))
-      .catch(e => console.error('fetchItemUsages error:', e));
     setEditing(true);
   }
 
@@ -420,7 +448,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 onYearChange={setEditYear}
                 locationSuggestions={locationSuggestions}
               />
-              <UsageBackfill usedDays={usedDays} onToggle={handleBackfillToggle} />
             </View>
           </ScrollView>
         ) : null}
@@ -535,29 +562,49 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 </View>
               )}
               {isOwnerItem && (
-                <View style={styles.usageRow}>
-                  <Animated.View style={useTodayStyle}>
+                <View style={styles.usageSection}>
+                  <View style={styles.usageRow}>
+                    <Animated.View style={useTodayStyle}>
+                      <TouchableOpacity
+                        style={[styles.useTodayBtn, usedToday && styles.useTodayBtnOn]}
+                        onPress={handleUseTodayToggle}
+                        disabled={usageBusy}
+                        activeOpacity={0.8}
+                      >
+                        <Ionicons
+                          name={usedToday ? 'checkmark-circle' : 'checkmark-circle-outline'}
+                          size={18}
+                          color={usedToday ? '#fff' : '#2D2D2D'}
+                        />
+                        <Text style={[styles.useTodayText, usedToday && styles.useTodayTextOn]}>
+                          {usedToday ? S.usage.usedToday : S.usage.useToday}
+                        </Text>
+                      </TouchableOpacity>
+                    </Animated.View>
+                    <Text style={styles.usageStat}>
+                      {usageCount === 0
+                        ? S.usage.neverUsed
+                        : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(liveItem.last_used_on))}`}
+                    </Text>
+                  </View>
+                  <View style={styles.usageDaysRow}>
                     <TouchableOpacity
-                      style={[styles.useTodayBtn, usedToday && styles.useTodayBtnOn]}
-                      onPress={handleUseTodayToggle}
-                      disabled={usageBusy}
-                      activeOpacity={0.8}
+                      style={styles.logPastBtn}
+                      onPress={() => { setPickerDate(new Date()); setDatePickerVisible(true); }}
+                      activeOpacity={0.7}
                     >
-                      <Ionicons
-                        name={usedToday ? 'checkmark-circle' : 'checkmark-circle-outline'}
-                        size={18}
-                        color={usedToday ? '#fff' : '#2D2D2D'}
-                      />
-                      <Text style={[styles.useTodayText, usedToday && styles.useTodayTextOn]}>
-                        {usedToday ? S.usage.usedToday : S.usage.useToday}
-                      </Text>
+                      <Ionicons name="calendar-outline" size={15} color="#2D2D2D" />
+                      <Text style={styles.logPastText}>{S.usage.logPast}</Text>
                     </TouchableOpacity>
-                  </Animated.View>
-                  <Text style={styles.usageStat}>
-                    {usageCount === 0
-                      ? S.usage.neverUsed
-                      : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(liveItem.last_used_on))}`}
-                  </Text>
+                    {pastDays.map(key => (
+                      <View key={key} style={styles.usageDayChip}>
+                        <Text style={styles.usageDayChipText}>{dayKeyLabel(key)}</Text>
+                        <TouchableOpacity onPress={() => toggleUsageDay(key, false)} hitSlop={8}>
+                          <Ionicons name="close" size={13} color="#999" />
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  </View>
                 </View>
               )}
               {isRetired(item) && (
@@ -624,6 +671,33 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         onClose={() => setRetireSheetVisible(false)}
         onConfirm={({ reason, epitaph }) => { setRetireSheetVisible(false); onRetire?.(reason, epitaph); }}
       />
+      {datePickerVisible && Platform.OS === 'android' && (
+        <DateTimePicker
+          value={pickerDate}
+          mode="date"
+          maximumDate={new Date()}
+          onChange={onAndroidDateChange}
+        />
+      )}
+      {Platform.OS === 'ios' && (
+        <BottomSheet
+          visible={datePickerVisible}
+          onClose={() => setDatePickerVisible(false)}
+          sheetStyle={styles.pickerSheet}
+        >
+          <DateTimePicker
+            value={pickerDate}
+            mode="date"
+            display="spinner"
+            maximumDate={new Date()}
+            themeVariant="light"
+            onChange={(_e, date) => date && setPickerDate(date)}
+          />
+          <TouchableOpacity style={styles.pickerDoneBtn} onPress={() => commitPickedDate(pickerDate)}>
+            <Text style={styles.pickerDoneText}>{S.usage.addDate}</Text>
+          </TouchableOpacity>
+        </BottomSheet>
+      )}
       </GestureHandlerRootView>
     </Modal>
   );
@@ -926,11 +1000,70 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 20,
   },
+  usageSection: {
+    gap: 10,
+  },
   usageRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 12,
     flexWrap: 'wrap',
+  },
+  usageDaysRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  logPastBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#E8E3DD',
+    backgroundColor: '#fff',
+  },
+  logPastText: {
+    fontSize: 13,
+    color: '#2D2D2D',
+  },
+  usageDayChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingLeft: 12,
+    paddingRight: 8,
+    borderRadius: 20,
+    backgroundColor: '#E8E3DD',
+  },
+  usageDayChipText: {
+    fontSize: 13,
+    color: '#2D2D2D',
+  },
+  pickerSheet: {
+    backgroundColor: '#F5F0EB',
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 8,
+    paddingBottom: 12,
+    paddingHorizontal: 16,
+  },
+  pickerDoneBtn: {
+    marginTop: 4,
+    marginHorizontal: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+    backgroundColor: '#2D2D2D',
+    alignItems: 'center',
+  },
+  pickerDoneText: {
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#fff',
   },
   useTodayBtn: {
     flexDirection: 'row',

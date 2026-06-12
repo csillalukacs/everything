@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "xyz.whimsylabs.things",
+      "bundleIdentifier": "com.csillalukacs.things",
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take photos of your items.",
         "ITSAppUsesNonExemptEncryption": false
@@ -35,7 +35,7 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
       ],
-      "package": "xyz.whimsylabs.things"
+      "package": "com.csillalukacs.things"
     },
     "web": {
       "favicon": "./assets/favicon.png"
@@ -52,7 +52,8 @@
             "deploymentTarget": "15.5"
           }
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "extra": {
       "router": {},

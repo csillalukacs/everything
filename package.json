@@ -12,6 +12,7 @@
     "@expo/vector-icons": "^15.0.3",
     "@jacobjmc/react-native-background-remover": "^1.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/datetimepicker": "8.4.4",
     "@shopify/react-native-skia": "2.2.12",
     "@supabase/supabase-js": "^2.99.1",
     "babel-preset-expo": "~54.0.10",

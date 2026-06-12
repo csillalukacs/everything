@@ -2,14 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { S } from '../../../shared/strings'
 import { locationSuggestionsFromItems, isRetired } from '../../../shared/items'
-import { dayKey, relativeDay } from '../../../shared/dates'
+import { dayKey, relativeDay, dayKeyLabel } from '../../../shared/dates'
 import { recordUsage, removeUsage, fetchItemUsages } from '../../../shared/usagesApi'
 import { supabase } from '../lib/supabase'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
 import LockIcon from '../components/LockIcon'
 import Avatar from '../components/Avatar'
-import UsageBackfill from '../components/UsageBackfill'
 import { AppleIcon } from '../components/Icons'
 import { isFeaturedTag } from '../../../shared/featuredTag'
 
@@ -38,6 +37,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [retireReason, setRetireReason] = useState(null)
   const [retireEpitaph, setRetireEpitaph] = useState('')
   const fileInputRef = useRef(null)
+  const pastDateInputRef = useRef(null)
 
   useEffect(() => { setDisplayedIdx(0); setRetiring(false); setRetireReason(null); setRetireEpitaph('') }, [item?.id])
 
@@ -46,6 +46,12 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setLastUsedOn(item?.last_used_on ?? null)
     setUsedDays(new Set())
   }, [item?.id])
+
+  // Load the logged days when viewing an item you own, so the usage log shows without entering edit.
+  useEffect(() => {
+    if (!visible || !item?.id || !(sessionUserId && item.user_id === sessionUserId)) return
+    loadUsageDays()
+  }, [visible, item?.id, sessionUserId])
 
   const isOwnerItem = !!sessionUserId && item?.user_id === sessionUserId
   const todayKey = dayKey(new Date())
@@ -127,7 +133,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     setEditAcquired(item.acquired_location
       ? { location: item.acquired_location, lat: item.acquired_lat, lng: item.acquired_lng }
       : null)
-    loadUsageDays()
     setEditing(true)
   }
 
@@ -354,7 +359,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                   value={editYear}
                   onChange={e => setEditYear(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
                 />
-                <UsageBackfill usedDays={usedDays} onToggle={handleBackfillToggle} />
               </>
             ) : (
               <>
@@ -411,20 +415,59 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 )}
                 {item.description && <p className="detail-description">{item.description}</p>}
                 {isOwnerItem && !retired && (
-                  <div className="usage-row">
-                    <button
-                      type="button"
-                      className={`use-today-btn${usedToday ? ' use-today-btn-on' : ''}${usagePulse ? ' use-today-pulse' : ''}`}
-                      onClick={handleUseToday}
-                      disabled={usageBusy}
-                    >
-                      {usedToday ? '✓ ' : '+ '}{usedToday ? S.usage.usedToday : S.usage.useToday}
-                    </button>
-                    <span className="usage-stat">
-                      {usageCount === 0
-                        ? S.usage.neverUsed
-                        : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(lastUsedOn))}`}
-                    </span>
+                  <div className="usage-section">
+                    <div className="usage-row">
+                      <button
+                        type="button"
+                        className={`use-today-btn${usedToday ? ' use-today-btn-on' : ''}${usagePulse ? ' use-today-pulse' : ''}`}
+                        onClick={handleUseToday}
+                        disabled={usageBusy}
+                      >
+                        {usedToday ? '✓ ' : '+ '}{usedToday ? S.usage.usedToday : S.usage.useToday}
+                      </button>
+                      <span className="usage-stat">
+                        {usageCount === 0
+                          ? S.usage.neverUsed
+                          : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(lastUsedOn))}`}
+                      </span>
+                    </div>
+                    <div className="usage-days-row">
+                      <button
+                        type="button"
+                        className="log-past-btn"
+                        onClick={() => {
+                          const el = pastDateInputRef.current
+                          if (!el) return
+                          if (el.showPicker) el.showPicker()
+                          else el.focus()
+                        }}
+                      >
+                        <span className="log-past-icon">📅</span>
+                        {S.usage.logPast}
+                        <input
+                          ref={pastDateInputRef}
+                          type="date"
+                          className="log-past-input"
+                          max={todayKey}
+                          value=""
+                          onChange={e => {
+                            const key = e.target.value
+                            if (key && !usedDays.has(key)) handleBackfillToggle(key, true)
+                          }}
+                        />
+                      </button>
+                      {[...usedDays].filter(k => k !== todayKey).sort().reverse().map(key => (
+                        <span key={key} className="usage-day-chip">
+                          {dayKeyLabel(key)}
+                          <button
+                            type="button"
+                            className="usage-day-chip-x"
+                            onClick={() => handleBackfillToggle(key, false)}
+                            aria-label="remove"
+                          >×</button>
+                        </span>
+                      ))}
+                    </div>
                   </div>
                 )}
                 {(item.acquired_location || item.acquired_year) && (

@@ -1625,6 +1625,12 @@ input {
 
 /* ---- Usage tracking ---- */
 
+.usage-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
 .usage-row {
   display: flex;
   align-items: center;
@@ -1672,67 +1678,61 @@ input {
   color: #999;
 }
 
-.backfill {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.backfill-title {
-  font-size: 15px;
-  font-weight: 500;
-  color: #2D2D2D;
-}
-
-.backfill-hint {
-  font-size: 13px;
-  color: #999;
-  margin-bottom: 8px;
-}
-
-.backfill-grid {
+.usage-days-row {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 8px;
 }
 
-.backfill-chip {
-  display: flex;
-  flex-direction: column;
+.log-past-btn {
+  position: relative;
+  display: inline-flex;
   align-items: center;
-  width: 48px;
-  padding: 8px 0;
-  border-radius: 12px;
+  gap: 5px;
+  padding: 6px 12px;
+  border-radius: 20px;
   background: #fff;
   border: 1px solid #E8E3DD;
+  color: #2D2D2D;
+  font-size: 13px;
   cursor: pointer;
 }
 
-.backfill-chip-on {
-  background: #2D2D2D;
-  border-color: #2D2D2D;
+.log-past-icon {
+  font-size: 13px;
 }
 
-.backfill-chip-weekday {
-  font-size: 10px;
-  color: #999;
+/* Hidden date input; the picker is opened programmatically via showPicker() on the button click,
+   so it must not intercept the click itself. */
+.log-past-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
 }
 
-.backfill-chip-day {
-  font-size: 17px;
-  font-weight: 500;
+.usage-day-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 8px 6px 12px;
+  border-radius: 20px;
+  background: #E8E3DD;
   color: #2D2D2D;
+  font-size: 13px;
 }
 
-.backfill-chip-month {
-  font-size: 10px;
+.usage-day-chip-x {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
   color: #999;
-}
-
-.backfill-chip-on .backfill-chip-weekday,
-.backfill-chip-on .backfill-chip-day,
-.backfill-chip-on .backfill-chip-month {
-  color: #fff;
+  cursor: pointer;
 }
 
 /* ---- Primary button ---- */

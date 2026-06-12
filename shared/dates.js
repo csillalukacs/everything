@@ -167,3 +167,13 @@ export function formatDateLabel(s) {
   if (Number.isNaN(d.getTime())) return s;
   return d.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }).toLowerCase();
 }
+
+// 'YYYY-MM-DD' (a local day key) → short label like 'Jun 12', or 'Jun 12, 2024' when not the current year.
+// Parses the parts directly so the label never shifts a day across time zones.
+export function dayKeyLabel(key, now = new Date()) {
+  if (!key) return '';
+  const [y, m, d] = key.split('-').map(Number);
+  if (!y || !m || !d) return key;
+  const label = `${MONTH_NAMES[m - 1]} ${d}`;
+  return y === now.getFullYear() ? label : `${label}, ${y}`;
+}

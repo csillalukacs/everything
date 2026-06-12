@@ -27,7 +27,7 @@ export async function removeUsage(client, { itemId, usedOn }) {
   if (error) throw error;
 }
 
-// All used_on days for an item, most recent first. Used to light up the backfill grid.
+// All used_on days for an item, most recent first. Used to populate the usage log.
 export async function fetchItemUsages(client, itemId) {
   const { data, error } = await client
     .from('item_usages')
