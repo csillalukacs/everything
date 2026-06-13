@@ -264,6 +264,34 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               {displayedPhoto && (
                 <img src={displayedPhoto} alt={item.name || ''} className="detail-image" />
               )}
+              {showThumbnails && (
+                <div className={`thumbnail-row thumbnail-row-overlay${editing ? ' thumbnail-row-overlay-editing' : ''}`}>
+                  {allPhotos.map((entry, idx) => {
+                    if (!entry?.url) return null
+                    const selected = idx === safeDisplayedIdx
+                    const removable = editing && idx > 0
+                    return (
+                      <div key={`${idx}-${typeof entry.url === 'string' ? entry.url : 'preview'}`} className="thumbnail-wrap">
+                        <button
+                          type="button"
+                          className={`thumbnail${selected ? ' thumbnail-selected' : ''}`}
+                          onClick={() => setDisplayedIdx(idx)}
+                        >
+                          <img src={entry.thumb_url || entry.url} alt="" />
+                        </button>
+                        {removable && (
+                          <button
+                            type="button"
+                            className="thumbnail-remove"
+                            onClick={() => removePreviousPhoto(idx - 1)}
+                            aria-label={S.a11y.removePhoto}
+                          >×</button>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
               {editing && (
                 <>
                   <button
@@ -287,58 +315,29 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 </>
               )}
             </div>
-            {(showThumbnails || displayedDate || (editing && showThumbnails)) && (
+            {(displayedDate || (editing && showThumbnails)) && (
               <div className="photo-extras">
-                {(displayedDate || (editing && showThumbnails)) && (
-                  <div className="photo-meta-row">
-                    {displayedDate ? (
-                      <p className="photo-date">
-                        {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
-                      </p>
-                    ) : <span className="photo-date-spacer" />}
-                    {editing && showThumbnails && (
-                      <button
-                        type="button"
-                        className={`cover-btn${safeDisplayedIdx > 0 ? '' : ' cover-btn-hidden'}`}
-                        onClick={() => makeFeatured(safeDisplayedIdx)}
-                        disabled={safeDisplayedIdx === 0}
-                      >☆ {S.itemForm.useAsCover}</button>
-                    )}
-                  </div>
-                )}
-                {showThumbnails && (
-                  <div className="thumbnail-row">
-                    {allPhotos.map((entry, idx) => {
-                      if (!entry?.url) return null
-                      const selected = idx === safeDisplayedIdx
-                      const removable = editing && idx > 0
-                      return (
-                        <div key={`${idx}-${typeof entry.url === 'string' ? entry.url : 'preview'}`} className="thumbnail-wrap">
-                          <button
-                            type="button"
-                            className={`thumbnail${selected ? ' thumbnail-selected' : ''}`}
-                            onClick={() => setDisplayedIdx(idx)}
-                          >
-                            <img src={entry.thumb_url || entry.url} alt="" />
-                          </button>
-                          {removable && (
-                            <button
-                              type="button"
-                              className="thumbnail-remove"
-                              onClick={() => removePreviousPhoto(idx - 1)}
-                              aria-label={S.a11y.removePhoto}
-                            >×</button>
-                          )}
-                        </div>
-                      )
-                    })}
-                  </div>
-                )}
+                <div className="photo-meta-row">
+                  {displayedDate ? (
+                    <p className="photo-date">
+                      {S.itemForm.photoFrom(new Date(displayedDate).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }))}
+                    </p>
+                  ) : <span className="photo-date-spacer" />}
+                  {editing && showThumbnails && (
+                    <button
+                      type="button"
+                      className={`cover-btn${safeDisplayedIdx > 0 ? '' : ' cover-btn-hidden'}`}
+                      onClick={() => makeFeatured(safeDisplayedIdx)}
+                      disabled={safeDisplayedIdx === 0}
+                    >☆ {S.itemForm.useAsCover}</button>
+                  )}
+                </div>
               </div>
             )}
           </div>
 
-          <div className={`detail-info-col${editing ? ' detail-info-col-editing' : ''}`}>
+          <div className="detail-info-col">
+            <div className="detail-info-col-inner">
             {editing ? (
               <>
                 <input
@@ -550,6 +549,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                 )}
               </>
             )}
+            </div>
           </div>
         </div>
       </div>

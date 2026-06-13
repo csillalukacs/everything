@@ -1150,6 +1150,33 @@ input {
   padding: 4px 2px;
 }
 
+/* Overlaid on the main photo so the image column keeps a constant height
+   whether an item has one photo or several. */
+.thumbnail-row-overlay {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  z-index: 2;
+  /* Top padding keeps the remove "×" (at top:-6px) inside the scroll
+     container's padding box so overflow-x:auto doesn't clip it. */
+  padding: 8px 6px 0;
+}
+
+/* Clear the "new photo" overlay strip at the bottom while editing. */
+.thumbnail-row-overlay-editing {
+  bottom: 52px;
+}
+
+.thumbnail-row-overlay .thumbnail {
+  border-color: rgba(255, 255, 255, 0.7);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+}
+
+.thumbnail-row-overlay .thumbnail-selected {
+  border-color: #fff;
+}
+
 .thumbnail-wrap {
   position: relative;
   flex-shrink: 0;
@@ -1215,9 +1242,26 @@ input {
 }
 
 .detail-info-col {
+  position: relative;
+}
+
+/* Absolutely fill the column so the info content never drives the row
+   height — the image column is the sole height authority, keeping edit and
+   view modes (and items with differing content) the exact same height. */
+.detail-info-col-inner {
+  position: absolute;
+  inset: 0;
   display: flex;
   flex-direction: column;
   gap: 16px;
+  overflow-y: auto;
+}
+
+@media (max-width: 560px) {
+  .detail-info-col-inner {
+    position: static;
+    overflow: visible;
+  }
 }
 
 .detail-name-row {
@@ -1457,10 +1501,6 @@ input {
   display: flex;
   flex-direction: column;
   gap: 12px;
-  padding-bottom: 100px;
-}
-
-.detail-info-col-editing {
   padding-bottom: 100px;
 }
 
@@ -1718,7 +1758,7 @@ input {
 .usage-history-list {
   display: flex;
   flex-direction: column;
-  height: 132px;
+  max-height: 132px;
   overflow-y: auto;
 }
 

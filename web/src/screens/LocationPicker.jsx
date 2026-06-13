@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { searchPlaces } from '../lib/geocode'
 import { S } from '../../../shared/strings'
 
@@ -7,8 +8,10 @@ export default function LocationPicker({ value, onChange, placeholder = S.locati
   const [results, setResults] = useState([])
   const [loading, setLoading] = useState(false)
   const [focused, setFocused] = useState(false)
+  const [menuRect, setMenuRect] = useState(null)
   const debounceRef = useRef(null)
   const reqIdRef = useRef(0)
+  const rowRef = useRef(null)
 
   useEffect(() => {
     setQuery(value?.location ?? '')
@@ -60,9 +63,28 @@ export default function LocationPicker({ value, onChange, placeholder = S.locati
   const hasCoords = !!value?.lat && !!value?.lng
   const showResults = focused && results.length > 0
 
+  // The dropdown renders in a portal with fixed positioning so it can spill
+  // outside the modal (which clips via overflow) instead of reserving space.
+  useEffect(() => {
+    if (!showResults) return
+    const update = () => {
+      const el = rowRef.current
+      if (!el) return
+      const r = el.getBoundingClientRect()
+      setMenuRect({ left: r.left, top: r.bottom + 6, width: r.width })
+    }
+    update()
+    window.addEventListener('scroll', update, true)
+    window.addEventListener('resize', update)
+    return () => {
+      window.removeEventListener('scroll', update, true)
+      window.removeEventListener('resize', update)
+    }
+  }, [showResults])
+
   return (
     <div className="location-picker">
-      <div className="location-picker-input-row">
+      <div className="location-picker-input-row" ref={rowRef}>
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hasCoords ? '#2D2D2D' : '#bbb'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
@@ -84,8 +106,11 @@ export default function LocationPicker({ value, onChange, placeholder = S.locati
             <button type="button" className="location-picker-clear" onClick={clear} aria-label={S.a11y.clear}>×</button>
           )}
       </div>
-      {showResults && (
-        <div className="location-picker-results">
+      {showResults && menuRect && createPortal(
+        <div
+          className="location-picker-results"
+          style={{ position: 'fixed', left: menuRect.left, top: menuRect.top, width: menuRect.width, right: 'auto' }}
+        >
           {results.map((r, i) => (
             <button
               type="button"
@@ -95,7 +120,8 @@ export default function LocationPicker({ value, onChange, placeholder = S.locati
               onClick={() => pick(r)}
             >{r.display_name}</button>
           ))}
-        </div>
+        </div>,
+        document.body,
       )}
     </div>
   )
