@@ -17,6 +17,8 @@ const SORT_OPTIONS = [
   { value: 'name-desc', label: S.filters.sort.nameZA },
   { value: 'acquired-desc', label: S.filters.sort.acquiredNewest },
   { value: 'acquired-asc', label: S.filters.sort.acquiredOldest },
+  { value: 'used-recent', label: S.filters.sort.usedRecent },
+  { value: 'used-often', label: S.filters.sort.usedOften },
   { value: 'random', label: S.filters.sort.random },
 ];
 

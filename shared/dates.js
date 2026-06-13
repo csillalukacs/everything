@@ -41,6 +41,29 @@ export function relativeDay(dayStr, now = new Date()) {
   });
 }
 
+// How "recently used" an item is, from its last_used_on day ('YYYY-MM-DD' or null).
+// Returns 'today' | 'week' | 'month' for items used within those windows, else null
+// (never used, or last used > 30 days ago). Drives the warm grid-tile tint — see
+// USAGE_TINTS below. Both apps read these so the recency cue stays consistent.
+export function usageRecencyTier(lastUsedOn, now = new Date()) {
+  if (!lastUsedOn) return null;
+  const [y, m, d] = String(lastUsedOn).split('-').map(Number);
+  if (!y) return null;
+  const diffDays = Math.round((startOfDay(now) - startOfDay(new Date(y, m - 1, d))) / 86400000);
+  if (diffDays <= 0) return 'today';
+  if (diffDays <= 7) return 'week';
+  if (diffDays <= 30) return 'month';
+  return null;
+}
+
+// Warm mat colors keyed by usageRecencyTier(), against the #F5F0EB base. Warmer/
+// stronger = used more recently; absence of a tier means no tint (plain tile).
+export const USAGE_TINTS = {
+  today: '#F1D9BE',
+  week: '#F4E5D3',
+  month: '#F6EEE3',
+};
+
 export function startOfDay(d) {
   const x = new Date(d);
   x.setHours(0, 0, 0, 0);

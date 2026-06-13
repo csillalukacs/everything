@@ -6,7 +6,7 @@ import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired } from '.
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { UUID_RE } from '../../../shared/identifiers'
-import { formatDateLabel } from '../../../shared/dates'
+import { formatDateLabel, usageRecencyTier, USAGE_TINTS } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
 import { FEATURED_TAG_NAME, isFeaturedTag, sortTagsFeaturedFirst, findFeaturedTag, ensureFeaturedTag } from '../../../shared/featuredTag'
 import ItemDetailModal from './ItemDetailModal'
@@ -716,6 +716,8 @@ export default function ProfilePage() {
             { value: 'name-desc', label: S.filters.sort.nameZA },
             { value: 'acquired-desc', label: S.filters.sort.acquiredNewest },
             { value: 'acquired-asc', label: S.filters.sort.acquiredOldest },
+            { value: 'used-recent', label: S.filters.sort.usedRecent },
+            { value: 'used-often', label: S.filters.sort.usedOften },
             { value: 'random', label: S.filters.sort.random },
           ]}
         />
@@ -750,10 +752,12 @@ export default function ProfilePage() {
         {sortedItems.map(item => {
           const isSelected = selectedIds.has(item.id)
           const visible = visibleItemIds.has(item.id)
+          const tint = USAGE_TINTS[usageRecencyTier(item.last_used_on)]
           return (
             <div
               key={item.id}
               className={`card${isSelected ? ' card-selected' : ''}${visible ? '' : ' card-hidden'}`}
+              style={tint ? { background: tint } : undefined}
               onClick={() => isOwner && batchMode ? toggleBatchSelect(item.id) : openItem(item)}
               onContextMenu={isOwner ? e => { e.preventDefault(); toggleBatchSelect(item.id) } : undefined}
             >

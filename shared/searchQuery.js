@@ -1,7 +1,7 @@
 import { cityOf } from './items.js';
 
-const FIELD_ALIASES = { year: 'acquired', description: 'desc', created: 'added' };
-const VALID_FIELDS = new Set(['tag', 'acquired', 'added', 'city', 'name', 'desc', 'ocr']);
+const FIELD_ALIASES = { year: 'acquired', description: 'desc', created: 'added', lastused: 'used' };
+const VALID_FIELDS = new Set(['tag', 'acquired', 'added', 'used', 'uses', 'city', 'name', 'desc', 'ocr']);
 
 function tokenize(input) {
   const tokens = [];
@@ -123,12 +123,12 @@ function parseRangeOrCmp(field, value, negated) {
 }
 
 function parseFieldValue(field, raw) {
-  if (field === 'acquired') {
+  if (field === 'acquired' || field === 'uses') {
     const n = parseInt(raw, 10);
     if (Number.isNaN(n)) return null;
     return n;
   }
-  if (field === 'added') return parseDate(raw);
+  if (field === 'added' || field === 'used') return parseDate(raw);
   return null;
 }
 
@@ -153,7 +153,7 @@ function parseClause(tok) {
     return { field, op: 'contains', value: value.toLowerCase(), negated };
   }
 
-  if (field === 'acquired' || field === 'added') {
+  if (field === 'acquired' || field === 'added' || field === 'used' || field === 'uses') {
     return parseRangeOrCmp(field, value, negated);
   }
 
@@ -262,6 +262,46 @@ function matchClause(item, clause) {
       const { from, to } = v;
       if (from != null && t < from.lower) return false;
       if (to != null && t > to.upper) return false;
+      return true;
+    }
+    return false;
+  }
+
+  if (clause.field === 'used') {
+    // last_used_on is a 'YYYY-MM-DD' local calendar day (or null = never used).
+    // Parse to local midnight so it lines up with parseDate's local-time bounds.
+    const raw = item.last_used_on;
+    if (clause.op === 'none') return raw == null;
+    const m = raw ? /^(\d{4})-(\d{2})-(\d{2})$/.exec(raw) : null;
+    if (!m) return false;
+    const t = new Date(+m[1], +m[2] - 1, +m[3]).getTime();
+    const v = clause.value;
+    if (clause.op === 'eq') return t >= v.lower && t <= v.upper;
+    if (clause.op === 'gt') return t > v.upper;
+    if (clause.op === 'gte') return t >= v.lower;
+    if (clause.op === 'lt') return t < v.lower;
+    if (clause.op === 'lte') return t <= v.upper;
+    if (clause.op === 'range') {
+      const { from, to } = v;
+      if (from != null && t < from.lower) return false;
+      if (to != null && t > to.upper) return false;
+      return true;
+    }
+    return false;
+  }
+
+  if (clause.field === 'uses') {
+    const n = item.usage_count ?? 0;
+    if (clause.op === 'none') return n === 0;
+    if (clause.op === 'eq') return n === clause.value;
+    if (clause.op === 'gt') return n > clause.value;
+    if (clause.op === 'gte') return n >= clause.value;
+    if (clause.op === 'lt') return n < clause.value;
+    if (clause.op === 'lte') return n <= clause.value;
+    if (clause.op === 'range') {
+      const { from, to } = clause.value;
+      if (from != null && n < from) return false;
+      if (to != null && n > to) return false;
       return true;
     }
     return false;

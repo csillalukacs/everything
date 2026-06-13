@@ -8,6 +8,8 @@
 //   name-desc      name z→a, blank names last
 //   acquired-desc  acquired_year desc, missing years last
 //   acquired-asc   acquired_year asc, missing years last
+//   used-recent    last_used_on desc, never-used last
+//   used-often     usage_count desc, never-used last
 //   random         deterministic shuffle by hash(id, seed)
 
 export const SORT_MODES = [
@@ -18,6 +20,8 @@ export const SORT_MODES = [
   'name-desc',
   'acquired-desc',
   'acquired-asc',
+  'used-recent',
+  'used-often',
   'random',
 ];
 
@@ -37,6 +41,18 @@ function cmpYear(a, b) {
   if (a.acquired_year == null) return 1;
   if (b.acquired_year == null) return -1;
   return a.acquired_year - b.acquired_year;
+}
+
+// last_used_on is a 'YYYY-MM-DD' string (or null for never-used). Most-recent
+// first, with never-used items always last (independent of sort direction —
+// don't negate this). String compare suffices since the format is zero-padded.
+function cmpLastUsedDesc(a, b) {
+  const ad = a.last_used_on ?? '';
+  const bd = b.last_used_on ?? '';
+  if (!ad && !bd) return 0;
+  if (!ad) return 1;
+  if (!bd) return -1;
+  return bd.localeCompare(ad);
 }
 
 // FNV-1a hash of `${seed}:${id}` — deterministic per (id, seed) so random
@@ -70,6 +86,15 @@ export function sortItems(items, mode, seed = 0) {
       return arr.sort((a, b) => -cmpYear(a, b));
     case 'acquired-asc':
       return arr.sort(cmpYear);
+    case 'used-recent':
+      return arr.sort(cmpLastUsedDesc);
+    case 'used-often': {
+      // usage_count desc; ties (incl. never-used 0s) fall back to most-recent use.
+      return arr.sort((a, b) => {
+        const diff = (b.usage_count ?? 0) - (a.usage_count ?? 0);
+        return diff !== 0 ? diff : cmpLastUsedDesc(a, b);
+      });
+    }
     case 'random':
       return arr.sort((a, b) => hashItem(a.id, seed) - hashItem(b.id, seed));
     case 'newest':

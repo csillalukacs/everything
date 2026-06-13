@@ -169,6 +169,8 @@ export const S = {
       nameZA: 'name z–a',
       acquiredNewest: 'acquired (newest)',
       acquiredOldest: 'acquired (oldest)',
+      usedRecent: 'last used',
+      usedOften: 'most used',
       random: 'random',
     },
     // Date-range chip on profile page

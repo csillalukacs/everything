@@ -3,6 +3,7 @@ import { memo, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
 import { thumbOf } from '../shared/items';
+import { usageRecencyTier, USAGE_TINTS } from '../shared/dates';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_GAP = 8;
@@ -13,6 +14,7 @@ function cardSize(numColumns) {
 }
 
 const Card = memo(function Card({ item, size, isSelected, batchMode, onPress, onLongPress }) {
+  const tint = USAGE_TINTS[usageRecencyTier(item.last_used_on)];
   return (
     <TouchableOpacity
       style={[styles.card, { width: size }, isSelected && styles.cardSelected]}
@@ -21,7 +23,7 @@ const Card = memo(function Card({ item, size, isSelected, batchMode, onPress, on
       delayLongPress={400}
     >
       {item.image_url && (
-        <View style={styles.cardImageContainer}>
+        <View style={[styles.cardImageContainer, { backgroundColor: tint || 'transparent' }]}>
           <Image source={{ uri: thumbOf(item) }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
         </View>
       )}
@@ -142,7 +144,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   card: {
-    backgroundColor: '#fff',
+    backgroundColor: 'transparent',
     borderRadius: 12,
     overflow: 'hidden',
   },
@@ -153,7 +155,6 @@ const styles = StyleSheet.create({
   cardImageContainer: {
     width: '100%',
     aspectRatio: 1,
-    backgroundColor: '#E8E3DD',
   },
   cardImage: {
     width: '100%',
