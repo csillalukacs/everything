@@ -24,6 +24,7 @@ import { thumbOf, isRetired } from '../shared/items';
 import { S } from '../shared/strings';
 import { buildTagDistribution, computeYearStats, buildMapGroups } from '../shared/stats';
 import { Bar, PieChart, StatCard } from './StatsComponents';
+import { C } from '../shared/theme';
 
 let MapView = null;
 let Marker = null;
@@ -120,7 +121,7 @@ export default function StatsScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="chevron-back" size={28} color="#2D2D2D" />
+          <Ionicons name="chevron-back" size={28} color={C.ink} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{S.stats.title}</Text>
@@ -246,7 +247,7 @@ export default function StatsScreen() {
                         coordinate={{ latitude: home.lat, longitude: home.lng }}
                         title={S.stats.home}
                         description={home.location?.split(',')[0]}
-                        pinColor="#2D2D2D"
+                        pinColor={C.ink}
                       />
                     )}
                   </MapView>
@@ -295,7 +296,7 @@ export default function StatsScreen() {
                 }}
               >
                 <Text style={styles.sheetSeeAllText}>{S.stats.seeAllFromMobile(selectedGroup.city)}</Text>
-                <Ionicons name="chevron-forward" size={16} color="#2D2D2D" />
+                <Ionicons name="chevron-forward" size={16} color={C.ink} />
               </TouchableOpacity>
             )}
           </Pressable>
@@ -317,7 +318,7 @@ function Section({ title, children }) {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingHorizontal: 24,
   },
@@ -336,7 +337,7 @@ const styles = StyleSheet.create({
     fontSize: 32,
     fontWeight: '300',
     letterSpacing: 1,
-    color: '#2D2D2D',
+    color: C.ink,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
   },
   subtitle: {
@@ -375,7 +376,7 @@ const styles = StyleSheet.create({
     height: 180,
     paddingTop: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E3DD',
+    borderBottomColor: C.surface,
     gap: 3,
   },
   pieWrap: {
@@ -398,7 +399,7 @@ const styles = StyleSheet.create({
   legendLabel: {
     flex: 1,
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   legendValue: {
     fontSize: 12,
@@ -409,7 +410,7 @@ const styles = StyleSheet.create({
     height: 320,
     borderRadius: 16,
     overflow: 'hidden',
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
   map: {
     flex: 1,
@@ -426,7 +427,7 @@ const styles = StyleSheet.create({
     justifyContent: 'flex-end',
   },
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     paddingHorizontal: 24,
     paddingTop: 20,
     paddingBottom: Platform.OS === 'ios' ? 40 : 24,
@@ -436,7 +437,7 @@ const styles = StyleSheet.create({
   sheetTitle: {
     fontSize: 20,
     fontWeight: '400',
-    color: '#2D2D2D',
+    color: C.ink,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
   },
   sheetSub: {
@@ -455,7 +456,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1,
     borderColor: '#E0E0E0',
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
     overflow: 'hidden',
   },
   sheetThumbImg: {
@@ -464,7 +465,7 @@ const styles = StyleSheet.create({
   },
   sheetThumbPlaceholder: {
     flex: 1,
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
   sheetSeeAll: {
     flexDirection: 'row',
@@ -474,11 +475,11 @@ const styles = StyleSheet.create({
     marginTop: 18,
     paddingVertical: 12,
     borderTopWidth: 1,
-    borderTopColor: '#E8E3DD',
+    borderTopColor: C.surface,
   },
   sheetSeeAllText: {
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     letterSpacing: 0.3,
   },
 });

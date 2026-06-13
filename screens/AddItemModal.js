@@ -24,6 +24,7 @@ import { S } from '../shared/strings';
 import CameraCaptureModal from './CameraCaptureModal';
 import LocationPicker from './LocationPicker';
 import TagInput from './TagInput';
+import { C } from '../shared/theme';
 
 export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
   const { items, uploadLocalPhoto } = useCollection();
@@ -243,7 +244,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
   },
   scrollContent: {
     paddingTop: 60,
@@ -262,7 +263,7 @@ const styles = StyleSheet.create({
     aspectRatio: 1,
     borderRadius: 16,
     marginBottom: 16,
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
     overflow: 'hidden',
   },
   photo: {
@@ -288,11 +289,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 16,
-    color: '#2D2D2D',
+    color: C.ink,
     marginBottom: 12,
   },
   button: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',
@@ -316,6 +317,6 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   privacyCornerOn: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
   },
 });

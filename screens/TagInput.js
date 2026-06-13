@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 
 import { S } from '../shared/strings';
 import { FEATURED_TAG_NAME } from '../shared/featuredTag';
 import AppleIcon from './AppleIcon';
+import { C } from '../shared/theme';
 
 export default function TagInput({ allTags = [], selectedTags, onChange, onStartAdding }) {
   const [addingTag, setAddingTag] = useState(false);
@@ -70,7 +71,7 @@ export default function TagInput({ allTags = [], selectedTags, onChange, onStart
             onBlur={handleConfirmNewTag}
           />
           <TouchableOpacity onPress={handleConfirmNewTag} style={styles.newTagConfirm}>
-            <Ionicons name="checkmark" size={18} color="#2D2D2D" />
+            <Ionicons name="checkmark" size={18} color={C.ink} />
           </TouchableOpacity>
         </View>
       ) : (
@@ -109,8 +110,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   tagChipSelected: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
+    backgroundColor: C.ink,
+    borderColor: C.ink,
   },
   tagChipAdd: {
     borderStyle: 'dashed',
@@ -135,7 +136,7 @@ const styles = StyleSheet.create({
   },
   newTagInput: {
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
     minWidth: 80,
   },
   newTagConfirm: {

@@ -8,6 +8,7 @@ import AppleIcon from './AppleIcon';
 import { S } from '../shared/strings';
 import { filterAndSortTags, validateTagRename } from '../shared/tagManagement';
 import { isFeaturedTag } from '../shared/featuredTag';
+import { C } from '../shared/theme';
 
 export default function ManageTagsSheet({
   visible,
@@ -135,7 +136,7 @@ export default function ManageTagsSheet({
                       <Ionicons
                         name={tag.is_private ? 'lock-closed' : 'lock-open-outline'}
                         size={16}
-                        color={tag.is_private ? '#2D2D2D' : '#ccc'}
+                        color={tag.is_private ? C.ink : '#ccc'}
                       />
                     </TouchableOpacity>
                     {!featured && (
@@ -156,7 +157,7 @@ export default function ManageTagsSheet({
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -174,7 +175,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   done: {
     fontSize: 15,
@@ -195,7 +196,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     paddingVertical: 0,
   },
   list: {
@@ -215,7 +216,7 @@ const styles = StyleSheet.create({
   },
   rowBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E3DD',
+    borderBottomColor: C.surface,
   },
   tagInfo: {
     flex: 1,
@@ -226,7 +227,7 @@ const styles = StyleSheet.create({
   },
   tagName: {
     fontSize: 15,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   tagCount: {
     fontSize: 12,
@@ -242,11 +243,11 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   renameInputError: {
-    borderColor: '#E74C3C',
+    borderColor: C.red,
   },
   renameError: {
     fontSize: 11,
-    color: '#E74C3C',
+    color: C.red,
   },
   actions: {
     flexDirection: 'row',
@@ -258,6 +259,6 @@ const styles = StyleSheet.create({
   },
   deleteBtn: {
     fontSize: 13,
-    color: '#E74C3C',
+    color: C.red,
   },
 });

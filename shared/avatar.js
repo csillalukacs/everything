@@ -3,15 +3,17 @@
 // background. Colors are deterministic per profile (hashed from the
 // identifier) so a user keeps the same placeholder color everywhere.
 
+// Bold, white-text-safe categorical hues (initials render in #fff). No yellow
+// here — it fails contrast against white text.
 const PALETTE = [
-  '#B7C4A4', // sage
-  '#C9A78F', // taupe
-  '#A8B5C4', // dusty blue
-  '#C7A8A0', // muted clay
-  '#B5A8C4', // lavender grey
-  '#A4B8B0', // eucalyptus
-  '#C4B59B', // sand
-  '#9FB0A8', // grey-green
+  '#E53935', // red
+  '#1E88E5', // blue
+  '#43A047', // green
+  '#8E24AA', // purple
+  '#00897B', // teal
+  '#D81B60', // pink
+  '#3949AB', // indigo
+  '#455A64', // slate
 ];
 
 export function avatarInitial(profile) {

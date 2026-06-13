@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { S } from '../shared/strings';
 import BottomSheet from './BottomSheet';
+import { C } from '../shared/theme';
 
 const SORT_OPTIONS = [
   { value: 'newest', label: S.filters.sort.newest },
@@ -148,7 +149,7 @@ export default function FilterSheet({
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   done: {
     fontSize: 15,
@@ -180,7 +181,7 @@ const styles = StyleSheet.create({
   },
   clear: {
     fontSize: 14,
-    color: '#E74C3C',
+    color: C.red,
   },
   scroll: {
     flex: 1,
@@ -215,8 +216,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   chipActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
+    backgroundColor: C.ink,
+    borderColor: C.ink,
   },
   chipText: {
     fontSize: 13,

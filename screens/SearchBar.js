@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
 import { Modal, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 export default function SearchBar({ value, onChange, rightAdornment }) {
   const [helpVisible, setHelpVisible] = useState(false);
@@ -94,7 +95,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     paddingVertical: 0,
   },
   searchHelpButton: {
@@ -130,7 +131,7 @@ const styles = StyleSheet.create({
   searchHelpTitle: {
     fontSize: 15,
     fontWeight: '600',
-    color: '#2D2D2D',
+    color: C.ink,
     marginBottom: 4,
   },
   searchHelpIntro: {
@@ -144,12 +145,12 @@ const styles = StyleSheet.create({
   searchHelpRow: {
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EBE5',
+    borderBottomColor: C.line,
   },
   searchHelpCode: {
     fontFamily: 'Menlo',
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
     marginBottom: 2,
   },
   searchHelpDesc: {

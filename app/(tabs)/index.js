@@ -26,6 +26,7 @@ import { parseQuery, matchItem } from '../../shared/searchQuery';
 import { sortItems, newRandomSeed } from '../../shared/sortItems';
 import { isFeaturedTag } from '../../shared/featuredTag';
 import { S } from '../../shared/strings';
+import { C } from '../../shared/theme';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -262,7 +263,7 @@ export default function Collection() {
             onPress={() => setFilterSheetVisible(true)}
             hitSlop={8}
           >
-            <Ionicons name="options-outline" size={20} color={(activeYear || activeCity) ? '#2D2D2D' : '#999'} />
+            <Ionicons name="options-outline" size={20} color={(activeYear || activeCity) ? C.ink : '#999'} />
             {(activeYear || activeCity) && <View style={styles.filterIconDot} />}
           </TouchableOpacity>
         }
@@ -285,7 +286,7 @@ export default function Collection() {
             onPress={() => setCollagesSheetVisible(true)}
             activeOpacity={0.7}
           >
-            <Ionicons name="grid-outline" size={14} color="#2D2D2D" />
+            <Ionicons name="grid-outline" size={14} color={C.ink} />
             <Text style={styles.tagActionText}>{S.collages.title}</Text>
           </TouchableOpacity>
         </View>
@@ -398,7 +399,7 @@ export default function Collection() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     paddingTop: 80,
     paddingHorizontal: 24,
   },
@@ -416,7 +417,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '300',
     letterSpacing: 1,
-    color: '#2D2D2D',
+    color: C.ink,
     fontFamily: 'Georgia',
   },
   subtitle: {
@@ -454,7 +455,7 @@ const styles = StyleSheet.create({
     width: 7,
     height: 7,
     borderRadius: 4,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
   },
   tagActionsRow: {
     flexDirection: 'row',
@@ -475,6 +476,6 @@ const styles = StyleSheet.create({
   },
   tagActionText: {
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
   },
 });

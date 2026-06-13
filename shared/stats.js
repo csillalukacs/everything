@@ -2,11 +2,13 @@ import { cityOf } from './items';
 import { FEATURED_TAG_NAME } from './featuredTag';
 import { S } from './strings';
 
+// Bold categorical hues for pie slices (each slice is labelled in its own
+// legend, so yellow is fine here).
 export const PIE_PALETTE = [
-  '#C5705D', '#D4A55C', '#8FA363', '#5C9A8C', '#5A7CA8',
-  '#8A6FA3', '#B5688A', '#8B6F47', '#A89B6E', '#5C5C5C',
+  '#E53935', '#1E88E5', '#FDD835', '#43A047', '#8E24AA',
+  '#00897B', '#D81B60', '#3949AB', '#00ACC1', '#C0CA33',
 ];
-export const PIE_UNTAGGED_COLOR = '#D5D0C8';
+export const PIE_UNTAGGED_COLOR = '#BDBDBD';
 
 export function buildTagDistribution(items) {
   if (items.length === 0) return null;

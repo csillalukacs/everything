@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import BottomSheet from './BottomSheet';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 // Collects an optional reason + epitaph and retires the item. The primary button
 // works with nothing filled in (one-tap retire); the fields are optional.
@@ -73,7 +74,7 @@ export default function RetireSheet({ visible, onClose, onConfirm }) {
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 20,
@@ -83,7 +84,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 17,
-    color: '#2D2D2D',
+    color: C.ink,
     fontWeight: '500',
   },
   hint: {
@@ -113,8 +114,8 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   chipActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
+    backgroundColor: C.ink,
+    borderColor: C.ink,
   },
   chipText: {
     fontSize: 13,
@@ -129,11 +130,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     minHeight: 48,
   },
   confirmBtn: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',

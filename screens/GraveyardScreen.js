@@ -7,6 +7,7 @@ import { isRetired } from '../shared/items';
 import { S } from '../shared/strings';
 import ItemGrid from './ItemGrid';
 import ItemDetailModal from './ItemDetailModal';
+import { C } from '../shared/theme';
 
 export default function GraveyardScreen() {
   const router = useRouter();
@@ -44,7 +45,7 @@ export default function GraveyardScreen() {
     <View style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={28} color="#2D2D2D" />
+          <Ionicons name="chevron-back" size={28} color={C.ink} />
         </TouchableOpacity>
         <View style={{ flex: 1 }}>
           <Text style={styles.title}>{S.graveyard.emoji}  {S.graveyard.title}</Text>
@@ -87,7 +88,7 @@ export default function GraveyardScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -106,7 +107,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '300',
     letterSpacing: 1,
-    color: '#2D2D2D',
+    color: C.ink,
     fontFamily: 'Georgia',
   },
   subtitle: {
@@ -126,7 +127,7 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 16,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   emptyHint: {
     fontSize: 13,

@@ -190,8 +190,8 @@ These are repo-specific conventions. Apply them when writing or reviewing change
 **Identifiers.** Use `UUID_RE` and `USERNAME_RE` from [`shared/identifiers.js`](shared/identifiers.js) anywhere you parse a slug (search sheet, route guard, profile resolution).
 
 **Design system.**
-- Color palette: `#F5F0EB` (warm beige bg), `#2D2D2D` (dark text/accent), `#E8E3DD` (secondary bg), `#999` (muted text). Don't introduce new accent colors without a reason.
-- Mobile: styles are co-located via `StyleSheet.create` at the bottom of each component file.
+- Color palette ("Bauhaus on white" — high contrast, no beige/orange). The single source of truth is [`shared/theme.js`](shared/theme.js) (the `C` object), mirrored as CSS variables in the `:root` block of [`web/src/App.css`](web/src/App.css). Re-skinning the app = editing those two places. Core tokens: `bg` `#FFFFFF`, `surface` `#F2F2F2`, `line` `#E0E0E0`, `ink` `#111111` (text/dark accents/strong borders), `muted` `#999`, accents `red` `#E53935` / `blue` `#1E88E5` / `yellow` `#FDD835` (plus `redDark`/`redSoft` for destructive states). **Don't hard-code hex for these** — import `C` (mobile) or use `var(--token)` (web CSS). Categorical palettes (avatar, pie chart, usage-recency tints) live in `shared/avatar.js`, `shared/stats.js`, `shared/dates.js`. Don't introduce new accent colors without a reason.
+- Mobile: styles are co-located via `StyleSheet.create` at the bottom of each component file; reference `C` from `shared/theme` for color values.
 - Web: plain CSS classes in `web/src/App.css`; reuse existing class names (`sheet-overlay`, `chip`, `card`, etc.) before inventing new ones.
 
 **Batch mode (mobile).** Activated when `selectedIds.size > 0`; entered via long-press on a card. Cards in batch mode show the selection circle in place of the lock badge. Batch tag edits must be **additive** — never strip existing tags.

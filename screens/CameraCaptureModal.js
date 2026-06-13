@@ -13,6 +13,7 @@ import {
   View,
 } from 'react-native';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 export default function CameraCaptureModal({ visible, onCapture, onCancel }) {
   const [permission, requestPermission] = useCameraPermissions();
@@ -152,7 +153,7 @@ const styles = StyleSheet.create({
   },
   permissionContainer: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     justifyContent: 'center',
     alignItems: 'center',
     gap: 16,
@@ -160,10 +161,10 @@ const styles = StyleSheet.create({
   },
   permissionText: {
     fontSize: 18,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   permissionButton: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     borderRadius: 10,
     paddingVertical: 14,
     paddingHorizontal: 24,

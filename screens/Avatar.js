@@ -1,6 +1,7 @@
 import { StyleSheet, Text, View } from 'react-native';
 import { Image } from 'expo-image';
 import { avatarColor, avatarInitial, avatarSrc } from '../shared/avatar';
+import { C } from '../shared/theme';
 
 export default function Avatar({ profile, size = 40, style }) {
   const src = avatarSrc(profile);
@@ -26,7 +27,7 @@ export default function Avatar({ profile, size = 40, style }) {
 
 const styles = StyleSheet.create({
   image: {
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
   placeholder: {
     alignItems: 'center',

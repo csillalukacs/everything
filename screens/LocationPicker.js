@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { searchPlaces } from '../lib/geocode';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 export default function LocationPicker({ value, onChange, placeholder = S.location.defaultPlaceholder, onFocus: onFocusProp, suggestions = [] }) {
   const [query, setQuery] = useState(value?.location ?? '');
@@ -65,7 +66,7 @@ export default function LocationPicker({ value, onChange, placeholder = S.locati
   return (
     <View style={styles.wrap}>
       <View style={styles.inputRow}>
-        <Ionicons name="location-outline" size={16} color={hasCoords ? '#2D2D2D' : '#bbb'} />
+        <Ionicons name="location-outline" size={16} color={hasCoords ? C.ink : '#bbb'} />
         <TextInput
           style={styles.input}
           placeholder={placeholder}
@@ -118,7 +119,7 @@ const styles = StyleSheet.create({
   input: {
     flex: 1,
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     paddingVertical: 0,
   },
   results: {
@@ -135,10 +136,10 @@ const styles = StyleSheet.create({
   },
   resultBorder: {
     borderBottomWidth: 1,
-    borderBottomColor: '#F0EBE5',
+    borderBottomColor: C.line,
   },
   resultText: {
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
   },
 });

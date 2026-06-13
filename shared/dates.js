@@ -56,12 +56,12 @@ export function usageRecencyTier(lastUsedOn, now = new Date()) {
   return null;
 }
 
-// Warm mat colors keyed by usageRecencyTier(), against the #F5F0EB base. Warmer/
-// stronger = used more recently; absence of a tier means no tint (plain tile).
+// Yellow recency ramp keyed by usageRecencyTier(), against the #FFFFFF base.
+// Stronger = used more recently; absence of a tier means no tint (plain tile).
 export const USAGE_TINTS = {
-  today: '#F1D9BE',
-  week: '#F4E5D3',
-  month: '#F6EEE3',
+  today: '#FFE9A8',
+  week: '#FFF1CC',
+  month: '#FFF8E6',
 };
 
 export function startOfDay(d) {

@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { Platform, StyleSheet, Text, View } from 'react-native';
 import { Canvas, Path, Skia } from '@shopify/react-native-skia';
+import { C } from '../shared/theme';
 
 export function Bar({ count, max, label }) {
   const heightPct = max > 0 ? (count / max) * 100 : 0;
@@ -81,7 +82,7 @@ const styles = StyleSheet.create({
   cardValue: {
     fontSize: 28,
     fontWeight: '300',
-    color: '#2D2D2D',
+    color: C.ink,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
   },
   cardSub: {
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
   barFill: {
     width: '90%',
     maxWidth: 28,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     borderTopLeftRadius: 4,
     borderTopRightRadius: 4,
   },

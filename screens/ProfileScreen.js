@@ -19,6 +19,7 @@ import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
 import Avatar from './Avatar';
+import { C } from '../shared/theme';
 
 function EditActions({ onSave, onCancel, disabled }) {
   return (
@@ -27,7 +28,7 @@ function EditActions({ onSave, onCancel, disabled }) {
         <Ionicons name="close" size={20} color="#999" />
       </TouchableOpacity>
       <TouchableOpacity onPress={onSave} hitSlop={10} style={styles.actionBtn} disabled={disabled}>
-        <Ionicons name="checkmark" size={20} color="#2D2D2D" />
+        <Ionicons name="checkmark" size={20} color={C.ink} />
       </TouchableOpacity>
     </View>
   );
@@ -348,7 +349,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -363,7 +364,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   done: {
     fontSize: 15,
@@ -380,11 +381,11 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     alignItems: 'center',
     justifyContent: 'center',
     borderWidth: 2,
-    borderColor: '#F5F0EB',
+    borderColor: C.bg,
   },
   section: {
     marginBottom: 28,
@@ -404,7 +405,7 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: '300',
-    color: '#2D2D2D',
+    color: C.ink,
     letterSpacing: 0.3,
   },
   placeholderValue: {
@@ -421,7 +422,7 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 20,
     fontWeight: '300',
-    color: '#2D2D2D',
+    color: C.ink,
     letterSpacing: 0.3,
     backgroundColor: '#fff',
     borderRadius: 10,
@@ -444,14 +445,14 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 20,
     fontWeight: '300',
-    color: '#2D2D2D',
+    color: C.ink,
     letterSpacing: 0.3,
     paddingVertical: 10,
     paddingLeft: 2,
   },
   usernameError: {
     fontSize: 13,
-    color: '#E74C3C',
+    color: C.red,
     marginTop: 6,
   },
   hint: {
@@ -483,7 +484,7 @@ const styles = StyleSheet.create({
   countValue: {
     fontSize: 20,
     fontWeight: '300',
-    color: '#2D2D2D',
+    color: C.ink,
     letterSpacing: 0.3,
   },
   email: {
@@ -494,11 +495,11 @@ const styles = StyleSheet.create({
     marginTop: 8,
     paddingVertical: 14,
     alignItems: 'center',
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
     borderRadius: 12,
   },
   logoutText: {
     fontSize: 15,
-    color: '#E74C3C',
+    color: C.red,
   },
 });

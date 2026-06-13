@@ -23,6 +23,7 @@ import { thumbOf, isRetired } from '../../shared/items';
 import { dayKey } from '../../shared/dates';
 import { dailyCacheKey } from '../../shared/cacheKeys';
 import { S } from '../../shared/strings';
+import { C } from '../../shared/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_PADDING = 24;
@@ -341,7 +342,7 @@ export default function Today() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
   },
   scrollContent: {
     paddingHorizontal: GRID_PADDING,
@@ -355,7 +356,7 @@ const styles = StyleSheet.create({
     fontSize: 36,
     fontWeight: '300',
     letterSpacing: 1,
-    color: '#2D2D2D',
+    color: C.ink,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
   },
   subtitle: {
@@ -384,10 +385,10 @@ const styles = StyleSheet.create({
     backfaceVisibility: 'hidden',
   },
   coverFace: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
   },
   revealFace: {
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
   cardImage: {
     width: '100%',

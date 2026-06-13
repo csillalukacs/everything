@@ -33,6 +33,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../lib/CollectionProvider';
 import { thumbOf } from '../shared/items';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 const LOGICAL_SIZE = 1000;
 const INITIAL_DIM = 200;
@@ -374,7 +375,7 @@ export default function CanvasScreen({
       <View style={[styles.container, { paddingTop: insets.top + 8 }]}>
           <View style={styles.header}>
             <TouchableOpacity onPress={requestClose} style={styles.iconBtn} hitSlop={8}>
-              <Ionicons name="chevron-back" size={24} color="#2D2D2D" />
+              <Ionicons name="chevron-back" size={24} color={C.ink} />
             </TouchableOpacity>
             <TextInput
               style={styles.titleInput}
@@ -393,7 +394,7 @@ export default function CanvasScreen({
               <Ionicons
                 name={isPrivate ? 'lock-closed' : 'lock-open-outline'}
                 size={20}
-                color={isPrivate ? '#2D2D2D' : '#ccc'}
+                color={isPrivate ? C.ink : '#ccc'}
               />
             </TouchableOpacity>
             <TouchableOpacity onPress={handleExport} style={styles.iconBtn} hitSlop={8}>
@@ -424,7 +425,7 @@ export default function CanvasScreen({
                   ref={canvasRef}
                   style={{ width: canvasSize.width, height: canvasSize.height }}
                 >
-                  <Rect x={0} y={0} width={canvasSize.width} height={canvasSize.height} color="#E8E3DD" />
+                  <Rect x={0} y={0} width={canvasSize.width} height={canvasSize.height} color={C.surface} />
                   <Group
                     transform={[
                       { translateX: view.offsetX },
@@ -464,7 +465,7 @@ export default function CanvasScreen({
                               y={-hh}
                               width={item.width}
                               height={item.height}
-                              color="#E8E3DD"
+                              color={C.surface}
                             />
                           )}
                           {isSelected && (() => {
@@ -477,7 +478,7 @@ export default function CanvasScreen({
                                 y={b.minY - pad}
                                 width={b.maxX - b.minX + pad * 2}
                                 height={b.maxY - b.minY + pad * 2}
-                                color="#2D2D2D"
+                                color={C.ink}
                                 style="stroke"
                                 strokeWidth={strokeW}
                               />
@@ -553,7 +554,7 @@ export default function CanvasScreen({
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
   },
   header: {
     flexDirection: 'row',
@@ -568,7 +569,7 @@ const styles = StyleSheet.create({
   titleInput: {
     flex: 1,
     fontSize: 16,
-    color: '#2D2D2D',
+    color: C.ink,
     paddingHorizontal: 8,
     paddingVertical: 6,
   },
@@ -579,14 +580,14 @@ const styles = StyleSheet.create({
   saveText: {
     fontSize: 16,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   saveTextDisabled: {
     color: '#999',
   },
   canvasContainer: {
     flex: 1,
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
   spinner: {
     position: 'absolute',
@@ -618,11 +619,11 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 8,
-    backgroundColor: '#FDF0EE',
+    backgroundColor: C.redSoft,
   },
   removeBtnText: {
     fontSize: 15,
-    color: '#E74C3C',
+    color: C.red,
   },
   doneBtn: {
     paddingVertical: 10,
@@ -630,7 +631,7 @@ const styles = StyleSheet.create({
   },
   doneBtnText: {
     fontSize: 15,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   trayContent: {
     padding: 12,
@@ -645,6 +646,6 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 8,
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
 });

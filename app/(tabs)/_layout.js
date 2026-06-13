@@ -4,6 +4,7 @@ import { StyleSheet, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../../lib/CollectionProvider';
 import { S } from '../../shared/strings';
+import { C } from '../../shared/theme';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -25,7 +26,7 @@ function CustomTabBar({ state, navigation }) {
         <Ionicons
           name={currentRoute === 'feed' ? 'home' : 'home-outline'}
           size={26}
-          color={currentRoute === 'feed' ? '#2D2D2D' : '#999'}
+          color={currentRoute === 'feed' ? C.ink : '#999'}
         />
       </TouchableOpacity>
 
@@ -37,7 +38,7 @@ function CustomTabBar({ state, navigation }) {
         <Ionicons
           name={currentRoute === 'today' ? 'today' : 'today-outline'}
           size={24}
-          color={currentRoute === 'today' ? '#2D2D2D' : '#999'}
+          color={currentRoute === 'today' ? C.ink : '#999'}
         />
       </TouchableOpacity>
 
@@ -49,7 +50,7 @@ function CustomTabBar({ state, navigation }) {
         <Ionicons
           name={currentRoute === 'index' ? 'person-circle' : 'person-circle-outline'}
           size={28}
-          color={currentRoute === 'index' ? '#2D2D2D' : '#999'}
+          color={currentRoute === 'index' ? C.ink : '#999'}
         />
       </TouchableOpacity>
     </View>
@@ -97,9 +98,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     paddingTop: 6,
     paddingHorizontal: 24,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopWidth: 1,
-    borderTopColor: '#E8E3DD',
+    borderTopColor: C.surface,
   },
   tabBtn: {
     flex: 1,
@@ -112,7 +113,7 @@ const styles = StyleSheet.create({
     width: 56,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     alignItems: 'center',
     justifyContent: 'center',
     shadowColor: '#000',

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Keyboard, StyleSheet, TextInput, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
+import { C } from '../shared/theme';
 
 export default function ItemFieldsEditor({
   name,
@@ -72,7 +73,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingVertical: 14,
     fontSize: 15,
-    color: '#2D2D2D',
+    color: C.ink,
     borderWidth: 1.5,
     borderColor: '#E0E0E0',
   },

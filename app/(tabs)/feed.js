@@ -13,6 +13,7 @@ import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
 import Avatar from '../../screens/Avatar';
+import { C } from '../../shared/theme';
 
 const TAB_BAR_HEIGHT = 70;
 
@@ -163,7 +164,7 @@ export default function Feed() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
   },
   header: {
     flexDirection: 'row',
@@ -171,13 +172,13 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 24,
     paddingBottom: 28,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
   },
   title: {
     fontSize: 36,
     fontWeight: '300',
     letterSpacing: 1,
-    color: '#2D2D2D',
+    color: C.ink,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
   },
   headerIconBtn: {
@@ -211,7 +212,7 @@ const styles = StyleSheet.create({
   posterName: {
     fontSize: 13,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   posterAction: {
     color: '#777',
@@ -222,7 +223,7 @@ const styles = StyleSheet.create({
   itemName: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   itemDescription: {
     fontSize: 13,
@@ -234,7 +235,7 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
   thumbImage: {
     width: '100%',

@@ -118,7 +118,7 @@ export default function ManageTagsSheet({
                             onClick={() => startRenameTag(tag)}
                             title={S.common.rename}
                           >
-                            <PencilIcon size={14} color="#2D2D2D" />
+                            <PencilIcon size={14} color="#111111" />
                           </button>
                         )}
                         <button
@@ -126,7 +126,7 @@ export default function ManageTagsSheet({
                           onClick={() => onToggleTagPrivacy(tag)}
                           title={tag.is_private ? S.a11y.makePublic : S.a11y.makePrivate}
                         >
-                          <LockIcon size={14} color={tag.is_private ? '#2D2D2D' : '#ccc'} open={!tag.is_private} />
+                          <LockIcon size={14} color={tag.is_private ? '#111111' : '#ccc'} open={!tag.is_private} />
                         </button>
                         {!featured && (
                           <button className="manage-tag-delete" onClick={() => onDelete(tag)}>{S.common.delete}</button>

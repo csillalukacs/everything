@@ -18,6 +18,7 @@ import ItemDetailModal from './ItemDetailModal';
 import Avatar from './Avatar';
 import ItemGrid from './ItemGrid';
 import AppleIcon from './AppleIcon';
+import { C } from '../shared/theme';
 
 export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
   const [loading, setLoading] = useState(true);
@@ -172,7 +173,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
     <View style={styles.container}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} style={styles.backBtn}>
-            <Ionicons name="chevron-back" size={28} color="#2D2D2D" />
+            <Ionicons name="chevron-back" size={28} color={C.ink} />
           </TouchableOpacity>
           {profile && <Avatar profile={profile} size={56} style={styles.headerAvatar} />}
           <View style={{ flex: 1 }}>
@@ -297,7 +298,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     paddingTop: 60,
     paddingHorizontal: 24,
   },
@@ -320,7 +321,7 @@ const styles = StyleSheet.create({
     fontSize: 28,
     fontWeight: '300',
     letterSpacing: 1,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   subtitle: {
     fontSize: 13,
@@ -359,7 +360,7 @@ const styles = StyleSheet.create({
   searchInput: {
     flex: 1,
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     paddingVertical: 0,
   },
   filterScroll: {
@@ -382,8 +383,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   filterChipActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
+    backgroundColor: C.ink,
+    borderColor: C.ink,
   },
   filterChipText: {
     fontSize: 13,

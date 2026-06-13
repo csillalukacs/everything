@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 export default function BatchBar({ selectedIds, items, onCancel, onTogglePrivacy, onDelete, onEdit }) {
   const allPrivate = [...selectedIds].every(id => items.find(i => i.id === id)?.is_private);
@@ -15,7 +16,7 @@ export default function BatchBar({ selectedIds, items, onCancel, onTogglePrivacy
           <Ionicons name={allPrivate ? 'lock-closed' : 'lock-open-outline'} size={18} color="#fff" />
         </TouchableOpacity>
         <TouchableOpacity onPress={onDelete} style={styles.icon}>
-          <Ionicons name="trash-outline" size={18} color="#ff6b6b" />
+          <Ionicons name="trash-outline" size={18} color={C.red} />
         </TouchableOpacity>
         <TouchableOpacity onPress={onEdit} style={styles.btn}>
           <Text style={styles.editText}>{S.common.edit}</Text>
@@ -33,7 +34,7 @@ const styles = StyleSheet.create({
     bottom: 10,
     height: 56,
     borderRadius: 28,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',

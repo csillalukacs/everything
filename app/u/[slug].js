@@ -5,6 +5,7 @@ import { supabase } from '../../lib/supabase';
 import { useCollection } from '../../lib/CollectionProvider';
 import ProfileViewScreen from '../../screens/ProfileViewScreen';
 import { UUID_RE } from '../../shared/identifiers';
+import { C } from '../../shared/theme';
 
 export default function ProfileSlugRoute() {
   const { slug, item } = useLocalSearchParams();
@@ -42,7 +43,7 @@ export default function ProfileSlugRoute() {
 
   if (resolving || !shouldShow) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F5F0EB', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color="#999" />
       </View>
     );

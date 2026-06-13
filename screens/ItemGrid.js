@@ -4,6 +4,7 @@ import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, Te
 import { Image } from 'expo-image';
 import { thumbOf } from '../shared/items';
 import { usageRecencyTier, USAGE_TINTS } from '../shared/dates';
+import { C } from '../shared/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
 const GRID_GAP = 8;
@@ -150,7 +151,7 @@ const styles = StyleSheet.create({
   },
   cardSelected: {
     borderWidth: 2.5,
-    borderColor: '#2D2D2D',
+    borderColor: C.ink,
   },
   cardImageContainer: {
     width: '100%',

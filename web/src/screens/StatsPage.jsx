@@ -371,7 +371,7 @@ export default function StatsPage() {
                     <Polyline
                       key={`line-${g.key}`}
                       positions={[[home.lat, home.lng], [g.lat, g.lng]]}
-                      pathOptions={{ color: '#2D2D2D', weight: 1, opacity: 0.35 }}
+                      pathOptions={{ color: '#111111', weight: 1, opacity: 0.35 }}
                     />
                   ))}
                   {mapGroups.map(g => (

@@ -4,6 +4,7 @@ import { ActivityIndicator, View } from 'react-native';
 import { useCollection } from '../lib/CollectionProvider';
 import { supabase } from '../lib/supabase';
 import CanvasScreen from '../screens/CanvasScreen';
+import { C } from '../shared/theme';
 
 export default function CanvasRoute() {
   const router = useRouter();
@@ -39,7 +40,7 @@ export default function CanvasRoute() {
 
   if (!loaded) {
     return (
-      <View style={{ flex: 1, backgroundColor: '#F5F0EB', alignItems: 'center', justifyContent: 'center' }}>
+      <View style={{ flex: 1, backgroundColor: C.bg, alignItems: 'center', justifyContent: 'center' }}>
         <ActivityIndicator color="#999" />
       </View>
     );

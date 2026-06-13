@@ -4,6 +4,7 @@ import { ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-nati
 import { S } from '../shared/strings';
 import { isFeaturedTag, sortTagsFeaturedFirst } from '../shared/featuredTag';
 import AppleIcon from './AppleIcon';
+import { C } from '../shared/theme';
 
 export default function TagFilterChips({
   tags,
@@ -120,8 +121,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   filterChipActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
+    backgroundColor: C.ink,
+    borderColor: C.ink,
   },
   filterChipText: {
     fontSize: 13,

@@ -3,6 +3,7 @@ import * as WebBrowser from 'expo-web-browser';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 WebBrowser.maybeCompleteAuthSession();
 
@@ -50,7 +51,7 @@ export default function AuthScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     paddingTop: 120,
     paddingHorizontal: 24,
   },
@@ -58,7 +59,7 @@ const styles = StyleSheet.create({
     fontSize: 40,
     fontWeight: '300',
     letterSpacing: 2,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   subtitle: {
     fontSize: 14,
@@ -68,7 +69,7 @@ const styles = StyleSheet.create({
     marginBottom: 48,
   },
   button: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     borderRadius: 10,
     paddingVertical: 14,
     alignItems: 'center',

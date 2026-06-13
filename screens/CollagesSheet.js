@@ -7,6 +7,7 @@ import BottomSheet from './BottomSheet';
 import { useCollection } from '../lib/CollectionProvider';
 import { supabase } from '../lib/supabase';
 import { S } from '../shared/strings';
+import { C } from '../shared/theme';
 
 const SHEET_HEIGHT = Math.min(Dimensions.get('window').height * 0.7, 560);
 
@@ -72,7 +73,7 @@ export default function CollagesSheet({ visible, onClose, tag }) {
 
       <TouchableOpacity style={styles.newRow} onPress={handleNew}>
         <View style={styles.newBadge}>
-          <Ionicons name="add" size={20} color="#2D2D2D" />
+          <Ionicons name="add" size={20} color={C.ink} />
         </View>
         <Text style={styles.newText}>{S.collages.newCollage}</Text>
       </TouchableOpacity>
@@ -118,7 +119,7 @@ export default function CollagesSheet({ visible, onClose, tag }) {
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -136,7 +137,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   done: {
     fontSize: 15,
@@ -161,7 +162,7 @@ const styles = StyleSheet.create({
   },
   newText: {
     fontSize: 15,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   list: {
     flex: 1,
@@ -172,7 +173,7 @@ const styles = StyleSheet.create({
     gap: 12,
     paddingVertical: 10,
     borderTopWidth: 1,
-    borderTopColor: '#E8E3DD',
+    borderTopColor: C.surface,
   },
   coverWrap: {
     width: 48,
@@ -186,7 +187,7 @@ const styles = StyleSheet.create({
     height: '100%',
   },
   coverEmpty: {
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
   },
   rowMid: {
     flex: 1,
@@ -196,7 +197,7 @@ const styles = StyleSheet.create({
   },
   rowTitle: {
     fontSize: 15,
-    color: '#2D2D2D',
+    color: C.ink,
     flexShrink: 1,
   },
   deleteBtn: {

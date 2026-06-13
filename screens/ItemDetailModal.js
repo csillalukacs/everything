@@ -42,6 +42,7 @@ import ItemFieldsEditor from './ItemFieldsEditor';
 import AppleIcon from './AppleIcon';
 import RetireSheet from './RetireSheet';
 import { isFeaturedTag } from '../shared/featuredTag';
+import { C } from '../shared/theme';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
@@ -368,7 +369,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         onPress={() => setInfoVisible(v => !v)}
         hitSlop={6}
       >
-        <Ionicons name="information-circle-outline" size={20} color="#2D2D2D" />
+        <Ionicons name="information-circle-outline" size={20} color={C.ink} />
       </TouchableOpacity>
     </View>
   ) : null;
@@ -420,7 +421,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 <Ionicons
                   name={editPrivate ? 'lock-closed' : 'lock-open-outline'}
                   size={18}
-                  color={editPrivate ? '#fff' : '#2D2D2D'}
+                  color={editPrivate ? '#fff' : C.ink}
                 />
               </TouchableOpacity>
               {bottomBar}
@@ -462,12 +463,12 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                 : <View style={styles.imagePlaceholder} />
               }
               <TouchableOpacity style={styles.imageBack} onPress={onClose} hitSlop={8}>
-                <Ionicons name="chevron-down" size={22} color="#2D2D2D" />
+                <Ionicons name="chevron-down" size={22} color={C.ink} />
               </TouchableOpacity>
               {isOwner && (
                 <View style={styles.imageMenuWrap} pointerEvents="box-none">
                   <TouchableOpacity style={styles.imageMenuButton} onPress={() => setMenuVisible(v => !v)} hitSlop={8}>
-                    <Ionicons name="ellipsis-horizontal" size={20} color="#2D2D2D" />
+                    <Ionicons name="ellipsis-horizontal" size={20} color={C.ink} />
                   </TouchableOpacity>
                   {menuVisible && (
                     <View style={styles.imageMenu}>
@@ -480,7 +481,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                           style={styles.imageMenuItem}
                           onPress={() => { setMenuVisible(false); enterEdit(); }}
                         >
-                          <Ionicons name="pencil-outline" size={18} color="#2D2D2D" />
+                          <Ionicons name="pencil-outline" size={18} color={C.ink} />
                           <Text style={styles.imageMenuItemText}>{S.common.edit}</Text>
                         </TouchableOpacity>
                       )}
@@ -489,7 +490,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                           style={styles.imageMenuItem}
                           onPress={() => { setMenuVisible(false); onResurrect(); }}
                         >
-                          <Ionicons name="leaf-outline" size={18} color="#2D2D2D" />
+                          <Ionicons name="leaf-outline" size={18} color={C.ink} />
                           <Text style={styles.imageMenuItemText}>{S.graveyard.resurrect}</Text>
                         </TouchableOpacity>
                       )}
@@ -507,7 +508,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                           style={styles.imageMenuItem}
                           onPress={() => { setMenuVisible(false); onDelete(); }}
                         >
-                          <Ionicons name="trash-outline" size={18} color="#E74C3C" />
+                          <Ionicons name="trash-outline" size={18} color={C.red} />
                           <Text style={[styles.imageMenuItemText, styles.imageMenuItemDanger]}>{S.common.delete}</Text>
                         </TouchableOpacity>
                       )}
@@ -576,7 +577,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                         <Ionicons
                           name={usedToday ? 'checkmark-circle' : 'checkmark-circle-outline'}
                           size={18}
-                          color={usedToday ? '#fff' : '#2D2D2D'}
+                          color={usedToday ? '#fff' : C.ink}
                         />
                         <Text style={[styles.useTodayText, usedToday && styles.useTodayTextOn]}>
                           {usedToday ? S.usage.usedToday : S.usage.useToday}
@@ -596,7 +597,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                       onPress={() => { setPickerDate(new Date()); setDatePickerVisible(true); }}
                       activeOpacity={0.7}
                     >
-                      <Ionicons name="add" size={16} color="#2D2D2D" />
+                      <Ionicons name="add" size={16} color={C.ink} />
                       <Text style={styles.addEntryText}>{S.usage.addEntry}</Text>
                     </TouchableOpacity>
                   </View>
@@ -621,7 +622,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                               style={styles.historyDeleteBtn}
                               onPress={() => { setArmedDay(null); toggleUsageDay(key, false); }}
                             >
-                              <Ionicons name="trash-outline" size={14} color="#E74C3C" />
+                              <Ionicons name="trash-outline" size={14} color={C.red} />
                               <Text style={styles.historyDeleteText}>{S.common.delete}</Text>
                             </TouchableOpacity>
                           )}
@@ -732,7 +733,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     paddingTop: 60,
     paddingHorizontal: 24,
     paddingBottom: 40,
@@ -783,14 +784,14 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
     borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#E8E3DD',
+    borderColor: C.surface,
   },
   ownerText: {
     flex: 1,
   },
   ownerName: {
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     fontWeight: '500',
   },
   ownerHandle: {
@@ -801,7 +802,7 @@ const styles = StyleSheet.create({
   name: {
     fontSize: 28,
     fontWeight: '300',
-    color: '#2D2D2D',
+    color: C.ink,
     letterSpacing: 0.5,
   },
   tagRow: {
@@ -830,7 +831,7 @@ const styles = StyleSheet.create({
   },
   tagBadgeText: {
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   privacyCorner: {
     position: 'absolute',
@@ -844,7 +845,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   privacyCornerOn: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
   },
   editFooter: {
     flexDirection: 'row',
@@ -852,7 +853,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 24,
     paddingTop: 24,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     marginHorizontal: -24,
     marginBottom: -40,
   },
@@ -959,10 +960,10 @@ const styles = StyleSheet.create({
   },
   imageMenuItemText: {
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   imageMenuItemDanger: {
-    color: '#E74C3C',
+    color: C.red,
   },
   imageMenuEmoji: {
     fontSize: 16,
@@ -981,7 +982,7 @@ const styles = StyleSheet.create({
   },
   acquired: {
     fontSize: 16,
-    color: '#2D2D2D',
+    color: C.ink,
     fontWeight: '500',
   },
   acquiredLink: {
@@ -1002,16 +1003,16 @@ const styles = StyleSheet.create({
     gap: 12,
     padding: 14,
     borderRadius: 12,
-    backgroundColor: '#E8E3DD',
+    backgroundColor: C.surface,
     borderWidth: 1,
-    borderColor: '#DDD5CC',
+    borderColor: C.line,
   },
   tombstoneEmoji: {
     fontSize: 22,
   },
   tombstoneRetired: {
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
     fontWeight: '500',
   },
   tombstoneReason: {
@@ -1043,7 +1044,7 @@ const styles = StyleSheet.create({
   historyTitle: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   addEntryBtn: {
     flexDirection: 'row',
@@ -1054,12 +1055,12 @@ const styles = StyleSheet.create({
     paddingRight: 12,
     borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#E8E3DD',
+    borderColor: C.surface,
     backgroundColor: '#fff',
   },
   addEntryText: {
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   historyList: {
     height: 132,
@@ -1070,11 +1071,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingVertical: 11,
     borderBottomWidth: 1,
-    borderBottomColor: '#E8E3DD',
+    borderBottomColor: C.surface,
   },
   historyDate: {
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   historyDeleteBtn: {
     flexDirection: 'row',
@@ -1083,11 +1084,11 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
     paddingHorizontal: 10,
     borderRadius: 14,
-    backgroundColor: '#FBEAE8',
+    backgroundColor: C.redSoft,
   },
   historyDeleteText: {
     fontSize: 13,
-    color: '#E74C3C',
+    color: C.red,
     fontWeight: '500',
   },
   historyEmpty: {
@@ -1096,7 +1097,7 @@ const styles = StyleSheet.create({
     paddingVertical: 4,
   },
   pickerSheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 8,
@@ -1108,7 +1109,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 8,
     paddingVertical: 14,
     borderRadius: 14,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     alignItems: 'center',
   },
   pickerDoneText: {
@@ -1125,15 +1126,15 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#fff',
     borderWidth: 1,
-    borderColor: '#2D2D2D',
+    borderColor: C.ink,
   },
   useTodayBtnOn: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
   },
   useTodayText: {
     fontSize: 14,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   useTodayTextOn: {
     color: '#fff',

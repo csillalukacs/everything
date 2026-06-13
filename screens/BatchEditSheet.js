@@ -18,6 +18,7 @@ import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
 import AppleIcon from './AppleIcon';
 import { FEATURED_TAG_NAME } from '../shared/featuredTag';
+import { C } from '../shared/theme';
 
 export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
   const { items } = useCollection();
@@ -124,7 +125,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
                 onBlur={handleConfirmNewTag}
               />
               <TouchableOpacity onPress={handleConfirmNewTag} style={styles.confirmBtn}>
-                <Ionicons name="checkmark" size={18} color="#2D2D2D" />
+                <Ionicons name="checkmark" size={18} color={C.ink} />
               </TouchableOpacity>
             </View>
           ) : (
@@ -202,14 +203,14 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   dialog: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderRadius: 20,
     padding: 24,
     width: 380,
     gap: 16,
   },
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     paddingTop: 20,
@@ -219,7 +220,7 @@ const styles = StyleSheet.create({
   },
   title: {
     fontSize: 15,
-    color: '#2D2D2D',
+    color: C.ink,
     fontWeight: '500',
   },
   sectionLabel: {
@@ -246,8 +247,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   chipActive: {
-    backgroundColor: '#2D2D2D',
-    borderColor: '#2D2D2D',
+    backgroundColor: C.ink,
+    borderColor: C.ink,
   },
   chipAdd: {
     borderStyle: 'dashed',
@@ -272,7 +273,7 @@ const styles = StyleSheet.create({
   },
   newTagInput: {
     fontSize: 13,
-    color: '#2D2D2D',
+    color: C.ink,
     minWidth: 80,
   },
   confirmBtn: {
@@ -284,10 +285,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 12,
     fontSize: 14,
-    color: '#2D2D2D',
+    color: C.ink,
   },
   applyBtn: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     borderRadius: 14,
     paddingVertical: 14,
     alignItems: 'center',

@@ -85,7 +85,7 @@ export default function LocationPicker({ value, onChange, placeholder = S.locati
   return (
     <div className="location-picker">
       <div className="location-picker-input-row" ref={rowRef}>
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hasCoords ? '#2D2D2D' : '#bbb'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke={hasCoords ? '#111111' : '#bbb'} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
           <path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z" />
           <circle cx="12" cy="10" r="3" />
         </svg>

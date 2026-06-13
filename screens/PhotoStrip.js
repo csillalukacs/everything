@@ -1,6 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { ScrollView, StyleSheet, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
+import { C } from '../shared/theme';
 
 export default function PhotoStrip({ photos, selectedIdx, onSelect, editable, onRemove, style }) {
   const hasMultiple = photos.filter(p => p?.url).length > 1;
@@ -78,7 +79,7 @@ const styles = StyleSheet.create({
     width: 18,
     height: 18,
     borderRadius: 9,
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     alignItems: 'center',
     justifyContent: 'center',
   },

@@ -8,6 +8,7 @@ import {
 } from 'react-native';
 import { S } from '../shared/strings';
 import BottomSheet from './BottomSheet';
+import { C } from '../shared/theme';
 
 function parseSlug(input) {
   const trimmed = input.trim();
@@ -72,7 +73,7 @@ export default function OpenProfileSheet({ visible, onClose, onOpen }) {
 
 const styles = StyleSheet.create({
   sheet: {
-    backgroundColor: '#F5F0EB',
+    backgroundColor: C.bg,
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
     padding: 24,
@@ -87,7 +88,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 15,
     fontWeight: '500',
-    color: '#2D2D2D',
+    color: C.ink,
   },
   cancel: {
     fontSize: 15,
@@ -103,7 +104,7 @@ const styles = StyleSheet.create({
   input: {
     fontSize: 18,
     fontWeight: '300',
-    color: '#2D2D2D',
+    color: C.ink,
     backgroundColor: '#fff',
     borderRadius: 10,
     paddingHorizontal: 14,
@@ -111,13 +112,13 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   goBtn: {
-    backgroundColor: '#2D2D2D',
+    backgroundColor: C.ink,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
   },
   goBtnDisabled: {
-    backgroundColor: '#D5CFC8',
+    backgroundColor: C.line,
   },
   goBtnText: {
     color: '#fff',

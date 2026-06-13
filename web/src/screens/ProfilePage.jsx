@@ -796,7 +796,7 @@ export default function ProfilePage() {
                 <LockIcon size={18} color="#fff" open={![...selectedIds].every(id => items.find(i => i.id === id)?.is_private)} />
               </button>
               <button className="batch-icon-btn batch-delete-btn" onClick={handleBatchDelete} title={S.common.delete}>
-                <TrashIcon size={18} color="#ff6b6b" />
+                <TrashIcon size={18} color="#E53935" />
               </button>
               <button className="batch-tag-btn" onClick={() => setBatchEditVisible(true)}>{S.common.edit}</button>
             </div>
