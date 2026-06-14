@@ -1,7 +1,10 @@
 const PAGE_SIZE = 1000;
 
 export async function fetchAllItems(client, { userId, publicOnly = false, columns = '*, tags(id, name, is_private)' } = {}) {
-  let from = 0;
+  // Keyset pagination on (created_at desc, id desc) — see the matching indexes in
+  // sql/add_items_collection_indexes.sql. Faster than OFFSET (which scans and
+  // discards every prior page) and stable when rows share a created_at.
+  let cursor = null; // { created_at, id } of the last row returned, or null on page 1
   const all = [];
   for (;;) {
     let query = client
@@ -9,14 +12,21 @@ export async function fetchAllItems(client, { userId, publicOnly = false, column
       .select(columns)
       .eq('user_id', userId)
       .order('created_at', { ascending: false })
-      .range(from, from + PAGE_SIZE - 1);
+      .order('id', { ascending: false })
+      .limit(PAGE_SIZE);
+    if (cursor) {
+      query = query.or(
+        `created_at.lt.${cursor.created_at},and(created_at.eq.${cursor.created_at},id.lt.${cursor.id})`
+      );
+    }
     // Retired (graveyard) items are owner-only; never expose them publicly.
     if (publicOnly) query = query.eq('is_private', false).is('retired_at', null);
     const { data, error } = await query;
     if (error) throw error;
     all.push(...data);
     if (data.length < PAGE_SIZE) break;
-    from += PAGE_SIZE;
+    const last = data[data.length - 1];
+    cursor = { created_at: last.created_at, id: last.id };
   }
   return all;
 }
