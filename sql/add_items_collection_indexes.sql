@@ -18,3 +18,11 @@ create index if not exists items_user_public_created_idx
 -- Owner's own full-collection load (includes private + retired items).
 create index if not exists items_user_created_idx
   on items(user_id, created_at desc, id desc);
+
+-- Cross-user public feed (fetchPublicFeed / fetchFeedEvents): no user_id filter,
+-- newest public non-retired items across all users. The user_id-leading indexes
+-- above can't serve a global created_at ordering, so this one omits user_id.
+-- Mirrors item_usages_feed_idx, which covers the usage side of the feed.
+create index if not exists items_feed_created_idx
+  on items(created_at desc)
+  where is_private = false and retired_at is null;
