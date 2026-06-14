@@ -19,6 +19,8 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [usedDays, setUsedDays] = useState(() => new Set())
   const [usageBusy, setUsageBusy] = useState(false)
   const [usagePulse, setUsagePulse] = useState(false)
+  const [addingUse, setAddingUse] = useState(false)
+  const [pendingUseDate, setPendingUseDate] = useState('')
   const [editing, setEditing] = useState(false)
   const [editName, setEditName] = useState('')
   const [editDescription, setEditDescription] = useState('')
@@ -37,9 +39,8 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [retireReason, setRetireReason] = useState(null)
   const [retireEpitaph, setRetireEpitaph] = useState('')
   const fileInputRef = useRef(null)
-  const pastDateInputRef = useRef(null)
 
-  useEffect(() => { setDisplayedIdx(0); setRetiring(false); setRetireReason(null); setRetireEpitaph('') }, [item?.id])
+  useEffect(() => { setDisplayedIdx(0); setRetiring(false); setRetireReason(null); setRetireEpitaph(''); setAddingUse(false); setPendingUseDate('') }, [item?.id])
 
   useEffect(() => {
     setUsageCount(item?.usage_count ?? 0)
@@ -441,26 +442,36 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                         type="button"
                         className="add-entry-btn"
                         onClick={() => {
-                          const el = pastDateInputRef.current
-                          if (!el) return
-                          if (el.showPicker) el.showPicker()
-                          else el.focus()
+                          setAddingUse(a => !a)
+                          setPendingUseDate(todayKey)
                         }}
                       >
                         + {S.usage.addEntry}
+                      </button>
+                    </div>
+                    {addingUse && (
+                      <div className="usage-add-row">
                         <input
-                          ref={pastDateInputRef}
                           type="date"
                           className="add-entry-input"
                           max={todayKey}
-                          value=""
-                          onChange={e => {
-                            const key = e.target.value
-                            if (key && !usedDays.has(key)) handleBackfillToggle(key, true)
-                          }}
+                          value={pendingUseDate}
+                          onChange={e => setPendingUseDate(e.target.value)}
                         />
-                      </button>
-                    </div>
+                        <button
+                          type="button"
+                          className="usage-add-confirm"
+                          disabled={!pendingUseDate || usedDays.has(pendingUseDate)}
+                          onClick={() => {
+                            if (pendingUseDate && !usedDays.has(pendingUseDate)) handleBackfillToggle(pendingUseDate, true)
+                            setAddingUse(false)
+                            setPendingUseDate('')
+                          }}
+                        >
+                          {S.usage.addDate}
+                        </button>
+                      </div>
+                    )}
                     {pastDays.length > 0 ? (
                       <div className="usage-history-list">
                         {pastDays.map(key => (
