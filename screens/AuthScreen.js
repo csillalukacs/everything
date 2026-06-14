@@ -1,7 +1,8 @@
+import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { S } from '../shared/strings';
 import { C } from '../shared/theme';
@@ -43,6 +44,29 @@ export default function AuthScreen() {
     }
   }
 
+  async function signInWithApple() {
+    setError(null);
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      if (credential.identityToken) {
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: 'apple',
+          token: credential.identityToken,
+        });
+        if (error) setError(S.auth.signInFailed);
+      }
+    } catch (e) {
+      if (e.code === 'ERR_REQUEST_CANCELED') return;
+      console.warn('Apple sign-in failed:', e?.code, e?.message, e);
+      setError(`${S.auth.signInFailed} (${e?.code || 'unknown'})`);
+    }
+  }
+
   async function signInWithEmail() {
     setError(null);
     setLoading(true);
@@ -62,6 +86,18 @@ export default function AuthScreen() {
       <TouchableOpacity style={styles.button} onPress={signInWithGoogle}>
         <Text style={styles.buttonText}>{S.auth.continueWithGoogle}</Text>
       </TouchableOpacity>
+
+      {Platform.OS === 'ios' && (
+        <AppleAuthentication.AppleAuthenticationButton
+          buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
+          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+          cornerRadius={10}
+          style={styles.appleButton}
+          onPress={signInWithApple}
+        />
+      )}
+
+      {error && !showEmail ? <Text style={styles.errorTop}>{error}</Text> : null}
 
       {showEmail ? (
         <View style={styles.emailForm}>
@@ -134,6 +170,10 @@ const styles = StyleSheet.create({
   buttonDisabled: {
     opacity: 0.5,
   },
+  appleButton: {
+    height: 48,
+    marginTop: 12,
+  },
   buttonText: {
     color: '#fff',
     fontSize: 16,
@@ -162,5 +202,10 @@ const styles = StyleSheet.create({
   error: {
     color: C.redDark,
     fontSize: 14,
+  },
+  errorTop: {
+    color: C.redDark,
+    fontSize: 14,
+    marginTop: 16,
   },
 });
