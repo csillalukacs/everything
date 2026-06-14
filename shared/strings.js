@@ -48,6 +48,8 @@ export const S = {
   // Auth
   auth: {
     continueWithGoogle: 'continue with google',
+    notAllowed: 'this email is not on the invite list, or something else has gone wrong. contact @exactlynora on twitter.',
+    backToLogin: 'back to login',
   },
 
   // Item form fields (used by add + edit on both apps)

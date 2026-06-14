@@ -244,6 +244,23 @@ input {
   letter-spacing: 1px;
 }
 
+.auth-error {
+  margin-top: 16px;
+  margin-bottom: 24px;
+  padding: 10px 14px;
+  background: var(--red-soft);
+  color: var(--red-dark);
+  border-radius: 8px;
+  font-size: 14px;
+  max-width: 320px;
+}
+
+/* btn-primary is sometimes rendered as a <Link> (an inline <a>); force block
+   so its width/padding apply and it doesn't overlap the text above it. */
+.auth a.btn-primary {
+  display: block;
+}
+
 .header-right {
   display: flex;
   flex-direction: column;
