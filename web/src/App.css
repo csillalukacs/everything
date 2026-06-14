@@ -1805,6 +1805,15 @@ input {
   max-width: 400px;
 }
 
+.auth .btn-apple {
+  margin-top: 12px;
+  background: #000;
+}
+
+.auth .btn-apple:hover:not(:disabled) {
+  background: #222;
+}
+
 .auth .link-btn {
   margin-top: 8px;
 }

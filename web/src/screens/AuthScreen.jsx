@@ -25,12 +25,22 @@ export default function AuthScreen() {
     })
   }
 
+  async function signInWithApple() {
+    await supabase.auth.signInWithOAuth({
+      provider: 'apple',
+      options: { redirectTo: window.location.origin },
+    })
+  }
+
   return (
     <div className="auth">
       <h1 className="title">{S.appName}</h1>
       <p className="subtitle">{S.appTagline}</p>
       <button className="btn-primary" onClick={signInWithGoogle}>
         {S.auth.continueWithGoogle}
+      </button>
+      <button className="btn-primary btn-apple" onClick={signInWithApple}>
+        {S.auth.continueWithApple}
       </button>
     </div>
   )
