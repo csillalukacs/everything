@@ -40,7 +40,6 @@ export default function ProfilePage() {
   const [notFound, setNotFound] = useState(false)
   const [items, setItems] = useState([])
   const [itemCount, setItemCount] = useState(null)
-  const [collageCount, setCollageCount] = useState(0)
   const [allTags, setAllTags] = useState([])
   const [profileName, setProfileName] = useState(null)
   const [username, setUsername] = useState(null)
@@ -187,16 +186,6 @@ export default function ProfilePage() {
       fetchItemCount(supabase, { userId: resolvedId, publicOnly })
         .then(setItemCount)
         .catch(e => console.error('fetchItemCount error:', e))
-
-      supabase
-        .from('collages')
-        .select('id', { count: 'exact', head: true })
-        .eq('user_id', resolvedId)
-        .not('cover_url', 'is', null)
-        .then(({ count, error }) => {
-          if (error) { console.error('fetch collage count error:', error); return }
-          setCollageCount(count ?? 0)
-        })
 
       try {
         const fetchedItems = await fetchAllItems(supabase, { userId: resolvedId, publicOnly })
@@ -632,7 +621,6 @@ export default function ProfilePage() {
         avatarThumbUrl={avatarThumbUrl}
         home={home}
         itemCount={itemCount}
-        collageCount={collageCount}
         isOwner={isOwner}
       />
 

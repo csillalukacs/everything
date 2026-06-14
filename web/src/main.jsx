@@ -4,7 +4,6 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import './App.css'
 import App from './App.jsx'
 import ProfilePage from './screens/ProfilePage.jsx'
-import CollagesPage from './screens/CollagesPage.jsx'
 import StatsPage from './screens/StatsPage.jsx'
 import SettingsPage from './screens/SettingsPage.jsx'
 import AuthErrorScreen from './screens/AuthErrorScreen.jsx'
@@ -15,7 +14,6 @@ createRoot(document.getElementById('root')).render(
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/u/:slug" element={<ProfilePage />} />
-        <Route path="/u/:slug/collages" element={<CollagesPage />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/settings" element={<SettingsPage />} />
         <Route path="/login-error" element={<AuthErrorScreen />} />
