@@ -250,6 +250,9 @@ export default function SettingsPage() {
           <button className="btn-primary" onClick={handleSave} disabled={saving}>
             {saving ? S.common.saving : S.common.save}
           </button>
+          <button className="link-btn" onClick={async () => { await supabase.auth.signOut(); navigate('/') }}>
+            {S.common.logOut}
+          </button>
         </div>
       </div>
     </div>
