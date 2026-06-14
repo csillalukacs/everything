@@ -5,6 +5,8 @@ import { fetchFeedEvents } from '../../shared/itemsApi'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
+import { feedCacheKey } from '../../shared/cacheKeys'
+import { readCache, writeCache } from './lib/cache'
 import AuthScreen from './screens/AuthScreen'
 import ItemDetailModal from './screens/ItemDetailModal'
 import Avatar from './components/Avatar'
@@ -38,9 +40,15 @@ export default function App() {
       .then(({ data }) => setUsername(data?.username ?? null))
 
     let cancelled = false
-    setFeedLoading(true)
+    const cached = readCache(feedCacheKey(session.user.id))
+    if (cached) { setFeedEvents(cached); setFeedLoading(false) }
+    else setFeedLoading(true)
     fetchFeedEvents(supabase, { limit: 50 })
-      .then(rows => { if (!cancelled) setFeedEvents(rows) })
+      .then(rows => {
+        if (cancelled) return
+        setFeedEvents(rows)
+        writeCache(feedCacheKey(session.user.id), rows)
+      })
       .catch(e => console.error('fetchFeedEvents error:', e))
       .finally(() => { if (!cancelled) setFeedLoading(false) })
     return () => { cancelled = true }
