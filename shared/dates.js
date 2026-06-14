@@ -56,13 +56,24 @@ export function usageRecencyTier(lastUsedOn, now = new Date()) {
   return null;
 }
 
-// Yellow recency ramp keyed by usageRecencyTier(), against the #FFFFFF base.
-// Stronger = used more recently; absence of a tier means no tint (plain tile).
+// Cool recency ramp keyed by usageRecencyTier(), against the #FFFFFF base. The
+// hue walks green → blue as an item ages: freshly used today glows green, this
+// week teal, this month blue. These are the glow *centre* colours — each tile
+// renders them as a radial glow fading to white (see usageGlowCss for web, and the
+// Skia RadialGradient in ItemGrid for mobile), not a flat fill. Absence of a tier
+// means no glow (plain tile).
 export const USAGE_TINTS = {
-  today: '#FFE9A8',
-  week: '#FFF1CC',
-  month: '#FFF8E6',
+  today: '#5BD6A0',
+  week: '#5BBFD6',
+  month: '#7BA8E8',
 };
+
+// Web: a radial glow behind a recently-used tile — the tint colour at the centre,
+// fading to the white grid base. Returns null for items with no recency tier.
+export function usageGlowCss(tier) {
+  const c = USAGE_TINTS[tier];
+  return c ? `radial-gradient(circle at 50% 50%, ${c} 0%, #FFFFFF 55%)` : null;
+}
 
 export function startOfDay(d) {
   const x = new Date(d);

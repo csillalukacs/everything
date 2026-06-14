@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { memo, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
+import { Canvas, Rect, RadialGradient, vec } from '@shopify/react-native-skia';
 import { thumbOf } from '../shared/items';
 import { usageRecencyTier, USAGE_TINTS } from '../shared/dates';
 import { C } from '../shared/theme';
@@ -24,7 +25,18 @@ const Card = memo(function Card({ item, size, isSelected, batchMode, onPress, on
       delayLongPress={400}
     >
       {item.image_url && (
-        <View style={[styles.cardImageContainer, { backgroundColor: tint || 'transparent' }]}>
+        <View style={styles.cardImageContainer}>
+          {tint && (
+            <Canvas style={StyleSheet.absoluteFill}>
+              <Rect x={0} y={0} width={size} height={size}>
+                <RadialGradient
+                  c={vec(size / 2, size / 2)}
+                  r={size * 0.4}
+                  colors={[tint, '#FFFFFF']}
+                />
+              </Rect>
+            </Canvas>
+          )}
           <Image source={{ uri: thumbOf(item) }} style={styles.cardImage} recyclingKey={item.id} cachePolicy="memory-disk" contentFit="cover" />
         </View>
       )}
