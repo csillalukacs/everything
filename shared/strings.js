@@ -50,6 +50,11 @@ export const S = {
     continueWithGoogle: 'continue with google',
     notAllowed: 'this email is not on the invite list, or something else has gone wrong. contact @exactlynora on twitter.',
     backToLogin: 'back to login',
+    useEmail: 'sign in with email',
+    emailPlaceholder: 'email',
+    passwordPlaceholder: 'password',
+    signIn: 'sign in',
+    signInFailed: 'sign-in failed. check your email and password.',
   },
 
   // Item form fields (used by add + edit on both apps)
