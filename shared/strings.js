@@ -265,6 +265,13 @@ export const S = {
     noFollowing: 'not following anyone yet',
   },
 
+  // In-app notifications (bell + list)
+  notifications: {
+    title: 'notifications',
+    empty: 'no notifications yet',
+    followed: 'followed you',
+  },
+
   // Usage tracking (item detail + edit)
   usage: {
     useToday: 'use today',
@@ -393,6 +400,7 @@ export const S = {
     today: 'today',
     addItem: 'add thing',
     yourCollection: 'your collection',
+    notifications: 'notifications',
     // web
     removePhoto: 'remove photo',
     clearSearch: 'clear search',

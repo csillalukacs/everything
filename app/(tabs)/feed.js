@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
+import { useFocusEffect, useRouter } from 'expo-router';
 import { Image } from 'expo-image';
 import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -20,7 +20,7 @@ const TAB_BAR_HEIGHT = 70;
 export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, updateItem, deleteItem, blockedIds, followingIds } = useCollection();
+  const { session, updateItem, deleteItem, blockedIds, followingIds, unreadNotifications, refreshNotifications } = useCollection();
   const [feedEvents, setFeedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -30,6 +30,10 @@ export default function Feed() {
 
   const isOwnItem = !!selectedItem && session?.user?.id === selectedItem.user_id;
   const visibleEvents = feedEvents.filter(e => !blockedIds.has(e.item.user_id));
+
+  // Refresh the unread count each time the feed regains focus (e.g. returning
+  // from the notifications screen, where they get marked read).
+  useFocusEffect(useCallback(() => { refreshNotifications(); }, [refreshNotifications]));
 
   const feedOptions = useCallback(
     () => (activeTab === 'friends' ? { limit: 50, authorIds: [...followingIds] } : { limit: 50 }),
@@ -83,9 +87,23 @@ export default function Feed() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 16 }]}>
         <Text style={styles.title}>{S.appName}</Text>
-        <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
-          <Ionicons name="search" size={22} color="#999" />
-        </TouchableOpacity>
+        <View style={styles.headerActions}>
+          <TouchableOpacity
+            onPress={() => router.push('/notifications')}
+            style={styles.headerIconBtn}
+            accessibilityLabel={S.a11y.notifications}
+          >
+            <Ionicons name="notifications-outline" size={22} color="#999" />
+            {unreadNotifications > 0 && (
+              <View style={styles.badge}>
+                <Text style={styles.badgeText}>{unreadNotifications > 99 ? '99+' : unreadNotifications}</Text>
+              </View>
+            )}
+          </TouchableOpacity>
+          <TouchableOpacity onPress={() => setOpenProfileVisible(true)} style={styles.headerIconBtn}>
+            <Ionicons name="search" size={22} color="#999" />
+          </TouchableOpacity>
+        </View>
       </View>
       <View style={styles.tabs}>
         {['everyone', 'friends'].map(tab => (
@@ -200,8 +218,30 @@ const styles = StyleSheet.create({
     color: C.ink,
     fontFamily: Platform.OS === 'ios' ? 'Georgia' : undefined,
   },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
   headerIconBtn: {
     padding: 4,
+  },
+  badge: {
+    position: 'absolute',
+    top: -2,
+    right: -4,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: C.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   tabs: {
     flexDirection: 'row',

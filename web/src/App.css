@@ -553,6 +553,65 @@ input {
   font-weight: 500;
 }
 
+/* Notifications: header bell + badge, list rows */
+.notif-bell {
+  position: relative;
+  font-size: 18px;
+  line-height: 1;
+  text-decoration: none;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -6px;
+  right: -8px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 8px;
+  background: var(--red);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notif-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.notif-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 14px 0;
+  border-bottom: 1px solid var(--line);
+  text-decoration: none;
+}
+
+.notif-row-unread {
+  background: var(--surface);
+  margin: 0 -24px;
+  padding-left: 24px;
+  padding-right: 24px;
+}
+
+.notif-text {
+  font-size: 14px;
+  color: #777;
+}
+
+.notif-name {
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.notif-time {
+  color: var(--muted);
+}
+
 .link-btn:disabled {
   opacity: 0.4;
   cursor: not-allowed;

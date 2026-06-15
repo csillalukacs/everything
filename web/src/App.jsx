@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
 import { fetchBlockedIds } from '../../shared/moderation'
 import { fetchFollowingIds } from '../../shared/follows'
+import { fetchUnreadNotificationCount } from '../../shared/notifications'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
@@ -22,6 +23,7 @@ export default function App() {
   const [selectedItem, setSelectedItem] = useState(null)
   const [blockedIds, setBlockedIds] = useState(() => new Set())
   const [followingIds, setFollowingIds] = useState(() => new Set())
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [activeTab, setActiveTab] = useState('everyone')
 
   useEffect(() => {
@@ -37,7 +39,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) {
-      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setFollowingIds(new Set())
+      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setFollowingIds(new Set()); setUnreadNotifications(0)
       return
     }
     supabase
@@ -53,6 +55,9 @@ export default function App() {
     fetchFollowingIds(supabase, session.user.id)
       .then(ids => setFollowingIds(new Set(ids)))
       .catch(e => console.error('fetchFollowingIds error:', e))
+    fetchUnreadNotificationCount(supabase, session.user.id)
+      .then(n => setUnreadNotifications(n))
+      .catch(e => console.error('fetchUnreadNotificationCount error:', e))
   }, [session])
 
   useEffect(() => {
@@ -95,6 +100,12 @@ export default function App() {
         </div>
         <div className="header-right">
           <div className="header-links">
+            <Link to="/notifications" className="notif-bell" aria-label={S.a11y.notifications}>
+              🔔
+              {unreadNotifications > 0 && (
+                <span className="notif-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>
+              )}
+            </Link>
             <Link to={`/u/${username ?? session.user.id}`} className="link-btn">{S.feed.myCollection}</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>{S.common.logOut}</button>
           </div>
