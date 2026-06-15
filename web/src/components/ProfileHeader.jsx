@@ -56,7 +56,7 @@ export default function ProfileHeader({
       <div className="header-links" style={{ marginTop: 8 }}>
         {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
         {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
-        <Link to="/" className="link-btn">{S.appName}</Link>
+        <Link to="/" className="link-btn">{S.a11y.feed}</Link>
       </div>
     </header>
   )
