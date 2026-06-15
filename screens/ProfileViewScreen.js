@@ -92,12 +92,16 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
       let resolvedProfile = null;
       const cols = 'user_id, display_name, username, home_location, home_lat, home_lng, avatar_url, avatar_thumb_url';
       if (slugIsUuid) {
+        // A UUID always resolves to that user, even if they haven't created a
+        // profile row yet (no display name / username). They can still have
+        // public items, so show them rather than declaring the user not found.
+        resolvedId = slug;
         const { data } = await supabase
           .from('profiles')
           .select(cols)
           .eq('user_id', slug)
           .maybeSingle();
-        if (data) { resolvedId = data.user_id; resolvedProfile = data; }
+        resolvedProfile = data;
       } else {
         const { data } = await supabase
           .from('profiles')
@@ -112,7 +116,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
         setLoading(false);
         return;
       }
-      setProfile(resolvedProfile);
+      setProfile(resolvedProfile ?? { user_id: resolvedId });
       setResolvedUserId(resolvedId);
 
       fetchItemCount(supabase, { userId: resolvedId, publicOnly: true })
