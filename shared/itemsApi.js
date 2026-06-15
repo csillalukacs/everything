@@ -61,24 +61,31 @@ export async function fetchPublicFeed(client, { limit = 50, blockedIds = [] } = 
 // Unified cross-user feed: item-add events merged with "used today" usage events,
 // each carrying its item + the poster's profile, sorted newest-first by insert time.
 // Returns events shaped { type: 'add' | 'usage', key, at, used_on?, item }.
-export async function fetchFeedEvents(client, { limit = 50, blockedIds = [] } = {}) {
+// authorIds: when provided, restrict the feed to these users (the "friends" tab).
+// An empty array yields an empty feed (you follow no one). null = everyone.
+export async function fetchFeedEvents(client, { limit = 50, blockedIds = [], authorIds = null } = {}) {
   const blocked = new Set(blockedIds);
+  if (authorIds && authorIds.length === 0) return [];
+
+  let addsQuery = client
+    .from('items')
+    .select('*, tags(id, name, is_private)')
+    .eq('is_private', false)
+    .is('retired_at', null);
+  let usagesQuery = client
+    .from('item_usages')
+    .select('id, used_on, created_at, item:items!inner(*, tags(id, name, is_private))')
+    .eq('on_feed', true)
+    .eq('item.is_private', false)
+    .is('item.retired_at', null);
+  if (authorIds) {
+    addsQuery = addsQuery.in('user_id', authorIds);
+    usagesQuery = usagesQuery.in('item.user_id', authorIds);
+  }
+
   const [addsRes, usagesRes] = await Promise.all([
-    client
-      .from('items')
-      .select('*, tags(id, name, is_private)')
-      .eq('is_private', false)
-      .is('retired_at', null)
-      .order('created_at', { ascending: false })
-      .limit(limit),
-    client
-      .from('item_usages')
-      .select('id, used_on, created_at, item:items!inner(*, tags(id, name, is_private))')
-      .eq('on_feed', true)
-      .eq('item.is_private', false)
-      .is('item.retired_at', null)
-      .order('created_at', { ascending: false })
-      .limit(limit),
+    addsQuery.order('created_at', { ascending: false }).limit(limit),
+    usagesQuery.order('created_at', { ascending: false }).limit(limit),
   ]);
   if (addsRes.error) throw addsRes.error;
   if (usagesRes.error) throw usagesRes.error;

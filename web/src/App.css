@@ -288,6 +288,28 @@ input {
   color: var(--ink);
 }
 
+.feed-tabs {
+  display: flex;
+  gap: 24px;
+  margin-bottom: 24px;
+}
+
+.feed-tab {
+  background: none;
+  border: none;
+  padding: 0 0 6px;
+  font-size: 16px;
+  color: var(--muted);
+  cursor: pointer;
+  border-bottom: 2px solid transparent;
+}
+
+.feed-tab-active {
+  color: var(--ink);
+  font-weight: 500;
+  border-bottom-color: var(--ink);
+}
+
 .blocked-notice {
   display: flex;
   flex-direction: column;

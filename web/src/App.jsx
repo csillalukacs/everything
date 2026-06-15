@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
 import { fetchBlockedIds } from '../../shared/moderation'
+import { fetchFollowingIds } from '../../shared/follows'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
@@ -20,6 +21,8 @@ export default function App() {
   const [feedLoading, setFeedLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState(null)
   const [blockedIds, setBlockedIds] = useState(() => new Set())
+  const [followingIds, setFollowingIds] = useState(() => new Set())
+  const [activeTab, setActiveTab] = useState('everyone')
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -33,7 +36,10 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!session) { setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); return }
+    if (!session) {
+      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setFollowingIds(new Set())
+      return
+    }
     supabase
       .from('profiles')
       .select('username')
@@ -44,21 +50,33 @@ export default function App() {
     fetchBlockedIds(supabase, session.user.id)
       .then(ids => setBlockedIds(new Set(ids)))
       .catch(e => console.error('fetchBlockedIds error:', e))
+    fetchFollowingIds(supabase, session.user.id)
+      .then(ids => setFollowingIds(new Set(ids)))
+      .catch(e => console.error('fetchFollowingIds error:', e))
+  }, [session])
 
+  useEffect(() => {
+    if (!session) return
     let cancelled = false
-    const cached = readCache(feedCacheKey(session.user.id))
-    if (cached) { setFeedEvents(cached); setFeedLoading(false) }
-    else setFeedLoading(true)
-    fetchFeedEvents(supabase, { limit: 50 })
+    const everyone = activeTab === 'everyone'
+    if (everyone) {
+      const cached = readCache(feedCacheKey(session.user.id))
+      if (cached) { setFeedEvents(cached); setFeedLoading(false) }
+      else setFeedLoading(true)
+    } else {
+      setFeedLoading(true)
+    }
+    const opts = everyone ? { limit: 50 } : { limit: 50, authorIds: [...followingIds] }
+    fetchFeedEvents(supabase, opts)
       .then(rows => {
         if (cancelled) return
         setFeedEvents(rows)
-        writeCache(feedCacheKey(session.user.id), rows)
+        if (everyone) writeCache(feedCacheKey(session.user.id), rows)
       })
       .catch(e => console.error('fetchFeedEvents error:', e))
       .finally(() => { if (!cancelled) setFeedLoading(false) })
     return () => { cancelled = true }
-  }, [session])
+  }, [session, activeTab, followingIds])
 
   if (loading) return (
     <div className="centered"><div className="spinner" /></div>
@@ -83,13 +101,25 @@ export default function App() {
         </div>
       </header>
 
+      <div className="feed-tabs">
+        {['everyone', 'friends'].map(tab => (
+          <button
+            key={tab}
+            className={`feed-tab${activeTab === tab ? ' feed-tab-active' : ''}`}
+            onClick={() => setActiveTab(tab)}
+          >
+            {tab === 'everyone' ? S.feed.tabEveryone : S.feed.tabFriends}
+          </button>
+        ))}
+      </div>
+
       {feedLoading ? (
         <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
           <div className="spinner" />
         </div>
       ) : visibleEvents.length === 0 ? (
         <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
-          <p style={{ color: '#999' }}>{S.feed.feedEmpty}</p>
+          <p style={{ color: '#999' }}>{activeTab === 'friends' ? S.feed.friendsEmpty : S.feed.feedEmpty}</p>
         </div>
       ) : (
         <div className="feed-list">
@@ -146,7 +176,10 @@ export default function App() {
         item={selectedItem}
         sessionUserId={session.user.id}
         onClose={() => setSelectedItem(null)}
-        onBlocked={id => setBlockedIds(prev => new Set(prev).add(id))}
+        onBlocked={id => {
+          setBlockedIds(prev => new Set(prev).add(id))
+          setFollowingIds(prev => { const n = new Set(prev); n.delete(id); return n })
+        }}
       />
     </div>
   )

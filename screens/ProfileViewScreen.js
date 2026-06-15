@@ -24,7 +24,7 @@ import AppleIcon from './AppleIcon';
 import { C } from '../shared/theme';
 
 export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
-  const { session, blockedIds, blockContent, unblockContent, reportContent } = useCollection();
+  const { session, blockedIds, blockContent, unblockContent, reportContent, followingIds, followContent, unfollowContent } = useCollection();
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -143,6 +143,12 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
 
   const isOwnProfile = !!session?.user?.id && session.user.id === resolvedUserId;
   const isBlocked = !!resolvedUserId && blockedIds.has(resolvedUserId);
+  const isFollowing = !!resolvedUserId && followingIds.has(resolvedUserId);
+
+  function handleToggleFollow() {
+    if (isFollowing) unfollowContent(resolvedUserId);
+    else followContent(resolvedUserId);
+  }
   const ownerName = profile?.display_name
     || (profile?.username ? `@${profile.username}` : 'this user');
 
@@ -242,6 +248,17 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
             )}
             {!loading && !notFound && !isBlocked && itemCount != null && (
               <Text style={styles.itemCount}>{S.profile.objectCount(itemCount)}</Text>
+            )}
+            {!loading && !notFound && !isBlocked && resolvedUserId && !isOwnProfile && (
+              <TouchableOpacity
+                style={[styles.followBtn, isFollowing && styles.followBtnOn]}
+                onPress={handleToggleFollow}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextOn]}>
+                  {isFollowing ? S.social.following : S.social.follow}
+                </Text>
+              </TouchableOpacity>
             )}
           </View>
           {!loading && !notFound && resolvedUserId && !isOwnProfile && (
@@ -479,6 +496,27 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 6,
     letterSpacing: 0.5,
+  },
+  followBtn: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    paddingVertical: 7,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: C.ink,
+    borderWidth: 1.5,
+    borderColor: C.ink,
+  },
+  followBtnOn: {
+    backgroundColor: '#fff',
+  },
+  followBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  followBtnTextOn: {
+    color: C.ink,
   },
   searchContainer: {
     flexDirection: 'row',

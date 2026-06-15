@@ -20,15 +20,21 @@ const TAB_BAR_HEIGHT = 70;
 export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, updateItem, deleteItem, blockedIds } = useCollection();
+  const { session, updateItem, deleteItem, blockedIds, followingIds } = useCollection();
   const [feedEvents, setFeedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
+  const [activeTab, setActiveTab] = useState('everyone');
 
   const isOwnItem = !!selectedItem && session?.user?.id === selectedItem.user_id;
   const visibleEvents = feedEvents.filter(e => !blockedIds.has(e.item.user_id));
+
+  const feedOptions = useCallback(
+    () => (activeTab === 'friends' ? { limit: 50, authorIds: [...followingIds] } : { limit: 50 }),
+    [activeTab, followingIds],
+  );
 
   async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt) {
     if (!selectedItem) return false;
@@ -47,24 +53,24 @@ export default function Feed() {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    fetchFeedEvents(supabase, { limit: 50 })
+    fetchFeedEvents(supabase, feedOptions())
       .then(rows => { if (!cancelled) setFeedEvents(rows); })
       .catch(e => console.error('fetchFeedEvents error:', e))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [feedOptions]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
     try {
-      const rows = await fetchFeedEvents(supabase, { limit: 50 });
+      const rows = await fetchFeedEvents(supabase, feedOptions());
       setFeedEvents(rows);
     } catch (e) {
       console.error('fetchFeedEvents error:', e);
     } finally {
       setRefreshing(false);
     }
-  }, []);
+  }, [feedOptions]);
 
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
 
@@ -81,6 +87,16 @@ export default function Feed() {
           <Ionicons name="search" size={22} color="#999" />
         </TouchableOpacity>
       </View>
+      <View style={styles.tabs}>
+        {['everyone', 'friends'].map(tab => (
+          <TouchableOpacity key={tab} style={styles.tab} onPress={() => setActiveTab(tab)} activeOpacity={0.7}>
+            <Text style={[styles.tabText, activeTab === tab && styles.tabTextActive]}>
+              {tab === 'everyone' ? S.feed.tabEveryone : S.feed.tabFriends}
+            </Text>
+            {activeTab === tab && <View style={styles.tabUnderline} />}
+          </TouchableOpacity>
+        ))}
+      </View>
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: tabBarOffset + 24 }}
@@ -94,7 +110,9 @@ export default function Feed() {
           </View>
         ) : visibleEvents.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>{S.feed.feedEmpty}</Text>
+            <Text style={styles.emptyText}>
+              {activeTab === 'friends' ? S.feed.friendsEmpty : S.feed.feedEmpty}
+            </Text>
           </View>
         ) : (
           <View style={styles.feedList}>
@@ -184,6 +202,29 @@ const styles = StyleSheet.create({
   },
   headerIconBtn: {
     padding: 4,
+  },
+  tabs: {
+    flexDirection: 'row',
+    gap: 24,
+    paddingHorizontal: 24,
+    marginBottom: 20,
+  },
+  tab: {
+    alignItems: 'center',
+  },
+  tabText: {
+    fontSize: 16,
+    color: '#999',
+  },
+  tabTextActive: {
+    color: C.ink,
+    fontWeight: '500',
+  },
+  tabUnderline: {
+    marginTop: 6,
+    height: 2,
+    alignSelf: 'stretch',
+    backgroundColor: C.ink,
   },
   empty: {
     paddingVertical: 80,

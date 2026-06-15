@@ -248,6 +248,15 @@ export const S = {
     loading: 'loading…',
     addedNewItem: 'added a new thing',
     usedItem: 'used',
+    tabEveryone: 'everyone',
+    tabFriends: 'friends',
+    friendsEmpty: 'follow people to see their things here',
+  },
+
+  // Following (profile actions)
+  social: {
+    follow: 'follow',
+    following: 'following',
   },
 
   // Usage tracking (item detail + edit)

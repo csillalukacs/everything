@@ -13,9 +13,11 @@ export default function ProfileHeader({
   itemCount,
   isOwner,
   isBlocked,
+  isFollowing,
   onReport,
   onBlock,
   onUnblock,
+  onToggleFollow,
 }) {
   const displayName = profileName ?? username ?? userId?.split('-')[0] ?? ''
   return (
@@ -61,6 +63,12 @@ export default function ProfileHeader({
         {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
         {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
         <Link to="/" className="link-btn">{S.a11y.feed}</Link>
+        {!isOwner && !isBlocked && onToggleFollow && (
+          <button
+            className={`link-btn${isFollowing ? '' : ' link-btn-dark'}`}
+            onClick={onToggleFollow}
+          >{isFollowing ? S.social.following : S.social.follow}</button>
+        )}
         {!isOwner && isBlocked && onUnblock && <button className="link-btn" onClick={onUnblock}>{S.moderation.unblock}</button>}
         {!isOwner && !isBlocked && onReport && <button className="link-btn" onClick={onReport}>{S.moderation.report}</button>}
         {!isOwner && !isBlocked && onBlock && <button className="link-btn" onClick={onBlock}>{S.moderation.block}</button>}

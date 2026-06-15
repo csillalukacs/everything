@@ -6,6 +6,7 @@ import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired } from '.
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { submitReport, blockUser, unblockUser } from '../../../shared/moderation'
+import { followUser, unfollowUser } from '../../../shared/follows'
 import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel, usageRecencyTier, usageGlowCss } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -59,6 +60,7 @@ export default function ProfilePage() {
   const [graveyardOpen, setGraveyardOpen] = useState(false)
   const [reportingProfile, setReportingProfile] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
+  const [isFollowing, setIsFollowing] = useState(false)
 
   const batchMode = selectedIds.size > 0
 
@@ -192,6 +194,15 @@ export default function ProfilePage() {
             .maybeSingle()
           blocked = !!blk
           setIsBlocked(blocked)
+          if (!blocked) {
+            const { data: fol } = await supabase
+              .from('follows')
+              .select('id')
+              .eq('follower_id', session.user.id)
+              .eq('followed_id', resolvedId)
+              .maybeSingle()
+            setIsFollowing(!!fol)
+          }
         }
       }
 
@@ -433,8 +444,21 @@ export default function ProfilePage() {
       console.error('blockUser error:', e)
     }
     setIsBlocked(true)
+    setIsFollowing(false)
     closeItem()
     alert(S.moderation.blockedDone(name))
+  }
+
+  async function handleToggleFollow() {
+    const next = !isFollowing
+    setIsFollowing(next)
+    try {
+      if (next) await followUser(supabase, { followerId: sessionUserId, followedId: userId })
+      else await unfollowUser(supabase, { followerId: sessionUserId, followedId: userId })
+    } catch (e) {
+      console.error('toggle follow error:', e)
+      setIsFollowing(!next)
+    }
   }
 
   async function handleUnblockProfile() {
@@ -676,9 +700,11 @@ export default function ProfilePage() {
         itemCount={itemCount}
         isOwner={isOwner}
         isBlocked={isBlocked}
+        isFollowing={isFollowing}
         onReport={() => setReportingProfile(true)}
         onBlock={handleBlockProfile}
         onUnblock={handleUnblockProfile}
+        onToggleFollow={sessionUserId ? handleToggleFollow : undefined}
       />
 
       {!isOwner && !isBlocked && reportingProfile && (
