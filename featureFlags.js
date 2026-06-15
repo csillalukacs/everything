@@ -13,5 +13,5 @@
 // After flipping this, run `npx expo prebuild --clean` so the native project
 // picks up the entitlement change.
 module.exports = {
-  APPLE_SIGN_IN: false,
+  APPLE_SIGN_IN: true,
 };
