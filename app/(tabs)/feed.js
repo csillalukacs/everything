@@ -20,7 +20,7 @@ const TAB_BAR_HEIGHT = 70;
 export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, updateItem, deleteItem, blockedIds, followingIds, unreadNotifications, refreshNotifications } = useCollection();
+  const { session, updateItem, deleteItem, blockedIds, blockedByIds, followingIds, unreadNotifications, refreshNotifications } = useCollection();
   const [feedEvents, setFeedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -29,7 +29,11 @@ export default function Feed() {
   const [activeTab, setActiveTab] = useState('everyone');
 
   const isOwnItem = !!selectedItem && session?.user?.id === selectedItem.user_id;
-  const visibleEvents = feedEvents.filter(e => !blockedIds.has(e.item.user_id));
+  // Hide both people I've blocked and people who've blocked me (the latter so my
+  // updates stay off their feed, mirrored: their updates stay off mine).
+  const visibleEvents = feedEvents.filter(
+    e => !blockedIds.has(e.item.user_id) && !blockedByIds.has(e.item.user_id),
+  );
 
   // Refresh the unread count each time the feed regains focus (e.g. returning
   // from the notifications screen, where they get marked read).

@@ -52,6 +52,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true)
   const [isOwner, setIsOwner] = useState(false)
   const [sessionUserId, setSessionUserId] = useState(null)
+  const [isLoggedIn, setIsLoggedIn] = useState(false) // any signed-in viewer (sessionUserId is owner-only)
   const [home, setHome] = useState(null)
   const [selectedIds, setSelectedIds] = useState(new Set())
   const [addModalVisible, setAddModalVisible] = useState(false)
@@ -174,6 +175,7 @@ export default function ProfilePage() {
       }
 
       if (session) {
+        setIsLoggedIn(true)
         const displayName = 'user'
         await supabase.from('profiles').upsert({ user_id: session.user.id, display_name: displayName }, { ignoreDuplicates: true })
         if (session.user.id === resolvedId) {
@@ -234,16 +236,17 @@ export default function ProfilePage() {
     load()
   }, [slug])
 
-  // Follow counts are public; reload when the profile resolves or our follow
-  // state toward them changes (following bumps their follower count).
+  // Follow counts are shown to signed-in users only; reload when the profile
+  // resolves or our follow state toward them changes (following bumps their
+  // follower count).
   useEffect(() => {
-    if (!userId) return
+    if (!userId || !isLoggedIn) return // counts are signed-in only
     let cancelled = false
     fetchFollowCounts(supabase, userId)
       .then(c => { if (!cancelled) setFollowCounts(c) })
       .catch(e => console.error('fetchFollowCounts error:', e))
     return () => { cancelled = true }
-  }, [userId, isFollowing])
+  }, [userId, isLoggedIn, isFollowing])
 
   const featuredRedirectCheckedRef = useRef(false)
   useEffect(() => {
@@ -716,7 +719,7 @@ export default function ProfilePage() {
         itemCount={itemCount}
         isOwner={isOwner}
         isBlocked={isBlocked}
-        onOpenSheet={() => setProfileSheetOpen(true)}
+        onOpenSheet={isLoggedIn ? () => setProfileSheetOpen(true) : undefined}
       />
 
       {!isOwner && !isBlocked && reportingProfile && (

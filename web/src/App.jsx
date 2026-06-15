@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
-import { fetchBlockedIds } from '../../shared/moderation'
+import { fetchBlockedIds, fetchBlockedByIds } from '../../shared/moderation'
 import { fetchFollowingIds } from '../../shared/follows'
 import { fetchUnreadNotificationCount } from '../../shared/notifications'
 import { thumbOf } from '../../shared/items'
@@ -22,6 +22,7 @@ export default function App() {
   const [feedLoading, setFeedLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState(null)
   const [blockedIds, setBlockedIds] = useState(() => new Set())
+  const [blockedByIds, setBlockedByIds] = useState(() => new Set())
   const [followingIds, setFollowingIds] = useState(() => new Set())
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [activeTab, setActiveTab] = useState('everyone')
@@ -39,7 +40,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) {
-      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setFollowingIds(new Set()); setUnreadNotifications(0)
+      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setBlockedByIds(new Set()); setFollowingIds(new Set()); setUnreadNotifications(0)
       return
     }
     supabase
@@ -52,6 +53,9 @@ export default function App() {
     fetchBlockedIds(supabase, session.user.id)
       .then(ids => setBlockedIds(new Set(ids)))
       .catch(e => console.error('fetchBlockedIds error:', e))
+    fetchBlockedByIds(supabase)
+      .then(ids => setBlockedByIds(new Set(ids)))
+      .catch(e => console.error('fetchBlockedByIds error:', e))
     fetchFollowingIds(supabase, session.user.id)
       .then(ids => setFollowingIds(new Set(ids)))
       .catch(e => console.error('fetchFollowingIds error:', e))
@@ -89,7 +93,11 @@ export default function App() {
 
   if (!session) return <AuthScreen />
 
-  const visibleEvents = feedEvents.filter(e => !blockedIds.has(e.item.user_id))
+  // Hide both people I've blocked and people who've blocked me (so my updates
+  // stay off their feed too).
+  const visibleEvents = feedEvents.filter(
+    e => !blockedIds.has(e.item.user_id) && !blockedByIds.has(e.item.user_id),
+  )
 
   return (
     <div className="app">

@@ -16,21 +16,28 @@ export default function ProfileHeader({
   onOpenSheet,
 }) {
   const displayName = profileName ?? username ?? userId?.split('-')[0] ?? ''
+  const avatar = (
+    <Avatar
+      profile={{
+        user_id: userId,
+        display_name: profileName,
+        username,
+        avatar_url: avatarUrl,
+        avatar_thumb_url: avatarThumbUrl,
+      }}
+      size={64}
+    />
+  )
   return (
     <header className="header">
       <div className="profile-header-row">
-        <button className="avatar-button" onClick={onOpenSheet} aria-label={displayName}>
-          <Avatar
-            profile={{
-              user_id: userId,
-              display_name: profileName,
-              username,
-              avatar_url: avatarUrl,
-              avatar_thumb_url: avatarThumbUrl,
-            }}
-            size={64}
-          />
-        </button>
+        {/* The sheet (counts + follow/report/block) is signed-in only; logged-out
+            visitors get a non-interactive avatar. */}
+        {onOpenSheet ? (
+          <button className="avatar-button" onClick={onOpenSheet} aria-label={displayName}>
+            {avatar}
+          </button>
+        ) : avatar}
         <div>
           <div className="profile-name-row">
             <h1 className="profile-name">

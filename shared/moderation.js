@@ -39,3 +39,13 @@ export async function fetchBlockedIds(client, blockerId) {
   if (error) throw error;
   return (data ?? []).map(r => r.blocked_id);
 }
+
+// Returns the set of user ids that have blocked the *current* user (the reverse
+// of fetchBlockedIds). Goes through the blocked_by_ids() RPC because the blocks
+// RLS only lets the blocker read their own rows — see sql/add_blocked_by_rpc.sql.
+// Used to hide the viewer's items from people who blocked them on the feed.
+export async function fetchBlockedByIds(client) {
+  const { data, error } = await client.rpc('blocked_by_ids');
+  if (error) throw error;
+  return data ?? [];
+}
