@@ -1,4 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
@@ -15,18 +16,23 @@ import { fetchAllItems, fetchItemCount } from '../shared/itemsApi';
 import { UUID_RE } from '../shared/identifiers';
 import { S } from '../shared/strings';
 import { FEATURED_TAG_NAME, isFeaturedTag, sortTagsFeaturedFirst, findFeaturedTag } from '../shared/featuredTag';
+import { fetchFollowCounts } from '../shared/follows';
 import { useCollection } from '../lib/CollectionProvider';
 import ItemDetailModal from './ItemDetailModal';
 import ReportSheet from './ReportSheet';
+import FollowListScreen from './FollowListScreen';
 import Avatar from './Avatar';
 import ItemGrid from './ItemGrid';
 import AppleIcon from './AppleIcon';
 import { C } from '../shared/theme';
 
 export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
+  const router = useRouter();
   const { session, blockedIds, blockContent, unblockContent, reportContent, followingIds, followContent, unfollowContent } = useCollection();
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
+  const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
+  const [followListMode, setFollowListMode] = useState(null);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -76,6 +82,8 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
     setSearchQuery('');
     setMenuVisible(false);
     setReportSheetVisible(false);
+    setFollowListMode(null);
+    setFollowCounts({ followers: 0, following: 0 });
 
     (async () => {
       const slugIsUuid = UUID_RE.test(slug);
@@ -149,6 +157,17 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
     if (isFollowing) unfollowContent(resolvedUserId);
     else followContent(resolvedUserId);
   }
+
+  // Reload counts when the profile resolves or our follow state toward them changes
+  // (following them bumps their follower count).
+  useEffect(() => {
+    if (!resolvedUserId) return;
+    let cancelled = false;
+    fetchFollowCounts(supabase, resolvedUserId)
+      .then(c => { if (!cancelled) setFollowCounts(c); })
+      .catch(e => console.error('fetchFollowCounts error:', e));
+    return () => { cancelled = true; };
+  }, [resolvedUserId, isFollowing]);
   const ownerName = profile?.display_name
     || (profile?.username ? `@${profile.username}` : 'this user');
 
@@ -248,6 +267,17 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
             )}
             {!loading && !notFound && !isBlocked && itemCount != null && (
               <Text style={styles.itemCount}>{S.profile.objectCount(itemCount)}</Text>
+            )}
+            {!loading && !notFound && !isBlocked && resolvedUserId && (
+              <View style={styles.followCountsRow}>
+                <TouchableOpacity onPress={() => setFollowListMode('followers')} hitSlop={6}>
+                  <Text style={styles.followCount}>{S.social.followersCount(followCounts.followers)}</Text>
+                </TouchableOpacity>
+                <Text style={styles.followCountDot}>·</Text>
+                <TouchableOpacity onPress={() => setFollowListMode('following')} hitSlop={6}>
+                  <Text style={styles.followCount}>{S.social.followingCount(followCounts.following)}</Text>
+                </TouchableOpacity>
+              </View>
             )}
             {!loading && !notFound && !isBlocked && resolvedUserId && !isOwnProfile && (
               <TouchableOpacity
@@ -403,6 +433,14 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
           onClose={() => setReportSheetVisible(false)}
           onPick={handleReportPick}
         />
+
+        <FollowListScreen
+          visible={!!followListMode}
+          userId={resolvedUserId}
+          mode={followListMode}
+          onClose={() => setFollowListMode(null)}
+          onOpenProfile={slug => { setFollowListMode(null); router.push(`/u/${slug}`); }}
+        />
     </View>
   );
 }
@@ -496,6 +534,21 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 6,
     letterSpacing: 0.5,
+  },
+  followCountsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 6,
+  },
+  followCount: {
+    fontSize: 13,
+    color: C.ink,
+    fontWeight: '500',
+  },
+  followCountDot: {
+    fontSize: 13,
+    color: '#bbb',
   },
   followBtn: {
     alignSelf: 'flex-start',

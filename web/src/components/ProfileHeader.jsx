@@ -14,6 +14,9 @@ export default function ProfileHeader({
   isOwner,
   isBlocked,
   isFollowing,
+  followCounts,
+  onShowFollowers,
+  onShowFollowing,
   onReport,
   onBlock,
   onUnblock,
@@ -55,6 +58,17 @@ export default function ProfileHeader({
                 <circle cx="12" cy="10" r="3" />
               </svg>
               {home.location.split(',')[0]}
+            </p>
+          )}
+          {followCounts && !isBlocked && (
+            <p className="profile-follow-counts">
+              <button className="follow-count-btn" onClick={onShowFollowers}>
+                {S.social.followersCount(followCounts.followers)}
+              </button>
+              {' · '}
+              <button className="follow-count-btn" onClick={onShowFollowing}>
+                {S.social.followingCount(followCounts.following)}
+              </button>
             </p>
           )}
         </div>

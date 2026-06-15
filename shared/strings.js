@@ -253,10 +253,16 @@ export const S = {
     friendsEmpty: 'follow people to see their things here',
   },
 
-  // Following (profile actions)
+  // Following (profile actions + follower/following lists)
   social: {
     follow: 'follow',
     following: 'following',
+    followersCount: (n) => `${n} ${plural(n, 'follower')}`,
+    followingCount: (n) => `${n} following`,
+    followersTitle: 'followers',
+    followingTitle: 'following',
+    noFollowers: 'no followers yet',
+    noFollowing: 'not following anyone yet',
   },
 
   // Usage tracking (item detail + edit)

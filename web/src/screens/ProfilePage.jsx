@@ -6,7 +6,7 @@ import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired } from '.
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { submitReport, blockUser, unblockUser } from '../../../shared/moderation'
-import { followUser, unfollowUser } from '../../../shared/follows'
+import { followUser, unfollowUser, fetchFollowCounts } from '../../../shared/follows'
 import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel, usageRecencyTier, usageGlowCss } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -20,6 +20,7 @@ import SearchBar from '../components/SearchBar'
 import TagFilterChips from '../components/TagFilterChips'
 import { TrashIcon } from '../components/Icons'
 import ProfileHeader from '../components/ProfileHeader'
+import FollowListModal from './FollowListModal'
 import ManageTagsSheet from './ManageTagsSheet'
 import { itemsCacheKey, tagsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
@@ -61,6 +62,8 @@ export default function ProfilePage() {
   const [reportingProfile, setReportingProfile] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
+  const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 })
+  const [followListMode, setFollowListMode] = useState(null)
 
   const batchMode = selectedIds.size > 0
 
@@ -228,6 +231,17 @@ export default function ProfilePage() {
     }
     load()
   }, [slug])
+
+  // Follow counts are public; reload when the profile resolves or our follow
+  // state toward them changes (following bumps their follower count).
+  useEffect(() => {
+    if (!userId) return
+    let cancelled = false
+    fetchFollowCounts(supabase, userId)
+      .then(c => { if (!cancelled) setFollowCounts(c) })
+      .catch(e => console.error('fetchFollowCounts error:', e))
+    return () => { cancelled = true }
+  }, [userId, isFollowing])
 
   const featuredRedirectCheckedRef = useRef(false)
   useEffect(() => {
@@ -701,6 +715,9 @@ export default function ProfilePage() {
         isOwner={isOwner}
         isBlocked={isBlocked}
         isFollowing={isFollowing}
+        followCounts={followCounts}
+        onShowFollowers={() => setFollowListMode('followers')}
+        onShowFollowing={() => setFollowListMode('following')}
         onReport={() => setReportingProfile(true)}
         onBlock={handleBlockProfile}
         onUnblock={handleUnblockProfile}
@@ -960,6 +977,13 @@ export default function ProfilePage() {
           />
         </>
       )}
+
+      <FollowListModal
+        visible={!!followListMode}
+        userId={userId}
+        mode={followListMode}
+        onClose={() => setFollowListMode(null)}
+      />
     </div>
   )
 }

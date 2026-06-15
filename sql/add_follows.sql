@@ -19,10 +19,11 @@ create index if not exists follows_followed_idx on follows(followed_id);
 
 alter table follows enable row level security;
 
--- You can read follow edges you're part of (to compute "following" + follower counts),
--- and manage only the edges where you are the follower.
-create policy "follows_select_involved" on follows
-  for select using (auth.uid() = follower_id or auth.uid() = followed_id);
+-- Follows are public: anyone can read any edge so profiles can show follower /
+-- following counts and browsable lists. You can only manage edges where you're
+-- the follower.
+create policy "follows_select_public" on follows
+  for select using (true);
 create policy "follows_insert_own" on follows
   for insert with check (auth.uid() = follower_id);
 create policy "follows_delete_own" on follows

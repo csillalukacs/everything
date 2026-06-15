@@ -10,7 +10,10 @@ import {
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../../lib/CollectionProvider';
+import { supabase } from '../../lib/supabase';
+import { fetchFollowCounts } from '../../shared/follows';
 import ItemDetailModal from '../../screens/ItemDetailModal';
+import FollowListScreen from '../../screens/FollowListScreen';
 import BatchEditSheet from '../../screens/BatchEditSheet';
 import FilterSheet from '../../screens/FilterSheet';
 import ProfileScreen from '../../screens/ProfileScreen';
@@ -53,8 +56,11 @@ export default function Collection() {
     countCollagesForTag,
     refresh,
     setBatchModeActive,
+    followingIds,
   } = useCollection();
 
+  const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
+  const [followListMode, setFollowListMode] = useState(null);
   const [activeTag, setActiveTag] = useState(null);
   const [activeYear, setActiveYear] = useState(null);
   const [activeCity, setActiveCity] = useState(null);
@@ -223,6 +229,16 @@ export default function Collection() {
     for (const t of (item.tags ?? [])) totalTagCounts.set(t.id, (totalTagCounts.get(t.id) ?? 0) + 1);
   }
 
+  useEffect(() => {
+    const uid = session?.user?.id;
+    if (!uid) return;
+    let cancelled = false;
+    fetchFollowCounts(supabase, uid)
+      .then(c => { if (!cancelled) setFollowCounts(c); })
+      .catch(e => console.error('fetchFollowCounts error:', e));
+    return () => { cancelled = true; };
+  }, [session?.user?.id, followingIds]);
+
   const headlineName = profile?.display_name
     ?? 'you';
 
@@ -238,6 +254,15 @@ export default function Collection() {
             {profile?.username ? `@${profile.username} · ` : ''}
             {S.profile.objectCount(itemCount ?? items.length)}
           </Text>
+          <View style={styles.followCountsRow}>
+            <TouchableOpacity onPress={() => setFollowListMode('followers')} hitSlop={6}>
+              <Text style={styles.followCount}>{S.social.followersCount(followCounts.followers)}</Text>
+            </TouchableOpacity>
+            <Text style={styles.followCountDot}>·</Text>
+            <TouchableOpacity onPress={() => setFollowListMode('following')} hitSlop={6}>
+              <Text style={styles.followCount}>{S.social.followingCount(followCounts.following)}</Text>
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.headerActions}>
           {retiredCount > 0 && (
@@ -359,6 +384,14 @@ export default function Collection() {
         itemCount={itemCount ?? items.length}
       />
 
+      <FollowListScreen
+        visible={!!followListMode}
+        userId={session?.user?.id}
+        mode={followListMode}
+        onClose={() => setFollowListMode(null)}
+        onOpenProfile={slug => { setFollowListMode(null); router.push(`/u/${slug}`); }}
+      />
+
       <ManageTagsSheet
         visible={manageTagsVisible}
         onClose={() => setManageTagsVisible(false)}
@@ -425,6 +458,21 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 6,
     letterSpacing: 0.5,
+  },
+  followCountsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: 4,
+  },
+  followCount: {
+    fontSize: 13,
+    color: C.ink,
+    fontWeight: '500',
+  },
+  followCountDot: {
+    fontSize: 13,
+    color: '#bbb',
   },
   headerActions: {
     flexDirection: 'row',
