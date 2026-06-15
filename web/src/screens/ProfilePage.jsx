@@ -5,7 +5,7 @@ import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
 import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
-import { submitReport, blockUser } from '../../../shared/moderation'
+import { submitReport, blockUser, unblockUser } from '../../../shared/moderation'
 import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel, usageRecencyTier, usageGlowCss } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -58,6 +58,7 @@ export default function ProfilePage() {
   const [randomSeed, setRandomSeed] = useState(() => newRandomSeed())
   const [graveyardOpen, setGraveyardOpen] = useState(false)
   const [reportingProfile, setReportingProfile] = useState(false)
+  const [isBlocked, setIsBlocked] = useState(false)
 
   const batchMode = selectedIds.size > 0
 
@@ -155,6 +156,7 @@ export default function ProfilePage() {
       }
 
       let ownerSession = false
+      let blocked = false
       const isOwnerView = session && session.user.id === resolvedId
       if (isOwnerView) {
         const cachedItems = readCache(itemsCacheKey(resolvedId))
@@ -181,7 +183,22 @@ export default function ProfilePage() {
             setAllTags(next)
             writeCache(tagsCacheKey(resolvedId), next)
           }
+        } else {
+          const { data: blk } = await supabase
+            .from('blocks')
+            .select('id')
+            .eq('blocker_id', session.user.id)
+            .eq('blocked_id', resolvedId)
+            .maybeSingle()
+          blocked = !!blk
+          setIsBlocked(blocked)
         }
+      }
+
+      // Don't fetch a blocked user's things — the profile renders a blocked notice instead.
+      if (blocked) {
+        setLoading(false)
+        return
       }
 
       const publicOnly = !ownerSession
@@ -415,7 +432,20 @@ export default function ProfilePage() {
     } catch (e) {
       console.error('blockUser error:', e)
     }
-    navigate('/')
+    setIsBlocked(true)
+    closeItem()
+    alert(S.moderation.blockedDone(name))
+  }
+
+  async function handleUnblockProfile() {
+    const name = profileName || (username ? `@${username}` : 'this user')
+    if (!window.confirm(`${S.moderation.unblockConfirmTitle(name)}\n${S.moderation.unblockConfirmBody}`)) return
+    try {
+      await unblockUser(supabase, { blockerId: sessionUserId, blockedId: userId })
+    } catch (e) {
+      console.error('unblockUser error:', e)
+    }
+    setIsBlocked(false)
   }
 
   function toggleBatchSelect(itemId) {
@@ -645,11 +675,13 @@ export default function ProfilePage() {
         home={home}
         itemCount={itemCount}
         isOwner={isOwner}
+        isBlocked={isBlocked}
         onReport={() => setReportingProfile(true)}
         onBlock={handleBlockProfile}
+        onUnblock={handleUnblockProfile}
       />
 
-      {!isOwner && reportingProfile && (
+      {!isOwner && !isBlocked && reportingProfile && (
         <div className="retire-panel">
           <div className="retire-panel-title">{S.moderation.reportTitle}</div>
           <div className="retire-reason-chips">
@@ -669,7 +701,13 @@ export default function ProfilePage() {
         </button>
       )}
 
-      {graveyardOpen ? (
+      {isBlocked ? (
+        <div className="blocked-notice">
+          <p className="blocked-notice-title">{S.moderation.profileBlocked(profileName || (username ? `@${username}` : 'this user'))}</p>
+          <p className="blocked-notice-hint">{S.moderation.profileBlockedHint}</p>
+          <button className="link-btn link-btn-dark" onClick={handleUnblockProfile}>{S.moderation.unblock}</button>
+        </div>
+      ) : graveyardOpen ? (
         <div className="graveyard-view">
           <div className="graveyard-bar">
             <button className="link-btn graveyard-back" onClick={() => setGraveyardOpen(false)}>‹</button>
@@ -845,7 +883,7 @@ export default function ProfilePage() {
         onRetire={isOwner ? handleRetire : undefined}
         onResurrect={isOwner ? handleResurrect : undefined}
         sessionUserId={sessionUserId}
-        onBlocked={() => navigate('/')}
+        onBlocked={() => setIsBlocked(true)}
         onUsageChange={(id, patch) => setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))}
         allTags={allTags}
         items={items}

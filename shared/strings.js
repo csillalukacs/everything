@@ -82,6 +82,11 @@ export const S = {
     blockConfirmTitle: (name) => `block ${name}?`,
     blockConfirmBody: "you won't see their things anymore.",
     blocked: 'blocked',
+    blockedDone: (name) => `blocked ${name}`,
+    profileBlocked: (name) => `you blocked ${name}`,
+    profileBlockedHint: 'their things are hidden while blocked.',
+    unblockConfirmTitle: (name) => `unblock ${name}?`,
+    unblockConfirmBody: 'you’ll see their things again.',
   },
 
   // Terms & content policy (shown from the auth screen; satisfies the EULA requirement)

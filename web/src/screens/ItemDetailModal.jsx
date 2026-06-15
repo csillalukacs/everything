@@ -245,6 +245,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     } catch (e) {
       console.error('blockUser error:', e)
     }
+    alert(S.moderation.blockedDone(ownerName))
     onBlocked?.(item.user_id)
     onClose()
   }

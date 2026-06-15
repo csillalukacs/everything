@@ -24,7 +24,7 @@ import AppleIcon from './AppleIcon';
 import { C } from '../shared/theme';
 
 export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
-  const { session, blockContent, reportContent } = useCollection();
+  const { session, blockedIds, blockContent, unblockContent, reportContent } = useCollection();
   const [menuVisible, setMenuVisible] = useState(false);
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -142,6 +142,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
   }, [resolvedUserId]);
 
   const isOwnProfile = !!session?.user?.id && session.user.id === resolvedUserId;
+  const isBlocked = !!resolvedUserId && blockedIds.has(resolvedUserId);
   const ownerName = profile?.display_name
     || (profile?.username ? `@${profile.username}` : 'this user');
 
@@ -161,8 +162,24 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
         {
           text: S.moderation.block,
           style: 'destructive',
-          onPress: async () => { await blockContent(resolvedUserId); onClose?.(); },
+          onPress: async () => {
+            const name = ownerName;
+            await blockContent(resolvedUserId);
+            Alert.alert(S.moderation.blockedDone(name));
+          },
         },
+      ],
+    );
+  }
+
+  function handleUnblock() {
+    setMenuVisible(false);
+    Alert.alert(
+      S.moderation.unblockConfirmTitle(ownerName),
+      S.moderation.unblockConfirmBody,
+      [
+        { text: S.common.cancel, style: 'cancel' },
+        { text: S.moderation.unblock, onPress: () => unblockContent(resolvedUserId) },
       ],
     );
   }
@@ -223,7 +240,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
                 </Text>
               </View>
             )}
-            {!loading && !notFound && itemCount != null && (
+            {!loading && !notFound && !isBlocked && itemCount != null && (
               <Text style={styles.itemCount}>{S.profile.objectCount(itemCount)}</Text>
             )}
           </View>
@@ -241,10 +258,17 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
                     <Ionicons name="flag-outline" size={18} color={C.ink} />
                     <Text style={styles.menuItemText}>{S.moderation.report}</Text>
                   </TouchableOpacity>
-                  <TouchableOpacity style={styles.menuItem} onPress={handleBlock}>
-                    <Ionicons name="ban-outline" size={18} color={C.red} />
-                    <Text style={[styles.menuItemText, styles.menuItemDanger]}>{S.moderation.block}</Text>
-                  </TouchableOpacity>
+                  {isBlocked ? (
+                    <TouchableOpacity style={styles.menuItem} onPress={handleUnblock}>
+                      <Ionicons name="checkmark-circle-outline" size={18} color={C.ink} />
+                      <Text style={styles.menuItemText}>{S.moderation.unblock}</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity style={styles.menuItem} onPress={handleBlock}>
+                      <Ionicons name="ban-outline" size={18} color={C.red} />
+                      <Text style={[styles.menuItemText, styles.menuItemDanger]}>{S.moderation.block}</Text>
+                    </TouchableOpacity>
+                  )}
                 </View>
               )}
             </View>
@@ -258,6 +282,15 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
         ) : notFound ? (
           <View style={styles.centered}>
             <Text style={styles.emptyText}>{S.profileView.notFound(slug)}</Text>
+          </View>
+        ) : isBlocked ? (
+          <View style={styles.centered}>
+            <Ionicons name="ban-outline" size={40} color="#bbb" />
+            <Text style={styles.blockedTitle}>{S.moderation.profileBlocked(ownerName)}</Text>
+            <Text style={styles.blockedHint}>{S.moderation.profileBlockedHint}</Text>
+            <TouchableOpacity style={styles.unblockBtn} onPress={handleUnblock}>
+              <Text style={styles.unblockBtnText}>{S.moderation.unblock}</Text>
+            </TouchableOpacity>
           </View>
         ) : (
           <>
@@ -369,6 +402,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
     marginBottom: 16,
     gap: 4,
+    zIndex: 20,
   },
   backBtn: {
     paddingTop: 4,
@@ -376,7 +410,6 @@ const styles = StyleSheet.create({
     marginLeft: -8,
   },
   menuWrap: {
-    alignItems: 'flex-end',
     paddingTop: 4,
   },
   menuBtn: {
@@ -387,7 +420,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   menu: {
-    marginTop: 4,
+    position: 'absolute',
+    top: 44,
+    right: 0,
     backgroundColor: '#fff',
     borderRadius: 12,
     paddingVertical: 4,
@@ -396,7 +431,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.15,
     shadowRadius: 6,
-    elevation: 4,
+    elevation: 8,
+    zIndex: 30,
   },
   menuItem: {
     flexDirection: 'row',
@@ -508,5 +544,31 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 14,
     color: '#999',
+  },
+  blockedTitle: {
+    fontSize: 17,
+    fontWeight: '500',
+    color: C.ink,
+    marginTop: 14,
+  },
+  blockedHint: {
+    fontSize: 14,
+    color: '#999',
+    marginTop: 6,
+    textAlign: 'center',
+  },
+  unblockBtn: {
+    marginTop: 20,
+    paddingVertical: 10,
+    paddingHorizontal: 24,
+    borderRadius: 20,
+    borderWidth: 1.5,
+    borderColor: C.ink,
+    backgroundColor: '#fff',
+  },
+  unblockBtnText: {
+    fontSize: 15,
+    fontWeight: '500',
+    color: C.ink,
   },
 });

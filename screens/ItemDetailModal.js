@@ -45,7 +45,7 @@ import ReportSheet from './ReportSheet';
 import { isFeaturedTag } from '../shared/featuredTag';
 import { C } from '../shared/theme';
 
-export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, onRetire, onResurrect, onBlocked, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { items, session, profile, markUsedToday, unmarkUsedToday, addUsage, removeUsageOn, blockContent, reportContent } = useCollection();
@@ -300,7 +300,13 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         {
           text: S.moderation.block,
           style: 'destructive',
-          onPress: async () => { await blockContent(item.user_id); onClose?.(); },
+          onPress: async () => {
+            const name = ownerName;
+            await blockContent(item.user_id);
+            onClose?.();
+            onBlocked?.(item.user_id);
+            Alert.alert(S.moderation.blockedDone(name));
+          },
         },
       ],
     );
