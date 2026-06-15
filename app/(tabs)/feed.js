@@ -20,7 +20,7 @@ const TAB_BAR_HEIGHT = 70;
 export default function Feed() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { session, updateItem, deleteItem } = useCollection();
+  const { session, updateItem, deleteItem, blockedIds } = useCollection();
   const [feedEvents, setFeedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -28,6 +28,7 @@ export default function Feed() {
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
 
   const isOwnItem = !!selectedItem && session?.user?.id === selectedItem.user_id;
+  const visibleEvents = feedEvents.filter(e => !blockedIds.has(e.item.user_id));
 
   async function handleUpdate(name, photoOrUri, tagNames, isPrivate, description, acquired, ocrText, previousImages, imageAddedAt) {
     if (!selectedItem) return false;
@@ -91,13 +92,13 @@ export default function Feed() {
           <View style={styles.empty}>
             <ActivityIndicator color="#999" />
           </View>
-        ) : feedEvents.length === 0 ? (
+        ) : visibleEvents.length === 0 ? (
           <View style={styles.empty}>
             <Text style={styles.emptyText}>{S.feed.feedEmpty}</Text>
           </View>
         ) : (
           <View style={styles.feedList}>
-            {feedEvents.map(event => {
+            {visibleEvents.map(event => {
               const item = event.item;
               const name = item.profile?.display_name || item.profile?.username || 'someone';
               const time = relativeTime(event.at);

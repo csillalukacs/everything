@@ -41,13 +41,14 @@ import PhotoStrip from './PhotoStrip';
 import ItemFieldsEditor from './ItemFieldsEditor';
 import AppleIcon from './AppleIcon';
 import RetireSheet from './RetireSheet';
+import ReportSheet from './ReportSheet';
 import { isFeaturedTag } from '../shared/featuredTag';
 import { C } from '../shared/theme';
 
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, session, profile, markUsedToday, unmarkUsedToday, addUsage, removeUsageOn } = useCollection();
+  const { items, session, profile, markUsedToday, unmarkUsedToday, addUsage, removeUsageOn, blockContent, reportContent } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   // Usage rollups live on the provider's copy of the item so they update in place.
   const liveItem = useMemo(() => items.find(i => i.id === item?.id) ?? item, [items, item]);
@@ -75,6 +76,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [infoVisible, setInfoVisible] = useState(false);
   const [menuVisible, setMenuVisible] = useState(false);
   const [retireSheetVisible, setRetireSheetVisible] = useState(false);
+  const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const ocrPromiseRef = useRef(null);
   const scrollRef = useRef(null);
   const translateX = useSharedValue(0);
@@ -116,6 +118,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setInfoVisible(false);
     setMenuVisible(false);
     setRetireSheetVisible(false);
+    setReportSheetVisible(false);
     setArmedDay(null);
     if (!pendingDir.current) return;
     translateX.value = pendingDir.current === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH;
@@ -276,6 +279,31 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         url,
       });
     } catch {}
+  }
+
+  const ownerName = item?.profile?.display_name
+    || (item?.profile?.username ? `@${item.profile.username}` : 'this user');
+
+  async function handleReportPick(reason) {
+    setReportSheetVisible(false);
+    await reportContent({ targetType: 'item', targetId: item.id, targetUserId: item.user_id, reason });
+    Alert.alert(S.moderation.reportThanksTitle, S.moderation.reportThanksBody);
+  }
+
+  function handleBlock() {
+    setMenuVisible(false);
+    Alert.alert(
+      S.moderation.blockConfirmTitle(ownerName),
+      S.moderation.blockConfirmBody,
+      [
+        { text: S.common.cancel, style: 'cancel' },
+        {
+          text: S.moderation.block,
+          style: 'destructive',
+          onPress: async () => { await blockContent(item.user_id); onClose?.(); },
+        },
+      ],
+    );
   }
 
   async function attemptUpdate() {
@@ -516,6 +544,28 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   )}
                 </View>
               )}
+              {!isOwner && (
+                <View style={styles.imageMenuWrap} pointerEvents="box-none">
+                  <TouchableOpacity style={styles.imageMenuButton} onPress={() => setMenuVisible(v => !v)} hitSlop={8}>
+                    <Ionicons name="ellipsis-horizontal" size={20} color={C.ink} />
+                  </TouchableOpacity>
+                  {menuVisible && (
+                    <View style={styles.imageMenu}>
+                      <TouchableOpacity
+                        style={styles.imageMenuItem}
+                        onPress={() => { setMenuVisible(false); setReportSheetVisible(true); }}
+                      >
+                        <Ionicons name="flag-outline" size={18} color={C.ink} />
+                        <Text style={styles.imageMenuItemText}>{S.moderation.report}</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity style={styles.imageMenuItem} onPress={handleBlock}>
+                        <Ionicons name="ban-outline" size={18} color={C.red} />
+                        <Text style={[styles.imageMenuItemText, styles.imageMenuItemDanger]}>{S.moderation.block}</Text>
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                </View>
+              )}
               {bottomBar}
             </View>
             <View style={styles.info}>
@@ -697,6 +747,11 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         visible={retireSheetVisible}
         onClose={() => setRetireSheetVisible(false)}
         onConfirm={({ reason, epitaph }) => { setRetireSheetVisible(false); onRetire?.(reason, epitaph); }}
+      />
+      <ReportSheet
+        visible={reportSheetVisible}
+        onClose={() => setReportSheetVisible(false)}
+        onPick={handleReportPick}
       />
       {datePickerVisible && Platform.OS === 'android' && (
         <DateTimePicker

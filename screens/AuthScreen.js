@@ -1,13 +1,20 @@
-import * as AppleAuthentication from 'expo-apple-authentication';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 import { useState } from 'react';
-import { Platform, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
+import { Modal, Platform, ScrollView, StyleSheet, Text, TextInput, TouchableOpacity, View } from 'react-native';
 import { supabase } from '../lib/supabase';
 import { S } from '../shared/strings';
 import { C } from '../shared/theme';
+import { APPLE_SIGN_IN } from '../featureFlags';
 
 WebBrowser.maybeCompleteAuthSession();
+
+// APPLE_SIGN_IN comes from featureFlags.js — the same flag app.config.js uses to
+// add the entitlement-bearing plugin, so build + runtime can't drift. The native
+// module is `require`d lazily (not statically imported) so that when the flag is
+// off, its native view manager is never touched and the app runs without the
+// entitlement. See featureFlags.js for how to turn it on.
+const AppleAuthentication = APPLE_SIGN_IN ? require('expo-apple-authentication') : null;
 
 export default function AuthScreen() {
   const [showEmail, setShowEmail] = useState(false);
@@ -15,6 +22,7 @@ export default function AuthScreen() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [termsVisible, setTermsVisible] = useState(false);
 
   async function signInWithGoogle() {
     const redirectUrl = AuthSession.makeRedirectUri();
@@ -87,7 +95,7 @@ export default function AuthScreen() {
         <Text style={styles.buttonText}>{S.auth.continueWithGoogle}</Text>
       </TouchableOpacity>
 
-      {Platform.OS === 'ios' && (
+      {APPLE_SIGN_IN && Platform.OS === 'ios' && (
         <AppleAuthentication.AppleAuthenticationButton
           buttonType={AppleAuthentication.AppleAuthenticationButtonType.SIGN_IN}
           buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
@@ -137,6 +145,28 @@ export default function AuthScreen() {
           <Text style={styles.emailToggleText}>{S.auth.useEmail}</Text>
         </TouchableOpacity>
       )}
+
+      <Text style={styles.terms}>
+        {S.auth.agreePrefix}
+        <Text style={styles.termsLink} onPress={() => setTermsVisible(true)}>{S.legal.termsLink}</Text>
+        {S.auth.agreeSuffix}
+      </Text>
+
+      <Modal visible={termsVisible} animationType="slide" onRequestClose={() => setTermsVisible(false)}>
+        <View style={styles.termsModal}>
+          <View style={styles.termsHeader}>
+            <Text style={styles.termsTitle}>{S.legal.termsTitle}</Text>
+            <TouchableOpacity onPress={() => setTermsVisible(false)} hitSlop={8}>
+              <Text style={styles.termsClose}>{S.common.done}</Text>
+            </TouchableOpacity>
+          </View>
+          <ScrollView contentContainerStyle={styles.termsBody} showsVerticalScrollIndicator={false}>
+            {S.legal.body.map((para, i) => (
+              <Text key={i} style={styles.termsPara}>{para}</Text>
+            ))}
+          </ScrollView>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -207,5 +237,46 @@ const styles = StyleSheet.create({
     color: C.redDark,
     fontSize: 14,
     marginTop: 16,
+  },
+  terms: {
+    marginTop: 28,
+    fontSize: 12,
+    lineHeight: 18,
+    color: C.muted,
+  },
+  termsLink: {
+    color: C.ink,
+    textDecorationLine: 'underline',
+  },
+  termsModal: {
+    flex: 1,
+    backgroundColor: C.bg,
+    paddingTop: 60,
+    paddingHorizontal: 24,
+  },
+  termsHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  termsTitle: {
+    fontSize: 22,
+    fontWeight: '500',
+    color: C.ink,
+    flex: 1,
+  },
+  termsClose: {
+    fontSize: 16,
+    color: C.blue,
+  },
+  termsBody: {
+    paddingBottom: 60,
+    gap: 16,
+  },
+  termsPara: {
+    fontSize: 15,
+    lineHeight: 23,
+    color: C.ink,
   },
 });

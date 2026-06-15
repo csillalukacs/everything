@@ -56,6 +56,44 @@ export const S = {
     passwordPlaceholder: 'password',
     signIn: 'sign in',
     signInFailed: 'sign-in failed. check your email and password.',
+    // Shown under the sign-in buttons. The middle word links to the terms screen.
+    agreePrefix: 'by continuing you agree to our ',
+    agreeSuffix: ', and to a zero-tolerance policy for objectionable content and abusive behavior.',
+  },
+
+  // Moderation — report content + block users (App Store guideline 1.2)
+  moderation: {
+    report: 'report',
+    block: 'block',
+    unblock: 'unblock',
+    blockUser: (name) => `block ${name}`,
+    reportTitle: 'report this',
+    reportSubtitle: "what's wrong with it?",
+    reasons: [
+      { value: 'spam', label: 'spam or scam' },
+      { value: 'nudity', label: 'nudity or sexual content' },
+      { value: 'hate', label: 'hate or harassment' },
+      { value: 'violence', label: 'violence or threats' },
+      { value: 'illegal', label: 'illegal or dangerous' },
+      { value: 'other', label: 'something else' },
+    ],
+    reportThanksTitle: 'thanks for reporting',
+    reportThanksBody: "we'll review this within 24 hours.",
+    blockConfirmTitle: (name) => `block ${name}?`,
+    blockConfirmBody: "you won't see their things anymore.",
+    blocked: 'blocked',
+  },
+
+  // Terms & content policy (shown from the auth screen; satisfies the EULA requirement)
+  legal: {
+    termsLink: 'terms',
+    termsTitle: 'terms & content policy',
+    body: [
+      'things is a place to catalogue your stuff and share it with others. by using it you agree to keep it civil.',
+      'there is zero tolerance for objectionable content or abusive behavior. do not post content that is illegal, hateful, harassing, sexually explicit, violent, or that infringes anyone else’s rights.',
+      'you can report any content from the … menu, and block any user from their profile or any of their things. reported content and the accounts behind it are reviewed within 24 hours, and anything that violates this policy — along with the user who posted it — is removed.',
+      'we may remove content or suspend accounts at our discretion to keep the community safe.',
+    ],
   },
 
   // Item form fields (used by add + edit on both apps)

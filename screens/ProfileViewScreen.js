@@ -2,6 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,13 +15,18 @@ import { fetchAllItems, fetchItemCount } from '../shared/itemsApi';
 import { UUID_RE } from '../shared/identifiers';
 import { S } from '../shared/strings';
 import { FEATURED_TAG_NAME, isFeaturedTag, sortTagsFeaturedFirst, findFeaturedTag } from '../shared/featuredTag';
+import { useCollection } from '../lib/CollectionProvider';
 import ItemDetailModal from './ItemDetailModal';
+import ReportSheet from './ReportSheet';
 import Avatar from './Avatar';
 import ItemGrid from './ItemGrid';
 import AppleIcon from './AppleIcon';
 import { C } from '../shared/theme';
 
 export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
+  const { session, blockContent, reportContent } = useCollection();
+  const [menuVisible, setMenuVisible] = useState(false);
+  const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [profile, setProfile] = useState(null);
@@ -68,6 +74,8 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
     setActiveTag({ id: '__featured__', name: FEATURED_TAG_NAME, is_private: false });
     setSelectedItem(null);
     setSearchQuery('');
+    setMenuVisible(false);
+    setReportSheetVisible(false);
 
     (async () => {
       const slugIsUuid = UUID_RE.test(slug);
@@ -133,6 +141,32 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
     }
   }, [resolvedUserId]);
 
+  const isOwnProfile = !!session?.user?.id && session.user.id === resolvedUserId;
+  const ownerName = profile?.display_name
+    || (profile?.username ? `@${profile.username}` : 'this user');
+
+  async function handleReportPick(reason) {
+    setReportSheetVisible(false);
+    await reportContent({ targetType: 'profile', targetId: resolvedUserId, targetUserId: resolvedUserId, reason });
+    Alert.alert(S.moderation.reportThanksTitle, S.moderation.reportThanksBody);
+  }
+
+  function handleBlock() {
+    setMenuVisible(false);
+    Alert.alert(
+      S.moderation.blockConfirmTitle(ownerName),
+      S.moderation.blockConfirmBody,
+      [
+        { text: S.common.cancel, style: 'cancel' },
+        {
+          text: S.moderation.block,
+          style: 'destructive',
+          onPress: async () => { await blockContent(resolvedUserId); onClose?.(); },
+        },
+      ],
+    );
+  }
+
   const query = searchQuery.trim().toLowerCase();
   const searchedItems = query
     ? items.filter(i => {
@@ -193,6 +227,28 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
               <Text style={styles.itemCount}>{S.profile.objectCount(itemCount)}</Text>
             )}
           </View>
+          {!loading && !notFound && resolvedUserId && !isOwnProfile && (
+            <View style={styles.menuWrap} pointerEvents="box-none">
+              <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuVisible(v => !v)} hitSlop={8}>
+                <Ionicons name="ellipsis-horizontal" size={20} color={C.ink} />
+              </TouchableOpacity>
+              {menuVisible && (
+                <View style={styles.menu}>
+                  <TouchableOpacity
+                    style={styles.menuItem}
+                    onPress={() => { setMenuVisible(false); setReportSheetVisible(true); }}
+                  >
+                    <Ionicons name="flag-outline" size={18} color={C.ink} />
+                    <Text style={styles.menuItemText}>{S.moderation.report}</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity style={styles.menuItem} onPress={handleBlock}>
+                    <Ionicons name="ban-outline" size={18} color={C.red} />
+                    <Text style={[styles.menuItemText, styles.menuItemDanger]}>{S.moderation.block}</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
         </View>
 
         {loading ? (
@@ -291,6 +347,12 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
             return idx < filteredItems.length - 1 ? () => setSelectedItem(filteredItems[idx + 1]) : null;
           })()}
         />
+
+        <ReportSheet
+          visible={reportSheetVisible}
+          onClose={() => setReportSheetVisible(false)}
+          onPick={handleReportPick}
+        />
     </View>
   );
 }
@@ -312,6 +374,43 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingRight: 4,
     marginLeft: -8,
+  },
+  menuWrap: {
+    alignItems: 'flex-end',
+    paddingTop: 4,
+  },
+  menuBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  menu: {
+    marginTop: 4,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    paddingVertical: 4,
+    minWidth: 140,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  menuItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  menuItemText: {
+    fontSize: 14,
+    color: C.ink,
+  },
+  menuItemDanger: {
+    color: C.red,
   },
   headerAvatar: {
     marginRight: 12,

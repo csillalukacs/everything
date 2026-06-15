@@ -31,8 +31,8 @@ export async function fetchAllItems(client, { userId, publicOnly = false, column
   return all;
 }
 
-export async function fetchPublicFeed(client, { limit = 50 } = {}) {
-  const { data: items, error } = await client
+export async function fetchPublicFeed(client, { limit = 50, blockedIds = [] } = {}) {
+  const { data: rawItems, error } = await client
     .from('items')
     .select('*, tags(id, name, is_private)')
     .eq('is_private', false)
@@ -40,7 +40,9 @@ export async function fetchPublicFeed(client, { limit = 50 } = {}) {
     .order('created_at', { ascending: false })
     .limit(limit);
   if (error) throw error;
-  if (!items?.length) return [];
+  const blocked = new Set(blockedIds);
+  const items = (rawItems ?? []).filter(i => !blocked.has(i.user_id));
+  if (!items.length) return [];
 
   const userIds = [...new Set(items.map(i => i.user_id))];
   const { data: profiles, error: pErr } = await client
@@ -59,7 +61,8 @@ export async function fetchPublicFeed(client, { limit = 50 } = {}) {
 // Unified cross-user feed: item-add events merged with "used today" usage events,
 // each carrying its item + the poster's profile, sorted newest-first by insert time.
 // Returns events shaped { type: 'add' | 'usage', key, at, used_on?, item }.
-export async function fetchFeedEvents(client, { limit = 50 } = {}) {
+export async function fetchFeedEvents(client, { limit = 50, blockedIds = [] } = {}) {
+  const blocked = new Set(blockedIds);
   const [addsRes, usagesRes] = await Promise.all([
     client
       .from('items')
@@ -88,6 +91,7 @@ export async function fetchFeedEvents(client, { limit = 50 } = {}) {
     .map(u => ({ type: 'usage', key: `use-${u.id}`, at: u.created_at, used_on: u.used_on, item: u.item }));
 
   const events = [...addEvents, ...usageEvents]
+    .filter(e => !blocked.has(e.item.user_id))
     .sort((a, b) => new Date(b.at) - new Date(a.at))
     .slice(0, limit);
   if (!events.length) return [];

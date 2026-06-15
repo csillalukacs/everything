@@ -261,6 +261,33 @@ input {
   display: block;
 }
 
+.auth-terms {
+  margin-top: 28px;
+  max-width: 320px;
+  font-size: 12px;
+  line-height: 18px;
+  color: var(--muted);
+}
+
+.auth-terms-link {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+.terms-body {
+  max-width: 640px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding-bottom: 60px;
+}
+
+.terms-para {
+  font-size: 15px;
+  line-height: 23px;
+  color: var(--ink);
+}
+
 .header-right {
   display: flex;
   flex-direction: column;

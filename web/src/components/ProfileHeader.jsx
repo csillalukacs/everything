@@ -12,6 +12,8 @@ export default function ProfileHeader({
   home,
   itemCount,
   isOwner,
+  onReport,
+  onBlock,
 }) {
   const displayName = profileName ?? username ?? userId?.split('-')[0] ?? ''
   return (
@@ -57,6 +59,8 @@ export default function ProfileHeader({
         {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
         {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
         <Link to="/" className="link-btn">{S.a11y.feed}</Link>
+        {!isOwner && onReport && <button className="link-btn" onClick={onReport}>{S.moderation.report}</button>}
+        {!isOwner && onBlock && <button className="link-btn" onClick={onBlock}>{S.moderation.block}</button>}
       </div>
     </header>
   )

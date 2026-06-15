@@ -5,6 +5,7 @@ import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
 import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
+import { submitReport, blockUser } from '../../../shared/moderation'
 import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel, usageRecencyTier, usageGlowCss } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -56,6 +57,7 @@ export default function ProfilePage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [randomSeed, setRandomSeed] = useState(() => newRandomSeed())
   const [graveyardOpen, setGraveyardOpen] = useState(false)
+  const [reportingProfile, setReportingProfile] = useState(false)
 
   const batchMode = selectedIds.size > 0
 
@@ -395,6 +397,27 @@ export default function ProfilePage() {
     }
   }
 
+  async function handleReportProfile(reason) {
+    setReportingProfile(false)
+    try {
+      await submitReport(supabase, { reporterId: sessionUserId, targetType: 'profile', targetId: userId, targetUserId: userId, reason })
+    } catch (e) {
+      console.error('submitReport error:', e)
+    }
+    alert(S.moderation.reportThanksBody)
+  }
+
+  async function handleBlockProfile() {
+    const name = profileName || (username ? `@${username}` : 'this user')
+    if (!window.confirm(`${S.moderation.blockConfirmTitle(name)}\n${S.moderation.blockConfirmBody}`)) return
+    try {
+      await blockUser(supabase, { blockerId: sessionUserId, blockedId: userId })
+    } catch (e) {
+      console.error('blockUser error:', e)
+    }
+    navigate('/')
+  }
+
   function toggleBatchSelect(itemId) {
     setSelectedIds(prev => {
       const next = new Set(prev)
@@ -622,7 +645,23 @@ export default function ProfilePage() {
         home={home}
         itemCount={itemCount}
         isOwner={isOwner}
+        onReport={() => setReportingProfile(true)}
+        onBlock={handleBlockProfile}
       />
+
+      {!isOwner && reportingProfile && (
+        <div className="retire-panel">
+          <div className="retire-panel-title">{S.moderation.reportTitle}</div>
+          <div className="retire-reason-chips">
+            {S.moderation.reasons.map(r => (
+              <button key={r.value} type="button" className="chip" onClick={() => handleReportProfile(r.value)}>{r.label}</button>
+            ))}
+          </div>
+          <div className="retire-panel-actions">
+            <button className="link-btn" onClick={() => setReportingProfile(false)}>{S.common.cancel}</button>
+          </div>
+        </div>
+      )}
 
       {isOwner && retiredItems.length > 0 && !graveyardOpen && (
         <button className="graveyard-entry" onClick={() => setGraveyardOpen(true)}>
@@ -806,6 +845,7 @@ export default function ProfilePage() {
         onRetire={isOwner ? handleRetire : undefined}
         onResurrect={isOwner ? handleResurrect : undefined}
         sessionUserId={sessionUserId}
+        onBlocked={() => navigate('/')}
         onUsageChange={(id, patch) => setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))}
         allTags={allTags}
         items={items}

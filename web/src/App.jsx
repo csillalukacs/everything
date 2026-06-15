@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
+import { fetchBlockedIds } from '../../shared/moderation'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
@@ -18,6 +19,7 @@ export default function App() {
   const [feedEvents, setFeedEvents] = useState([])
   const [feedLoading, setFeedLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [blockedIds, setBlockedIds] = useState(() => new Set())
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -31,13 +33,17 @@ export default function App() {
   }, [])
 
   useEffect(() => {
-    if (!session) { setUsername(null); setFeedEvents([]); return }
+    if (!session) { setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); return }
     supabase
       .from('profiles')
       .select('username')
       .eq('user_id', session.user.id)
       .maybeSingle()
       .then(({ data }) => setUsername(data?.username ?? null))
+
+    fetchBlockedIds(supabase, session.user.id)
+      .then(ids => setBlockedIds(new Set(ids)))
+      .catch(e => console.error('fetchBlockedIds error:', e))
 
     let cancelled = false
     const cached = readCache(feedCacheKey(session.user.id))
@@ -60,6 +66,8 @@ export default function App() {
 
   if (!session) return <AuthScreen />
 
+  const visibleEvents = feedEvents.filter(e => !blockedIds.has(e.item.user_id))
+
   return (
     <div className="app">
       <header className="header">
@@ -79,13 +87,13 @@ export default function App() {
         <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
           <div className="spinner" />
         </div>
-      ) : feedEvents.length === 0 ? (
+      ) : visibleEvents.length === 0 ? (
         <div className="centered" style={{ height: 'auto', padding: '60px 0' }}>
           <p style={{ color: '#999' }}>{S.feed.feedEmpty}</p>
         </div>
       ) : (
         <div className="feed-list">
-          {feedEvents.map(event => {
+          {visibleEvents.map(event => {
             const item = event.item
             const slug = item.profile?.username || item.user_id
             const name = item.profile?.display_name || item.profile?.username || 'someone'
@@ -138,6 +146,7 @@ export default function App() {
         item={selectedItem}
         sessionUserId={session.user.id}
         onClose={() => setSelectedItem(null)}
+        onBlocked={id => setBlockedIds(prev => new Set(prev).add(id))}
       />
     </div>
   )

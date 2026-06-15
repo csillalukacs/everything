@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { S } from '../../../shared/strings'
 
@@ -42,6 +42,11 @@ export default function AuthScreen() {
       <button className="btn-primary btn-apple" onClick={signInWithApple}>
         {S.auth.continueWithApple}
       </button>
+      <p className="auth-terms">
+        {S.auth.agreePrefix}
+        <Link to="/terms" className="auth-terms-link">{S.legal.termsLink}</Link>
+        {S.auth.agreeSuffix}
+      </p>
     </div>
   )
 }

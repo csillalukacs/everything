@@ -4,6 +4,7 @@ import { S } from '../../../shared/strings'
 import { locationSuggestionsFromItems, isRetired } from '../../../shared/items'
 import { dayKey, relativeDay, dayKeyLabel } from '../../../shared/dates'
 import { recordUsage, removeUsage, fetchItemUsages } from '../../../shared/usagesApi'
+import { submitReport, blockUser } from '../../../shared/moderation'
 import { supabase } from '../lib/supabase'
 import LocationPicker from './LocationPicker'
 import TagInput from './TagInput'
@@ -12,7 +13,7 @@ import Avatar from '../components/Avatar'
 import { AppleIcon } from '../components/Icons'
 import { isFeaturedTag } from '../../../shared/featuredTag'
 
-export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], items = [], sessionUserId, onUsageChange, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], items = [], sessionUserId, onUsageChange, onBlocked, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [usageCount, setUsageCount] = useState(0)
   const [lastUsedOn, setLastUsedOn] = useState(null)
@@ -38,9 +39,10 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [retiring, setRetiring] = useState(false)
   const [retireReason, setRetireReason] = useState(null)
   const [retireEpitaph, setRetireEpitaph] = useState('')
+  const [reporting, setReporting] = useState(false)
   const fileInputRef = useRef(null)
 
-  useEffect(() => { setDisplayedIdx(0); setRetiring(false); setRetireReason(null); setRetireEpitaph(''); setAddingUse(false); setPendingUseDate('') }, [item?.id])
+  useEffect(() => { setDisplayedIdx(0); setRetiring(false); setRetireReason(null); setRetireEpitaph(''); setReporting(false); setAddingUse(false); setPendingUseDate('') }, [item?.id])
 
   useEffect(() => {
     setUsageCount(item?.usage_count ?? 0)
@@ -221,6 +223,30 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   function confirmRetire() {
     onRetire?.(retireReason ?? null, retireEpitaph.trim() || null)
     cancelRetire()
+  }
+
+  const ownerName = item.profile?.display_name
+    || (item.profile?.username ? `@${item.profile.username}` : 'this user')
+
+  async function handleReport(reason) {
+    setReporting(false)
+    try {
+      await submitReport(supabase, { reporterId: sessionUserId, targetType: 'item', targetId: item.id, targetUserId: item.user_id, reason })
+    } catch (e) {
+      console.error('submitReport error:', e)
+    }
+    alert(S.moderation.reportThanksBody)
+  }
+
+  async function handleBlock() {
+    if (!window.confirm(`${S.moderation.blockConfirmTitle(ownerName)}\n${S.moderation.blockConfirmBody}`)) return
+    try {
+      await blockUser(supabase, { blockerId: sessionUserId, blockedId: item.user_id })
+    } catch (e) {
+      console.error('blockUser error:', e)
+    }
+    onBlocked?.(item.user_id)
+    onClose()
   }
 
   const itemTags = item.tags ?? []
@@ -555,6 +581,26 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                         <button className="retire-btn" onClick={() => setRetiring(true)}>{S.graveyard.emoji} {S.graveyard.retire}</button>
                       )}
                       {onDelete && <button className="delete-btn" onClick={onDelete}>{S.itemForm.deleteItem}</button>}
+                    </div>
+                  )
+                )}
+                {!isOwnerItem && (
+                  reporting ? (
+                    <div className="retire-panel">
+                      <div className="retire-panel-title">{S.moderation.reportTitle}</div>
+                      <div className="retire-reason-chips">
+                        {S.moderation.reasons.map(r => (
+                          <button key={r.value} type="button" className="chip" onClick={() => handleReport(r.value)}>{r.label}</button>
+                        ))}
+                      </div>
+                      <div className="retire-panel-actions">
+                        <button className="link-btn" onClick={() => setReporting(false)}>{S.common.cancel}</button>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="detail-actions">
+                      <button className="retire-btn" onClick={() => setReporting(true)}>{S.moderation.report}</button>
+                      <button className="delete-btn" onClick={handleBlock}>{S.moderation.blockUser(ownerName)}</button>
                     </div>
                   )
                 )}
