@@ -21,6 +21,7 @@ import { useCollection } from '../lib/CollectionProvider';
 import ItemDetailModal from './ItemDetailModal';
 import ReportSheet from './ReportSheet';
 import FollowListScreen from './FollowListScreen';
+import ProfileSheet from './ProfileSheet';
 import Avatar from './Avatar';
 import ItemGrid from './ItemGrid';
 import AppleIcon from './AppleIcon';
@@ -29,7 +30,7 @@ import { C } from '../shared/theme';
 export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
   const router = useRouter();
   const { session, blockedIds, blockContent, unblockContent, reportContent, followingIds, followContent, unfollowContent } = useCollection();
-  const [menuVisible, setMenuVisible] = useState(false);
+  const [profileSheetVisible, setProfileSheetVisible] = useState(false);
   const [reportSheetVisible, setReportSheetVisible] = useState(false);
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
   const [followListMode, setFollowListMode] = useState(null);
@@ -80,7 +81,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
     setActiveTag({ id: '__featured__', name: FEATURED_TAG_NAME, is_private: false });
     setSelectedItem(null);
     setSearchQuery('');
-    setMenuVisible(false);
+    setProfileSheetVisible(false);
     setReportSheetVisible(false);
     setFollowListMode(null);
     setFollowCounts({ followers: 0, following: 0 });
@@ -178,7 +179,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
   }
 
   function handleBlock() {
-    setMenuVisible(false);
+    setProfileSheetVisible(false);
     Alert.alert(
       S.moderation.blockConfirmTitle(ownerName),
       S.moderation.blockConfirmBody,
@@ -198,7 +199,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
   }
 
   function handleUnblock() {
-    setMenuVisible(false);
+    setProfileSheetVisible(false);
     Alert.alert(
       S.moderation.unblockConfirmTitle(ownerName),
       S.moderation.unblockConfirmBody,
@@ -251,7 +252,14 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
           <TouchableOpacity onPress={onClose} style={styles.backBtn}>
             <Ionicons name="chevron-back" size={28} color={C.ink} />
           </TouchableOpacity>
-          {profile && <Avatar profile={profile} size={56} style={styles.headerAvatar} />}
+          {profile && (
+            <TouchableOpacity
+              onPress={() => !loading && !notFound && resolvedUserId && setProfileSheetVisible(true)}
+              activeOpacity={0.8}
+            >
+              <Avatar profile={profile} size={56} style={styles.headerAvatar} />
+            </TouchableOpacity>
+          )}
           <View style={{ flex: 1 }}>
             <Text style={styles.title} numberOfLines={1}>{headerTitle}</Text>
             {profile?.username && profile?.display_name && (
@@ -268,58 +276,7 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
             {!loading && !notFound && !isBlocked && itemCount != null && (
               <Text style={styles.itemCount}>{S.profile.objectCount(itemCount)}</Text>
             )}
-            {!loading && !notFound && !isBlocked && resolvedUserId && (
-              <View style={styles.followCountsRow}>
-                <TouchableOpacity onPress={() => setFollowListMode('followers')} hitSlop={6}>
-                  <Text style={styles.followCount}>{S.social.followersCount(followCounts.followers)}</Text>
-                </TouchableOpacity>
-                <Text style={styles.followCountDot}>·</Text>
-                <TouchableOpacity onPress={() => setFollowListMode('following')} hitSlop={6}>
-                  <Text style={styles.followCount}>{S.social.followingCount(followCounts.following)}</Text>
-                </TouchableOpacity>
-              </View>
-            )}
-            {!loading && !notFound && !isBlocked && resolvedUserId && !isOwnProfile && (
-              <TouchableOpacity
-                style={[styles.followBtn, isFollowing && styles.followBtnOn]}
-                onPress={handleToggleFollow}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextOn]}>
-                  {isFollowing ? S.social.following : S.social.follow}
-                </Text>
-              </TouchableOpacity>
-            )}
           </View>
-          {!loading && !notFound && resolvedUserId && !isOwnProfile && (
-            <View style={styles.menuWrap} pointerEvents="box-none">
-              <TouchableOpacity style={styles.menuBtn} onPress={() => setMenuVisible(v => !v)} hitSlop={8}>
-                <Ionicons name="ellipsis-horizontal" size={20} color={C.ink} />
-              </TouchableOpacity>
-              {menuVisible && (
-                <View style={styles.menu}>
-                  <TouchableOpacity
-                    style={styles.menuItem}
-                    onPress={() => { setMenuVisible(false); setReportSheetVisible(true); }}
-                  >
-                    <Ionicons name="flag-outline" size={18} color={C.ink} />
-                    <Text style={styles.menuItemText}>{S.moderation.report}</Text>
-                  </TouchableOpacity>
-                  {isBlocked ? (
-                    <TouchableOpacity style={styles.menuItem} onPress={handleUnblock}>
-                      <Ionicons name="checkmark-circle-outline" size={18} color={C.ink} />
-                      <Text style={styles.menuItemText}>{S.moderation.unblock}</Text>
-                    </TouchableOpacity>
-                  ) : (
-                    <TouchableOpacity style={styles.menuItem} onPress={handleBlock}>
-                      <Ionicons name="ban-outline" size={18} color={C.red} />
-                      <Text style={[styles.menuItemText, styles.menuItemDanger]}>{S.moderation.block}</Text>
-                    </TouchableOpacity>
-                  )}
-                </View>
-              )}
-            </View>
-          )}
         </View>
 
         {loading ? (
@@ -434,6 +391,21 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
           onPick={handleReportPick}
         />
 
+        <ProfileSheet
+          visible={profileSheetVisible}
+          onClose={() => setProfileSheetVisible(false)}
+          profile={profile}
+          counts={followCounts}
+          isOwn={isOwnProfile}
+          isFollowing={isFollowing}
+          isBlocked={isBlocked}
+          onToggleFollow={handleToggleFollow}
+          onReport={() => setReportSheetVisible(true)}
+          onBlock={handleBlock}
+          onUnblock={handleUnblock}
+          onShowFollows={mode => setFollowListMode(mode)}
+        />
+
         <FollowListScreen
           visible={!!followListMode}
           userId={resolvedUserId}
@@ -463,45 +435,6 @@ const styles = StyleSheet.create({
     paddingTop: 4,
     paddingRight: 4,
     marginLeft: -8,
-  },
-  menuWrap: {
-    paddingTop: 4,
-  },
-  menuBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  menu: {
-    position: 'absolute',
-    top: 44,
-    right: 0,
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    paddingVertical: 4,
-    minWidth: 140,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 6,
-    elevation: 8,
-    zIndex: 30,
-  },
-  menuItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-  },
-  menuItemText: {
-    fontSize: 14,
-    color: C.ink,
-  },
-  menuItemDanger: {
-    color: C.red,
   },
   headerAvatar: {
     marginRight: 12,
@@ -534,42 +467,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 6,
     letterSpacing: 0.5,
-  },
-  followCountsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
-  },
-  followCount: {
-    fontSize: 13,
-    color: C.ink,
-    fontWeight: '500',
-  },
-  followCountDot: {
-    fontSize: 13,
-    color: '#bbb',
-  },
-  followBtn: {
-    alignSelf: 'flex-start',
-    marginTop: 10,
-    paddingVertical: 7,
-    paddingHorizontal: 20,
-    borderRadius: 20,
-    backgroundColor: C.ink,
-    borderWidth: 1.5,
-    borderColor: C.ink,
-  },
-  followBtnOn: {
-    backgroundColor: '#fff',
-  },
-  followBtnText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: '#fff',
-  },
-  followBtnTextOn: {
-    color: C.ink,
   },
   searchContainer: {
     flexDirection: 'row',

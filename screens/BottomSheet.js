@@ -14,10 +14,18 @@ import {
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const ANIM_DURATION = 220;
 
-export default function BottomSheet({ visible, onClose, keyboardAvoiding, sheetStyle, children }) {
+export default function BottomSheet({ visible, onClose, onClosed, keyboardAvoiding, sheetStyle, children }) {
   const [mounted, setMounted] = useState(visible);
   const backdrop = useRef(new Animated.Value(0)).current;
   const translate = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
+
+  // Fire onClosed once the modal has fully unmounted, so callers can safely present
+  // another modal without overlapping native transitions (which stick on iOS).
+  const wasMounted = useRef(mounted);
+  useEffect(() => {
+    if (wasMounted.current && !mounted) onClosed?.();
+    wasMounted.current = mounted;
+  }, [mounted]);
 
   useEffect(() => {
     if (visible) {

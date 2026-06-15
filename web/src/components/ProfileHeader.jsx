@@ -13,29 +13,24 @@ export default function ProfileHeader({
   itemCount,
   isOwner,
   isBlocked,
-  isFollowing,
-  followCounts,
-  onShowFollowers,
-  onShowFollowing,
-  onReport,
-  onBlock,
-  onUnblock,
-  onToggleFollow,
+  onOpenSheet,
 }) {
   const displayName = profileName ?? username ?? userId?.split('-')[0] ?? ''
   return (
     <header className="header">
       <div className="profile-header-row">
-        <Avatar
-          profile={{
-            user_id: userId,
-            display_name: profileName,
-            username,
-            avatar_url: avatarUrl,
-            avatar_thumb_url: avatarThumbUrl,
-          }}
-          size={64}
-        />
+        <button className="avatar-button" onClick={onOpenSheet} aria-label={displayName}>
+          <Avatar
+            profile={{
+              user_id: userId,
+              display_name: profileName,
+              username,
+              avatar_url: avatarUrl,
+              avatar_thumb_url: avatarThumbUrl,
+            }}
+            size={64}
+          />
+        </button>
         <div>
           <div className="profile-name-row">
             <h1 className="profile-name">
@@ -60,32 +55,12 @@ export default function ProfileHeader({
               {home.location.split(',')[0]}
             </p>
           )}
-          {followCounts && !isBlocked && (
-            <p className="profile-follow-counts">
-              <button className="follow-count-btn" onClick={onShowFollowers}>
-                {S.social.followersCount(followCounts.followers)}
-              </button>
-              {' · '}
-              <button className="follow-count-btn" onClick={onShowFollowing}>
-                {S.social.followingCount(followCounts.following)}
-              </button>
-            </p>
-          )}
         </div>
       </div>
       <div className="header-links" style={{ marginTop: 8 }}>
         {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
         {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
         <Link to="/" className="link-btn">{S.a11y.feed}</Link>
-        {!isOwner && !isBlocked && onToggleFollow && (
-          <button
-            className={`link-btn${isFollowing ? '' : ' link-btn-dark'}`}
-            onClick={onToggleFollow}
-          >{isFollowing ? S.social.following : S.social.follow}</button>
-        )}
-        {!isOwner && isBlocked && onUnblock && <button className="link-btn" onClick={onUnblock}>{S.moderation.unblock}</button>}
-        {!isOwner && !isBlocked && onReport && <button className="link-btn" onClick={onReport}>{S.moderation.report}</button>}
-        {!isOwner && !isBlocked && onBlock && <button className="link-btn" onClick={onBlock}>{S.moderation.block}</button>}
       </div>
     </header>
   )

@@ -310,24 +310,72 @@ input {
   border-bottom-color: var(--ink);
 }
 
-.profile-follow-counts {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--muted);
-}
-
-.follow-count-btn {
+.avatar-button {
   background: none;
   border: none;
   padding: 0;
-  font-size: 13px;
+  cursor: pointer;
+  border-radius: 50%;
+}
+
+.profile-sheet {
+  max-width: 360px;
+  width: 100%;
+}
+
+.profile-sheet-head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.profile-sheet-name {
+  font-size: 20px;
   font-weight: 500;
   color: var(--ink);
+}
+
+.profile-sheet-handle {
+  font-size: 14px;
+  color: var(--muted);
+  margin-top: 2px;
+}
+
+.profile-sheet-counts {
+  display: flex;
+  gap: 28px;
+  margin: 20px 0;
+}
+
+.profile-sheet-count {
+  background: none;
+  border: none;
+  padding: 0;
+  font-size: 14px;
+  color: var(--muted);
   cursor: pointer;
 }
 
-.follow-count-btn:hover {
-  text-decoration: underline;
+.profile-sheet-count strong {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.profile-sheet-mod {
+  display: flex;
+  justify-content: center;
+  gap: 28px;
+  margin-top: 14px;
+}
+
+.btn-primary.btn-outline {
+  background: #fff;
+  color: var(--ink);
+  border: 1.5px solid var(--ink);
+}
+
+.link-btn-danger {
+  color: var(--red);
 }
 
 .follow-list-modal {

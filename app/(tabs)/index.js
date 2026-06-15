@@ -14,6 +14,7 @@ import { supabase } from '../../lib/supabase';
 import { fetchFollowCounts } from '../../shared/follows';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import FollowListScreen from '../../screens/FollowListScreen';
+import ProfileSheet from '../../screens/ProfileSheet';
 import BatchEditSheet from '../../screens/BatchEditSheet';
 import FilterSheet from '../../screens/FilterSheet';
 import ProfileScreen from '../../screens/ProfileScreen';
@@ -61,6 +62,7 @@ export default function Collection() {
 
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 });
   const [followListMode, setFollowListMode] = useState(null);
+  const [profileSheetVisible, setProfileSheetVisible] = useState(false);
   const [activeTag, setActiveTag] = useState(null);
   const [activeYear, setActiveYear] = useState(null);
   const [activeCity, setActiveCity] = useState(null);
@@ -245,7 +247,7 @@ export default function Collection() {
   return (
     <View style={styles.container}>
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setSettingsVisible(true)} activeOpacity={0.8}>
+        <TouchableOpacity onPress={() => setProfileSheetVisible(true)} activeOpacity={0.8}>
           <Avatar profile={{ ...profile, user_id: session?.user.id }} size={44} />
         </TouchableOpacity>
         <View style={styles.headerLeft}>
@@ -254,15 +256,6 @@ export default function Collection() {
             {profile?.username ? `@${profile.username} · ` : ''}
             {S.profile.objectCount(itemCount ?? items.length)}
           </Text>
-          <View style={styles.followCountsRow}>
-            <TouchableOpacity onPress={() => setFollowListMode('followers')} hitSlop={6}>
-              <Text style={styles.followCount}>{S.social.followersCount(followCounts.followers)}</Text>
-            </TouchableOpacity>
-            <Text style={styles.followCountDot}>·</Text>
-            <TouchableOpacity onPress={() => setFollowListMode('following')} hitSlop={6}>
-              <Text style={styles.followCount}>{S.social.followingCount(followCounts.following)}</Text>
-            </TouchableOpacity>
-          </View>
         </View>
         <View style={styles.headerActions}>
           {retiredCount > 0 && (
@@ -384,6 +377,16 @@ export default function Collection() {
         itemCount={itemCount ?? items.length}
       />
 
+      <ProfileSheet
+        visible={profileSheetVisible}
+        onClose={() => setProfileSheetVisible(false)}
+        profile={{ ...profile, user_id: session?.user?.id }}
+        counts={followCounts}
+        isOwn
+        onSettings={() => setSettingsVisible(true)}
+        onShowFollows={mode => setFollowListMode(mode)}
+      />
+
       <FollowListScreen
         visible={!!followListMode}
         userId={session?.user?.id}
@@ -458,21 +461,6 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 6,
     letterSpacing: 0.5,
-  },
-  followCountsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    marginTop: 4,
-  },
-  followCount: {
-    fontSize: 13,
-    color: C.ink,
-    fontWeight: '500',
-  },
-  followCountDot: {
-    fontSize: 13,
-    color: '#bbb',
   },
   headerActions: {
     flexDirection: 'row',

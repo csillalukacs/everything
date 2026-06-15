@@ -21,6 +21,7 @@ import TagFilterChips from '../components/TagFilterChips'
 import { TrashIcon } from '../components/Icons'
 import ProfileHeader from '../components/ProfileHeader'
 import FollowListModal from './FollowListModal'
+import ProfileSheet from './ProfileSheet'
 import ManageTagsSheet from './ManageTagsSheet'
 import { itemsCacheKey, tagsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
@@ -64,6 +65,7 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false)
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 })
   const [followListMode, setFollowListMode] = useState(null)
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false)
 
   const batchMode = selectedIds.size > 0
 
@@ -714,14 +716,7 @@ export default function ProfilePage() {
         itemCount={itemCount}
         isOwner={isOwner}
         isBlocked={isBlocked}
-        isFollowing={isFollowing}
-        followCounts={followCounts}
-        onShowFollowers={() => setFollowListMode('followers')}
-        onShowFollowing={() => setFollowListMode('following')}
-        onReport={() => setReportingProfile(true)}
-        onBlock={handleBlockProfile}
-        onUnblock={handleUnblockProfile}
-        onToggleFollow={sessionUserId ? handleToggleFollow : undefined}
+        onOpenSheet={() => setProfileSheetOpen(true)}
       />
 
       {!isOwner && !isBlocked && reportingProfile && (
@@ -977,6 +972,21 @@ export default function ProfilePage() {
           />
         </>
       )}
+
+      <ProfileSheet
+        visible={profileSheetOpen}
+        onClose={() => setProfileSheetOpen(false)}
+        profile={{ user_id: userId, display_name: profileName, username, avatar_url: avatarUrl, avatar_thumb_url: avatarThumbUrl }}
+        counts={followCounts}
+        isOwn={isOwner}
+        isFollowing={isFollowing}
+        isBlocked={isBlocked}
+        onToggleFollow={sessionUserId ? handleToggleFollow : undefined}
+        onReport={() => { setProfileSheetOpen(false); setReportingProfile(true) }}
+        onBlock={() => { setProfileSheetOpen(false); handleBlockProfile() }}
+        onUnblock={() => { setProfileSheetOpen(false); handleUnblockProfile() }}
+        onShowFollows={mode => { setProfileSheetOpen(false); setFollowListMode(mode) }}
+      />
 
       <FollowListModal
         visible={!!followListMode}
