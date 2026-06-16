@@ -1,10 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useCollection } from '../lib/CollectionProvider';
 import { supabase } from '../lib/supabase';
 import { fetchFavorites } from '../shared/likesApi';
+import { favoritesCacheKey } from '../shared/cacheKeys';
 import { S } from '../shared/strings';
 import ItemGrid from './ItemGrid';
 import ItemDetailModal from './ItemDetailModal';
@@ -23,17 +25,24 @@ export default function FavoritesScreen() {
     try {
       const rows = await fetchFavorites(supabase, session.user.id, { blockedIds: [...blockedIds], blockedByIds: [...blockedByIds] });
       setFavorites(rows);
+      AsyncStorage.setItem(favoritesCacheKey(session.user.id), JSON.stringify(rows));
     } catch (e) {
       console.error('fetchFavorites error:', e);
     }
   }, [session, blockedIds, blockedByIds]);
 
   useEffect(() => {
+    if (!session) return;
     let cancelled = false;
     setLoading(true);
+    // Show the last-known favorites right away; only spin if we've never loaded.
+    AsyncStorage.getItem(favoritesCacheKey(session.user.id)).then(raw => {
+      if (cancelled || !raw) return;
+      try { setFavorites(JSON.parse(raw)); setLoading(false); } catch { /* ignore */ }
+    });
     load().finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, [load]);
+  }, [load, session]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

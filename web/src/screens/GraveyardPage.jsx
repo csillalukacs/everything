@@ -7,7 +7,7 @@ import { S } from '../../../shared/strings'
 import ItemDetailModal from './ItemDetailModal'
 import ProfileHeader from '../components/ProfileHeader'
 import LockIcon from '../components/LockIcon'
-import { profileCacheKey, countCacheKey } from '../../../shared/cacheKeys'
+import { profileCacheKey, countCacheKey, itemsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 
 const PROFILE_COLS = 'display_name, username, avatar_url, avatar_thumb_url, home_location, home_lat, home_lng'
@@ -29,6 +29,10 @@ export default function GraveyardPage() {
       if (cachedProfile) setProfile(cachedProfile)
       const cachedCount = readCache(countCacheKey(session.user.id))
       if (cachedCount != null) setCollectionCount(cachedCount)
+      // The graveyard is a view over the full item list, which the collection page
+      // already caches — seed from it so retired items render instantly, no spinner.
+      const cachedItems = readCache(itemsCacheKey(session.user.id))
+      if (cachedItems) { setItems(cachedItems); setLoading(false) }
       try {
         const [profRes, fetched] = await Promise.all([
           supabase.from('profiles').select(PROFILE_COLS).eq('user_id', session.user.id).maybeSingle(),
@@ -39,6 +43,7 @@ export default function GraveyardPage() {
           writeCache(profileCacheKey(session.user.id), profRes.data)
         }
         setItems(fetched)
+        writeCache(itemsCacheKey(session.user.id), fetched)
         const count = fetched.filter(i => !isRetired(i)).length
         setCollectionCount(count)
         writeCache(countCacheKey(session.user.id), count)
@@ -74,7 +79,11 @@ export default function GraveyardPage() {
     const patch = { retired_at: null, retire_reason: null, epitaph: null }
     const { error } = await supabase.from('items').update(patch).eq('id', target.id)
     if (!error) {
-      setItems(prev => prev.map(i => i.id === target.id ? { ...i, ...patch } : i))
+      setItems(prev => {
+        const next = prev.map(i => i.id === target.id ? { ...i, ...patch } : i)
+        if (sessionUserId) writeCache(itemsCacheKey(sessionUserId), next)
+        return next
+      })
       // The item rejoins the active collection — keep the cached count in sync.
       setCollectionCount(c => {
         if (c == null) return c
@@ -90,7 +99,11 @@ export default function GraveyardPage() {
     setSelectedId(null)
     const { error } = await supabase.from('items').delete().eq('id', target.id)
     if (!error) {
-      setItems(prev => prev.filter(i => i.id !== target.id))
+      setItems(prev => {
+        const next = prev.filter(i => i.id !== target.id)
+        if (sessionUserId) writeCache(itemsCacheKey(sessionUserId), next)
+        return next
+      })
       deleteStorageForItems([target])
     }
   }

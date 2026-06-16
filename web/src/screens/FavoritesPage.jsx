@@ -8,7 +8,7 @@ import { thumbOf } from '../../../shared/items'
 import { S } from '../../../shared/strings'
 import ItemDetailModal from './ItemDetailModal'
 import ProfileHeader from '../components/ProfileHeader'
-import { profileCacheKey, countCacheKey } from '../../../shared/cacheKeys'
+import { profileCacheKey, countCacheKey, favoritesCacheKey, likesCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 
 const PROFILE_COLS = 'display_name, username, avatar_url, avatar_thumb_url, home_location, home_lat, home_lng'
@@ -31,6 +31,11 @@ export default function FavoritesPage() {
       if (cachedProfile) setProfile(cachedProfile)
       const cachedCount = readCache(countCacheKey(session.user.id))
       if (cachedCount != null) setCollectionCount(cachedCount)
+      // Show the last-known favorites right away; only spin if we've never loaded.
+      const cachedFavorites = readCache(favoritesCacheKey(session.user.id))
+      const cachedLikes = readCache(likesCacheKey(session.user.id))
+      if (cachedFavorites) { setFavorites(cachedFavorites); setLoading(false) }
+      if (cachedLikes) setLikedItemIds(new Set(cachedLikes))
       try {
         const [blocked, blockedBy, profRes, count] = await Promise.all([
           fetchBlockedIds(supabase, session.user.id),
@@ -50,6 +55,8 @@ export default function FavoritesPage() {
         ])
         setFavorites(rows)
         setLikedItemIds(new Set(likedIds))
+        writeCache(favoritesCacheKey(session.user.id), rows)
+        writeCache(likesCacheKey(session.user.id), likedIds)
       } catch (e) {
         console.error('FavoritesPage load error:', e)
       } finally {
@@ -63,6 +70,7 @@ export default function FavoritesPage() {
     setLikedItemIds(prev => {
       const n = new Set(prev)
       if (next) n.add(itemId); else n.delete(itemId)
+      writeCache(likesCacheKey(viewerId), [...n])
       return n
     })
     try {
@@ -73,6 +81,7 @@ export default function FavoritesPage() {
       setLikedItemIds(prev => {
         const n = new Set(prev)
         if (next) n.delete(itemId); else n.add(itemId)
+        writeCache(likesCacheKey(viewerId), [...n])
         return n
       })
     }
