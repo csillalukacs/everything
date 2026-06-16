@@ -248,7 +248,8 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
       : searchedItems.filter(i => (i.tags ?? []).some(t => t.id === activeTag.id));
 
   const headerTitle = profile?.display_name
-    ?? (profile?.username ? `@${profile.username}` : (slug ?? '').slice(0, 8));
+    ?? (profile?.username ? `@${profile.username}`
+      : loading ? '' : S.profileView.noName);
 
   return (
     <View style={styles.container}>

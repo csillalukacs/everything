@@ -167,6 +167,7 @@ export const S = {
   profileView: {
     notFound: (slug) => `no profile at /u/${slug}`,
     nothingPublic: 'nothing public yet',
+    noName: 'someone',
   },
 
   // Open-profile sheet (mobile only)
