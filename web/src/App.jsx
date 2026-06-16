@@ -14,6 +14,7 @@ import { readCache, writeCache } from './lib/cache'
 import AuthScreen from './screens/AuthScreen'
 import ItemDetailModal from './screens/ItemDetailModal'
 import Avatar from './components/Avatar'
+import NotificationsBell from './components/NotificationsBell'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -132,12 +133,11 @@ export default function App() {
         </div>
         <div className="header-right">
           <div className="header-links">
-            <Link to="/notifications" className="notif-bell" aria-label={S.a11y.notifications}>
-              🔔
-              {unreadNotifications > 0 && (
-                <span className="notif-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>
-              )}
-            </Link>
+            <NotificationsBell
+              sessionUserId={session.user.id}
+              unreadCount={unreadNotifications}
+              onMarkedRead={() => setUnreadNotifications(0)}
+            />
             <Link to={`/u/${username ?? session.user.id}`} className="link-btn">{S.feed.myCollection}</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>{S.common.logOut}</button>
           </div>
