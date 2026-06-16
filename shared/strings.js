@@ -293,6 +293,7 @@ export const S = {
     lastUsed: (rel) => `last used ${rel}`,
     timesUsed: (n) => `used ${n} ${plural(n, 'time')}`,
     historyTitle: 'usage history',
+    viewHistory: 'usage history',
     addEntry: 'add entry',
     addDate: 'add',
     noHistory: 'no past days logged yet',

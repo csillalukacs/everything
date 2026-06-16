@@ -55,6 +55,10 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [usageBusy, setUsageBusy] = useState(false);
   const [usedDays, setUsedDays] = useState(() => new Set());
   const [datePickerVisible, setDatePickerVisible] = useState(false);
+  const [historyVisible, setHistoryVisible] = useState(false);
+  // The date picker is its own modal; iOS can't stack it on top of the history sheet,
+  // so we close history first and open the picker once it has fully unmounted.
+  const [pendingPicker, setPendingPicker] = useState(false);
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [armedDay, setArmedDay] = useState(null);
   const useTodayScale = useSharedValue(1);
@@ -120,6 +124,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     setMenuVisible(false);
     setRetireSheetVisible(false);
     setReportSheetVisible(false);
+    setHistoryVisible(false);
     setArmedDay(null);
     if (!pendingDir.current) return;
     translateX.value = pendingDir.current === 'next' ? SCREEN_WIDTH : -SCREEN_WIDTH;
@@ -208,6 +213,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   function onAndroidDateChange(event, date) {
     if (event.type === 'set') commitPickedDate(date);
     else setDatePickerVisible(false);
+    setHistoryVisible(true);
   }
 
   // Logged days other than today (the "use today" button already covers today), most recent first.
@@ -656,6 +662,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   })}
                 </View>
               )}
+              {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               {isOwnerItem && (
                 <View style={styles.usageSection}>
                   <View style={styles.usageRow}>
@@ -682,48 +689,16 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                         : `${S.usage.timesUsed(usageCount)} · ${S.usage.lastUsed(relativeDay(liveItem.last_used_on))}`}
                     </Text>
                   </View>
-                  <View style={styles.historyHeader}>
-                    <Text style={styles.historyTitle}>{S.usage.historyTitle}</Text>
-                    <TouchableOpacity
-                      style={styles.addEntryBtn}
-                      onPress={() => { setPickerDate(new Date()); setDatePickerVisible(true); }}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="add" size={16} color={C.ink} />
-                      <Text style={styles.addEntryText}>{S.usage.addEntry}</Text>
-                    </TouchableOpacity>
-                  </View>
-                  {pastDays.length > 0 ? (
-                    <ScrollView
-                      style={styles.historyList}
-                      nestedScrollEnabled
-                      showsVerticalScrollIndicator={false}
-                    >
-                      {pastDays.map(key => (
-                        <TouchableOpacity
-                          key={key}
-                          style={styles.historyRow}
-                          activeOpacity={0.7}
-                          delayLongPress={300}
-                          onLongPress={() => { Haptics.selectionAsync(); setArmedDay(key); }}
-                          onPress={() => setArmedDay(null)}
-                        >
-                          <Text style={styles.historyDate}>{dayKeyLabel(key)}</Text>
-                          {armedDay === key && (
-                            <TouchableOpacity
-                              style={styles.historyDeleteBtn}
-                              onPress={() => { setArmedDay(null); toggleUsageDay(key, false); }}
-                            >
-                              <Ionicons name="trash-outline" size={14} color={C.red} />
-                              <Text style={styles.historyDeleteText}>{S.common.delete}</Text>
-                            </TouchableOpacity>
-                          )}
-                        </TouchableOpacity>
-                      ))}
-                    </ScrollView>
-                  ) : (
-                    <Text style={styles.historyEmpty}>{S.usage.noHistory}</Text>
-                  )}
+                  <TouchableOpacity
+                    style={styles.historyBtn}
+                    onPress={() => setHistoryVisible(true)}
+                    activeOpacity={0.7}
+                  >
+                    <Ionicons name="time-outline" size={16} color={C.ink} />
+                    <Text style={styles.historyBtnText}>{S.usage.viewHistory}</Text>
+                    <View style={{ flex: 1 }} />
+                    <Ionicons name="chevron-forward" size={16} color="#999" />
+                  </TouchableOpacity>
                 </View>
               )}
               {isRetired(item) && (
@@ -738,7 +713,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   </View>
                 </View>
               )}
-              {item.description ? <Text style={styles.description}>{item.description}</Text> : null}
               {(item.acquired_location || item.acquired_year) && (
                 <Text style={styles.acquired}>
                   {S.itemForm.acquired}
@@ -785,6 +759,61 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           </TouchableOpacity>
         </View>
       )}
+      <BottomSheet
+        visible={historyVisible}
+        onClose={() => setHistoryVisible(false)}
+        onClosed={() => {
+          if (pendingPicker) {
+            setPendingPicker(false);
+            setPickerDate(new Date());
+            setDatePickerVisible(true);
+          }
+        }}
+        sheetStyle={styles.historySheet}
+      >
+        <View style={styles.historyHeader}>
+          <Text style={styles.historyTitle}>{S.usage.historyTitle}</Text>
+          <TouchableOpacity
+            style={styles.addEntryBtn}
+            onPress={() => { setPendingPicker(true); setHistoryVisible(false); }}
+            activeOpacity={0.7}
+          >
+            <Ionicons name="add" size={16} color={C.ink} />
+            <Text style={styles.addEntryText}>{S.usage.addEntry}</Text>
+          </TouchableOpacity>
+        </View>
+        {pastDays.length > 0 ? (
+          <ScrollView
+            style={styles.historyList}
+            nestedScrollEnabled
+            showsVerticalScrollIndicator={false}
+          >
+            {pastDays.map(key => (
+              <TouchableOpacity
+                key={key}
+                style={styles.historyRow}
+                activeOpacity={0.7}
+                delayLongPress={300}
+                onLongPress={() => { Haptics.selectionAsync(); setArmedDay(key); }}
+                onPress={() => setArmedDay(null)}
+              >
+                <Text style={styles.historyDate}>{dayKeyLabel(key)}</Text>
+                {armedDay === key && (
+                  <TouchableOpacity
+                    style={styles.historyDeleteBtn}
+                    onPress={() => { setArmedDay(null); toggleUsageDay(key, false); }}
+                  >
+                    <Ionicons name="trash-outline" size={14} color={C.red} />
+                    <Text style={styles.historyDeleteText}>{S.common.delete}</Text>
+                  </TouchableOpacity>
+                )}
+              </TouchableOpacity>
+            ))}
+          </ScrollView>
+        ) : (
+          <Text style={styles.historyEmpty}>{S.usage.noHistory}</Text>
+        )}
+      </BottomSheet>
       <RetireSheet
         visible={retireSheetVisible}
         onClose={() => setRetireSheetVisible(false)}
@@ -807,6 +836,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
         <BottomSheet
           visible={datePickerVisible}
           onClose={() => setDatePickerVisible(false)}
+          onClosed={() => setHistoryVisible(true)}
           sheetStyle={styles.pickerSheet}
         >
           <DateTimePicker
@@ -1141,6 +1171,29 @@ const styles = StyleSheet.create({
     gap: 12,
     flexWrap: 'wrap',
   },
+  historyBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: C.surface,
+    backgroundColor: '#fff',
+  },
+  historyBtnText: {
+    fontSize: 14,
+    color: C.ink,
+  },
+  historySheet: {
+    backgroundColor: C.bg,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+    paddingTop: 20,
+    paddingBottom: 32,
+    paddingHorizontal: 24,
+  },
   historyHeader: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -1168,7 +1221,8 @@ const styles = StyleSheet.create({
     color: C.ink,
   },
   historyList: {
-    height: 132,
+    height: 264,
+    marginTop: 12,
   },
   historyRow: {
     flexDirection: 'row',
