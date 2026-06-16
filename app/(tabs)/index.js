@@ -263,6 +263,9 @@ export default function Collection() {
               <Text style={styles.graveyardIcon}>{S.graveyard.emoji}</Text>
             </TouchableOpacity>
           )}
+          <TouchableOpacity onPress={() => router.push('/favorites')} style={styles.headerIconBtn} accessibilityLabel={S.a11y.favorites}>
+            <Ionicons name="heart-outline" size={22} color="#999" />
+          </TouchableOpacity>
           <TouchableOpacity onPress={() => router.push('/stats')} style={styles.headerIconBtn}>
             <Ionicons name="bar-chart-outline" size={22} color="#999" />
           </TouchableOpacity>

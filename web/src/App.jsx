@@ -4,6 +4,7 @@ import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
 import { fetchBlockedIds, fetchBlockedByIds } from '../../shared/moderation'
 import { fetchFollowingIds } from '../../shared/follows'
+import { fetchLikedItemIds, addLike, removeLike } from '../../shared/likesApi'
 import { fetchUnreadNotificationCount } from '../../shared/notifications'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
@@ -24,6 +25,7 @@ export default function App() {
   const [blockedIds, setBlockedIds] = useState(() => new Set())
   const [blockedByIds, setBlockedByIds] = useState(() => new Set())
   const [followingIds, setFollowingIds] = useState(() => new Set())
+  const [likedItemIds, setLikedItemIds] = useState(() => new Set())
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [activeTab, setActiveTab] = useState('everyone')
 
@@ -40,7 +42,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) {
-      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setBlockedByIds(new Set()); setFollowingIds(new Set()); setUnreadNotifications(0)
+      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setBlockedByIds(new Set()); setFollowingIds(new Set()); setLikedItemIds(new Set()); setUnreadNotifications(0)
       return
     }
     supabase
@@ -59,6 +61,9 @@ export default function App() {
     fetchFollowingIds(supabase, session.user.id)
       .then(ids => setFollowingIds(new Set(ids)))
       .catch(e => console.error('fetchFollowingIds error:', e))
+    fetchLikedItemIds(supabase, session.user.id)
+      .then(ids => setLikedItemIds(new Set(ids)))
+      .catch(e => console.error('fetchLikedItemIds error:', e))
     fetchUnreadNotificationCount(supabase, session.user.id)
       .then(n => setUnreadNotifications(n))
       .catch(e => console.error('fetchUnreadNotificationCount error:', e))
@@ -99,6 +104,25 @@ export default function App() {
     e => !blockedIds.has(e.item.user_id) && !blockedByIds.has(e.item.user_id),
   )
 
+  async function handleToggleLike(itemId, next) {
+    setLikedItemIds(prev => {
+      const n = new Set(prev)
+      if (next) n.add(itemId); else n.delete(itemId)
+      return n
+    })
+    try {
+      if (next) await addLike(supabase, { userId: session.user.id, itemId })
+      else await removeLike(supabase, { userId: session.user.id, itemId })
+    } catch (e) {
+      console.error('toggle like error:', e)
+      setLikedItemIds(prev => {
+        const n = new Set(prev)
+        if (next) n.delete(itemId); else n.add(itemId)
+        return n
+      })
+    }
+  }
+
   return (
     <div className="app">
       <header className="header">
@@ -114,6 +138,7 @@ export default function App() {
                 <span className="notif-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>
               )}
             </Link>
+            <Link to="/favorites" className="notif-bell" aria-label={S.a11y.favorites}>♥</Link>
             <Link to={`/u/${username ?? session.user.id}`} className="link-btn">{S.feed.myCollection}</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>{S.common.logOut}</button>
           </div>
@@ -194,6 +219,8 @@ export default function App() {
         visible={!!selectedItem}
         item={selectedItem}
         sessionUserId={session.user.id}
+        liked={selectedItem ? likedItemIds.has(selectedItem.id) : false}
+        onToggleLike={handleToggleLike}
         onClose={() => setSelectedItem(null)}
         onBlocked={id => {
           setBlockedIds(prev => new Set(prev).add(id))

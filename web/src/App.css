@@ -1925,6 +1925,37 @@ input {
   100% { transform: scale(1); }
 }
 
+/* Favorite ("heart") button — shown on other people's things in the detail view. */
+.heart-btn {
+  align-self: flex-start;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #fff;
+  border: 1px solid var(--red);
+  color: var(--red);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: transform 0.12s ease, background 0.15s ease;
+}
+
+.heart-btn-on {
+  background: var(--red);
+  color: #fff;
+}
+
+.heart-glyph {
+  font-size: 16px;
+  line-height: 1;
+}
+
+.heart-pulse {
+  animation: use-today-pop 0.3s ease;
+}
+
 .usage-stat {
   font-size: 13px;
   color: #999;

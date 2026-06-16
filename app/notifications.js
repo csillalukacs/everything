@@ -37,6 +37,13 @@ export default function Notifications() {
     router.push(`/u/${actor.username || actor.user_id}`);
   }, [router]);
 
+  // A 'like' is someone favoriting one of your own things — open that thing in your
+  // collection; a 'follow' opens the actor's profile.
+  const handlePress = useCallback(n => {
+    if (n.type === 'like' && n.item_id) router.push(`/?item=${n.item_id}`);
+    else openActor(n.actor);
+  }, [router, openActor]);
+
   return (
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
@@ -64,12 +71,12 @@ export default function Notifications() {
                 key={n.id}
                 style={[styles.row, !n.read_at && styles.rowUnread]}
                 activeOpacity={0.7}
-                onPress={() => openActor(n.actor)}
+                onPress={() => handlePress(n)}
               >
                 <Avatar profile={n.actor} size={40} />
                 <Text style={styles.rowText}>
                   <Text style={styles.name}>{name}</Text>
-                  <Text style={styles.action}> {S.notifications.followed}</Text>
+                  <Text style={styles.action}> {n.type === 'like' ? S.notifications.liked : S.notifications.followed}</Text>
                   {time && <Text style={styles.time}> · {time}</Text>}
                 </Text>
               </TouchableOpacity>

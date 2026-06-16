@@ -13,7 +13,7 @@ import Avatar from '../components/Avatar'
 import { AppleIcon } from '../components/Icons'
 import { isFeaturedTag } from '../../../shared/featuredTag'
 
-export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], items = [], sessionUserId, onUsageChange, onBlocked, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
+export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], items = [], sessionUserId, onUsageChange, onBlocked, liked = false, onToggleLike, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
   const [usageCount, setUsageCount] = useState(0)
   const [lastUsedOn, setLastUsedOn] = useState(null)
@@ -40,7 +40,17 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [retireReason, setRetireReason] = useState(null)
   const [retireEpitaph, setRetireEpitaph] = useState('')
   const [reporting, setReporting] = useState(false)
+  const [likePulse, setLikePulse] = useState(false)
   const fileInputRef = useRef(null)
+
+  function handleToggleLike() {
+    if (!onToggleLike || !item) return
+    if (!liked) {
+      setLikePulse(true)
+      setTimeout(() => setLikePulse(false), 300)
+    }
+    onToggleLike(item.id, !liked)
+  }
 
   useEffect(() => { setDisplayedIdx(0); setRetiring(false); setRetireReason(null); setRetireEpitaph(''); setReporting(false); setAddingUse(false); setPendingUseDate('') }, [item?.id])
 
@@ -432,6 +442,16 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                       )
                     })}
                   </div>
+                )}
+                {!isOwnerItem && onToggleLike && (
+                  <button
+                    type="button"
+                    className={`heart-btn${liked ? ' heart-btn-on' : ''}${likePulse ? ' heart-pulse' : ''}`}
+                    onClick={handleToggleLike}
+                  >
+                    <span className="heart-glyph">{liked ? '♥' : '♡'}</span>
+                    {liked ? S.favorites.favorited : S.favorites.favorite}
+                  </button>
                 )}
                 {retired && (
                   <div className="tombstone">

@@ -7,6 +7,7 @@ import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { submitReport, blockUser, unblockUser } from '../../../shared/moderation'
 import { followUser, unfollowUser, fetchFollowCounts } from '../../../shared/follows'
+import { fetchLikedItemIds, addLike, removeLike } from '../../../shared/likesApi'
 import { UUID_RE } from '../../../shared/identifiers'
 import { formatDateLabel, usageRecencyTier, usageGlowCss } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -67,6 +68,7 @@ export default function ProfilePage() {
   const [followCounts, setFollowCounts] = useState({ followers: 0, following: 0 })
   const [followListMode, setFollowListMode] = useState(null)
   const [profileSheetOpen, setProfileSheetOpen] = useState(false)
+  const [likedItemIds, setLikedItemIds] = useState(() => new Set())
 
   const batchMode = selectedIds.size > 0
 
@@ -149,7 +151,9 @@ export default function ProfilePage() {
         return
       }
       if (slugIsUuid && resolvedProfile?.username) {
-        navigate(`/u/${resolvedProfile.username}`, { replace: true })
+        // Preserve the query string (e.g. ?item=… from a notification) across the
+        // canonical-username redirect.
+        navigate(`/u/${resolvedProfile.username}${window.location.search}`, { replace: true })
         return
       }
       setUserId(resolvedId)
@@ -247,6 +251,39 @@ export default function ProfilePage() {
       .catch(e => console.error('fetchFollowCounts error:', e))
     return () => { cancelled = true }
   }, [userId, isLoggedIn, isFollowing])
+
+  // The viewer's favorites (for the heart state on this profile's items). Fetched
+  // for any signed-in viewer; only matters when viewing someone else's things.
+  const [viewerId, setViewerId] = useState(null)
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) { setViewerId(null); setLikedItemIds(new Set()); return }
+      setViewerId(session.user.id)
+      fetchLikedItemIds(supabase, session.user.id)
+        .then(ids => setLikedItemIds(new Set(ids)))
+        .catch(e => console.error('fetchLikedItemIds error:', e))
+    })
+  }, [slug])
+
+  async function handleToggleLike(itemId, next) {
+    if (!viewerId) return
+    setLikedItemIds(prev => {
+      const n = new Set(prev)
+      if (next) n.add(itemId); else n.delete(itemId)
+      return n
+    })
+    try {
+      if (next) await addLike(supabase, { userId: viewerId, itemId })
+      else await removeLike(supabase, { userId: viewerId, itemId })
+    } catch (e) {
+      console.error('toggle like error:', e)
+      setLikedItemIds(prev => {
+        const n = new Set(prev)
+        if (next) n.delete(itemId); else n.add(itemId)
+        return n
+      })
+    }
+  }
 
   const featuredRedirectCheckedRef = useRef(false)
   useEffect(() => {
@@ -924,6 +961,8 @@ export default function ProfilePage() {
         onRetire={isOwner ? handleRetire : undefined}
         onResurrect={isOwner ? handleResurrect : undefined}
         sessionUserId={sessionUserId}
+        liked={selectedItem ? likedItemIds.has(selectedItem.id) : false}
+        onToggleLike={!isOwner && viewerId ? handleToggleLike : undefined}
         onBlocked={() => setIsBlocked(true)}
         onUsageChange={(id, patch) => setItems(prev => prev.map(i => i.id === id ? { ...i, ...patch } : i))}
         allTags={allTags}

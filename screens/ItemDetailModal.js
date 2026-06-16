@@ -48,7 +48,7 @@ import { C } from '../shared/theme';
 export default function ItemDetailModal({ item, visible, onClose, onDelete, onSave, onRetire, onResurrect, onBlocked, allTags = [], autoEdit = false, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const router = useRouter();
   const insets = useSafeAreaInsets();
-  const { items, session, profile, markUsedToday, unmarkUsedToday, addUsage, removeUsageOn, blockContent, reportContent } = useCollection();
+  const { items, session, profile, markUsedToday, unmarkUsedToday, addUsage, removeUsageOn, blockContent, reportContent, likedItemIds, likeItem, unlikeItem } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   // Usage rollups live on the provider's copy of the item so they update in place.
   const liveItem = useMemo(() => items.find(i => i.id === item?.id) ?? item, [items, item]);
@@ -58,6 +58,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const [pickerDate, setPickerDate] = useState(() => new Date());
   const [armedDay, setArmedDay] = useState(null);
   const useTodayScale = useSharedValue(1);
+  const heartScale = useSharedValue(1);
   const [editing, setEditing] = useState(false);
   const [editName, setEditName] = useState('');
   const [editDescription, setEditDescription] = useState('');
@@ -133,6 +134,26 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   const useTodayStyle = useAnimatedStyle(() => ({
     transform: [{ scale: useTodayScale.value }],
   }));
+
+  const heartStyle = useAnimatedStyle(() => ({
+    transform: [{ scale: heartScale.value }],
+  }));
+
+  const liked = !!item?.id && likedItemIds.has(item.id);
+
+  function handleToggleLike() {
+    if (!item?.id) return;
+    if (liked) {
+      unlikeItem(item.id);
+    } else {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      heartScale.value = withSequence(
+        withTiming(1.3, { duration: 130 }),
+        withSpring(1, { damping: 5, stiffness: 200 }),
+      );
+      likeItem(item.id);
+    }
+  }
 
   const isOwnerItem = session?.user?.id && item?.user_id === session.user.id;
   const todayKey = dayKey(new Date());
@@ -620,6 +641,24 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   })}
                 </View>
               )}
+              {!isOwner && (
+                <Animated.View style={[heartStyle, styles.heartWrap]}>
+                  <TouchableOpacity
+                    style={[styles.heartBtn, liked && styles.heartBtnOn]}
+                    onPress={handleToggleLike}
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons
+                      name={liked ? 'heart' : 'heart-outline'}
+                      size={18}
+                      color={liked ? '#fff' : C.red}
+                    />
+                    <Text style={[styles.heartText, liked && styles.heartTextOn]}>
+                      {liked ? S.favorites.favorited : S.favorites.favorite}
+                    </Text>
+                  </TouchableOpacity>
+                </Animated.View>
+              )}
               {isOwnerItem && (
                 <View style={styles.usageSection}>
                   <View style={styles.usageRow}>
@@ -1087,6 +1126,32 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     marginTop: 6,
     lineHeight: 20,
+  },
+  heartWrap: {
+    alignSelf: 'flex-start',
+  },
+  heartBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 20,
+    backgroundColor: '#fff',
+    borderWidth: 1,
+    borderColor: C.red,
+  },
+  heartBtnOn: {
+    backgroundColor: C.red,
+    borderColor: C.red,
+  },
+  heartText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: C.red,
+  },
+  heartTextOn: {
+    color: '#fff',
   },
   usageSection: {
     gap: 10,

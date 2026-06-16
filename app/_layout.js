@@ -32,6 +32,7 @@ function RootStack() {
       <Stack.Screen name="u/[slug]" />
       <Stack.Screen name="stats" />
       <Stack.Screen name="notifications" />
+      <Stack.Screen name="favorites" />
       <Stack.Screen name="canvas" />
     </Stack>
   );

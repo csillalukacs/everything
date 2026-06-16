@@ -270,6 +270,19 @@ export const S = {
     title: 'notifications',
     empty: 'no notifications yet',
     followed: 'followed you',
+    liked: 'favorited your thing',
+  },
+
+  // Favorites ("hearts") — favorite other people's things, view them in a grid.
+  favorites: {
+    entry: 'favorites',
+    title: 'favorites',
+    subtitle: 'things you’ve hearted from others',
+    favorite: 'favorite',
+    favorited: 'favorited',
+    empty: 'no favorites yet',
+    emptyHint: 'heart things from other people to keep them here',
+    count: (n) => `${n} ${plural(n, 'favorite')}`,
   },
 
   // Usage tracking (item detail + edit)
@@ -401,6 +414,7 @@ export const S = {
     addItem: 'add thing',
     yourCollection: 'your collection',
     notifications: 'notifications',
+    favorites: 'favorites',
     // web
     removePhoto: 'remove photo',
     clearSearch: 'clear search',

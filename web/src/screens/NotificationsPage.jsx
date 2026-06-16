@@ -11,11 +11,13 @@ export default function NotificationsPage() {
   const navigate = useNavigate()
   const [rows, setRows] = useState([])
   const [blockedIds, setBlockedIds] = useState(() => new Set())
+  const [sessionUserId, setSessionUserId] = useState(null)
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { navigate('/'); return }
+      setSessionUserId(session.user.id)
       Promise.all([
         fetchNotifications(supabase, session.user.id),
         fetchBlockedIds(supabase, session.user.id),
@@ -58,17 +60,20 @@ export default function NotificationsPage() {
           {visible.map(n => {
             const name = n.actor.display_name || n.actor.username || 'someone'
             const time = relativeTime(n.created_at)
-            const slug = n.actor.username || n.actor.user_id
+            // A 'like' opens your own thing; a 'follow' opens the actor's profile.
+            const to = n.type === 'like' && n.item_id
+              ? `/u/${sessionUserId}?item=${n.item_id}`
+              : `/u/${n.actor.username || n.actor.user_id}`
             return (
               <Link
                 key={n.id}
-                to={`/u/${slug}`}
+                to={to}
                 className={`notif-row${n.read_at ? '' : ' notif-row-unread'}`}
               >
                 <Avatar profile={n.actor} size={40} />
                 <p className="notif-text">
                   <span className="notif-name">{name}</span>
-                  <span className="notif-action"> {S.notifications.followed}</span>
+                  <span className="notif-action"> {n.type === 'like' ? S.notifications.liked : S.notifications.followed}</span>
                   {time && <span className="notif-time"> · {time}</span>}
                 </p>
               </Link>
