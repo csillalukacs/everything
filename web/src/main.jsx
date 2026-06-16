@@ -1,6 +1,7 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
+import { Analytics } from '@vercel/analytics/react'
 import './App.css'
 import App from './App.jsx'
 import ProfilePage from './screens/ProfilePage.jsx'
@@ -24,6 +25,7 @@ createRoot(document.getElementById('root')).render(
         <Route path="/graveyard" element={<GraveyardPage />} />
         <Route path="/terms" element={<TermsPage />} />
       </Routes>
+      <Analytics />
     </BrowserRouter>
   </StrictMode>,
 )
