@@ -164,7 +164,7 @@ export default function Feed() {
                       {time && <Text style={styles.posterTime}> · {time}</Text>}
                     </Text>
                     {item.name && <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>}
-                    {item.description && (
+                    {event.type !== 'usage' && item.description && (
                       <Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
                     )}
                   </View>

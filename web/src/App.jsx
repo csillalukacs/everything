@@ -199,7 +199,7 @@ export default function App() {
                     {time && <span className="feed-poster-time"> · {time}</span>}
                   </p>
                   {item.name && <h2 className="feed-item-name">{item.name}</h2>}
-                  {item.description && (
+                  {event.type !== 'usage' && item.description && (
                     <p className="feed-item-description">{item.description}</p>
                   )}
                 </div>
