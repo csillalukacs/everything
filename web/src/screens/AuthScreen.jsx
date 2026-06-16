@@ -1,23 +1,8 @@
-import { useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { S } from '../../../shared/strings'
 
 export default function AuthScreen() {
-  const navigate = useNavigate()
-
-  // A rejected signup (e.g. email not on the allowlist) bounces back from
-  // Google with an error in the URL hash. Send it to the dedicated error page.
-  useEffect(() => {
-    const hash = window.location.hash.slice(1)
-    if (!hash) return
-    const params = new URLSearchParams(hash)
-    if (params.get('error')) {
-      window.history.replaceState(null, '', window.location.pathname)
-      navigate('/login-error', { replace: true })
-    }
-  }, [navigate])
-
   async function signInWithGoogle() {
     await supabase.auth.signInWithOAuth({
       provider: 'google',
