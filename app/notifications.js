@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
@@ -6,6 +7,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { useCollection } from '../lib/CollectionProvider';
 import { fetchNotifications } from '../shared/notifications';
+import { notificationsCacheKey } from '../shared/cacheKeys';
 import { relativeTime } from '../shared/dates';
 import { S } from '../shared/strings';
 import { C } from '../shared/theme';
@@ -21,8 +23,18 @@ export default function Notifications() {
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
+    const key = notificationsCacheKey(session.user.id);
+    // Show the last-known list right away; only spin if we've never loaded.
+    AsyncStorage.getItem(key).then(raw => {
+      if (cancelled || !raw) return;
+      try { setRows(JSON.parse(raw)); setLoading(false); } catch { /* ignore */ }
+    });
     fetchNotifications(supabase, session.user.id)
-      .then(data => { if (!cancelled) setRows(data); })
+      .then(data => {
+        if (cancelled) return;
+        setRows(data);
+        AsyncStorage.setItem(key, JSON.stringify(data));
+      })
       .catch(e => console.error('fetchNotifications error:', e))
       .finally(() => { if (!cancelled) setLoading(false); });
     // Opening the screen clears the badge.

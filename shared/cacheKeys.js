@@ -5,3 +5,4 @@ export const countCacheKey = userId => `cache:count:${userId}`;
 export const likesCacheKey = userId => `cache:likes:${userId}`;
 export const dailyCacheKey = userId => `shuffle:daily:${userId}`;
 export const feedCacheKey = userId => `cache:feed:${userId}`;
+export const notificationsCacheKey = userId => `cache:notifications:${userId}`;

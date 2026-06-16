@@ -5,6 +5,8 @@ import { fetchNotifications, markNotificationsRead } from '../../../shared/notif
 import { fetchBlockedIds } from '../../../shared/moderation'
 import { relativeTime } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
+import { notificationsCacheKey } from '../../../shared/cacheKeys'
+import { readCache, writeCache } from '../lib/cache'
 import Avatar from './Avatar'
 
 export default function NotificationsBell({ sessionUserId, unreadCount, onMarkedRead }) {
@@ -33,7 +35,10 @@ export default function NotificationsBell({ sessionUserId, unreadCount, onMarked
     const next = !open
     setOpen(next)
     if (!next || !sessionUserId) return
-    setLoading(true)
+    // Show the last-known list right away; only spin if we've never loaded.
+    const cached = readCache(notificationsCacheKey(sessionUserId))
+    if (cached) { setRows(cached); setLoading(false) }
+    else setLoading(true)
     Promise.all([
       fetchNotifications(supabase, sessionUserId),
       fetchBlockedIds(supabase, sessionUserId),
@@ -41,6 +46,7 @@ export default function NotificationsBell({ sessionUserId, unreadCount, onMarked
       .then(([data, blocked]) => {
         setRows(data)
         setBlockedIds(new Set(blocked))
+        writeCache(notificationsCacheKey(sessionUserId), data)
       })
       .catch(e => console.error('fetchNotifications error:', e))
       .finally(() => setLoading(false))

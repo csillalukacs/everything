@@ -5,6 +5,8 @@ import { fetchNotifications, markNotificationsRead } from '../../../shared/notif
 import { fetchBlockedIds } from '../../../shared/moderation'
 import { relativeTime } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
+import { notificationsCacheKey } from '../../../shared/cacheKeys'
+import { readCache, writeCache } from '../lib/cache'
 import Avatar from '../components/Avatar'
 
 export default function NotificationsPage() {
@@ -18,6 +20,9 @@ export default function NotificationsPage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { navigate('/'); return }
       setSessionUserId(session.user.id)
+      // Show the last-known list right away; only spin if we've never loaded.
+      const cached = readCache(notificationsCacheKey(session.user.id))
+      if (cached) { setRows(cached); setLoading(false) }
       Promise.all([
         fetchNotifications(supabase, session.user.id),
         fetchBlockedIds(supabase, session.user.id),
@@ -25,6 +30,7 @@ export default function NotificationsPage() {
         .then(([data, blocked]) => {
           setRows(data)
           setBlockedIds(new Set(blocked))
+          writeCache(notificationsCacheKey(session.user.id), data)
         })
         .catch(e => console.error('fetchNotifications error:', e))
         .finally(() => setLoading(false))
