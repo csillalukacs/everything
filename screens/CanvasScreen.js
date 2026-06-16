@@ -1,6 +1,6 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import * as MediaLibrary from 'expo-media-library';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { memo, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -30,6 +30,8 @@ import {
   GestureHandlerRootView,
 } from 'react-native-gesture-handler';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useDerivedValue, useSharedValue } from 'react-native-reanimated';
+import { runOnJS } from 'react-native-worklets';
 import { useCollection } from '../lib/CollectionProvider';
 import { thumbOf } from '../shared/items';
 import { S } from '../shared/strings';
@@ -91,6 +93,59 @@ function stripRuntime(items) {
   return items.map(({ skImage, tightBounds, pending, ...rest }) => rest);
 }
 
+// One placed item. While it's the gesture-active item, its transform is driven by the
+// shared values on the UI thread (no React re-render per frame); otherwise it reads the
+// committed values from props. Memoized so a commit only re-renders the item that moved.
+const PlacedItem = memo(function PlacedItem({
+  item, isSelected, viewScale, activeId, liveX, liveY, liveScale, liveRot,
+}) {
+  const hw = item.width / 2;
+  const hh = item.height / 2;
+  const transform = useDerivedValue(() => {
+    const live = activeId.value === item.id;
+    return [
+      { translateX: live ? liveX.value : item.x },
+      { translateY: live ? liveY.value : item.y },
+      { rotate: live ? liveRot.value : item.rotation },
+      { scale: live ? liveScale.value : item.scale },
+    ];
+  }, [item.id, item.x, item.y, item.scale, item.rotation]);
+
+  const pad = 3 / item.scale / (viewScale || 1);
+  const strokeW = 1.5 / item.scale / (viewScale || 1);
+  const b = item.skImage && item.tightBounds
+    ? item.tightBounds
+    : { minX: -hw, minY: -hh, maxX: hw, maxY: hh };
+
+  return (
+    <Group transform={transform}>
+      {item.skImage ? (
+        <SkiaImage
+          image={item.skImage}
+          x={-hw}
+          y={-hh}
+          width={item.width}
+          height={item.height}
+          fit="contain"
+        />
+      ) : (
+        <Rect x={-hw} y={-hh} width={item.width} height={item.height} color={C.surface} />
+      )}
+      {isSelected && (
+        <Rect
+          x={b.minX - pad}
+          y={b.minY - pad}
+          width={b.maxX - b.minX + pad * 2}
+          height={b.maxY - b.minY + pad * 2}
+          color={C.ink}
+          style="stroke"
+          strokeWidth={strokeW}
+        />
+      )}
+    </Group>
+  );
+});
+
 export default function CanvasScreen({
   onClose,
   collageId,
@@ -116,9 +171,19 @@ export default function CanvasScreen({
 
   const placedItemsRef = useRef([]);
   const selectedIdRef = useRef(null);
-  const panStartRef = useRef(null);
-  const pinchStartRef = useRef(null);
-  const rotStartRef = useRef(null);
+
+  // Live transform of the gesture-active item, driven on the UI thread. `start*` anchor
+  // the gesture; `live*` are what the active PlacedItem renders. Committed to React state
+  // only on gesture finalize.
+  const activeId = useSharedValue(null);
+  const startX = useSharedValue(0);
+  const startY = useSharedValue(0);
+  const startScale = useSharedValue(1);
+  const startRot = useSharedValue(0);
+  const liveX = useSharedValue(0);
+  const liveY = useSharedValue(0);
+  const liveScale = useSharedValue(1);
+  const liveRot = useSharedValue(0);
 
   useEffect(() => { placedItemsRef.current = placedItems; }, [placedItems]);
   useEffect(() => { selectedIdRef.current = selectedId; }, [selectedId]);
@@ -203,60 +268,119 @@ export default function CanvasScreen({
     return null;
   }
 
-  function updateSelected(updates) {
-    const id = selectedIdRef.current;
+  // Seed the live shared values from a placed item so a gesture can drive it on the UI
+  // thread. Re-anchors `start*` to the current live values if it's already active, so a
+  // second simultaneous gesture (e.g. pinch starting mid-pan) composes correctly.
+  function beginManipulation(id) {
     if (!id) return;
-    setPlacedItems(prev => prev.map(p => p.id === id ? { ...p, ...updates } : p));
+    const item = placedItemsRef.current.find(p => p.id === id);
+    if (!item) return;
+    if (activeId.value !== id) {
+      startX.value = item.x;
+      startY.value = item.y;
+      startScale.value = item.scale;
+      startRot.value = item.rotation;
+      liveX.value = item.x;
+      liveY.value = item.y;
+      liveScale.value = item.scale;
+      liveRot.value = item.rotation;
+      activeId.value = id;
+    } else {
+      startX.value = liveX.value;
+      startY.value = liveY.value;
+      startScale.value = liveScale.value;
+      startRot.value = liveRot.value;
+    }
+  }
+
+  function beginManipulationSelected() {
+    beginManipulation(selectedIdRef.current);
+  }
+
+  function handleTap(x, y) {
+    setSelectedId(hitTest(x, y));
+  }
+
+  function handlePanBegin(x, y) {
+    const hit = hitTest(x, y);
+    if (hit) {
+      setSelectedId(hit);
+      beginManipulation(hit);
+    } else {
+      setSelectedId(null);
+      activeId.value = null;
+    }
+  }
+
+  // Write the live transform back into React state. No-op for a pure tap (values
+  // unchanged), so tapping doesn't mark the collage dirty.
+  function commitManipulation() {
+    const id = activeId.value;
+    if (!id) return;
+    const item = placedItemsRef.current.find(p => p.id === id);
+    if (!item) return;
+    const x = liveX.value, y = liveY.value, s = liveScale.value, r = liveRot.value;
+    if (item.x === x && item.y === y && item.scale === s && item.rotation === r) return;
+    setPlacedItems(prev => prev.map(p =>
+      p.id === id ? { ...p, x, y, scale: s, rotation: r } : p,
+    ));
     setDirty(true);
   }
 
-  const tapGesture = Gesture.Tap().runOnJS(true).onEnd((e) => {
-    const hit = hitTest(e.x, e.y);
-    setSelectedId(hit);
-  });
+  // Captured by value into the worklets below; constant for the duration of a gesture
+  // since no React re-render happens while dragging.
+  const vScale = view.scale;
 
-  const panGesture = Gesture.Pan().runOnJS(true)
+  const tapGesture = Gesture.Tap()
+    .onEnd((e) => {
+      'worklet';
+      runOnJS(handleTap)(e.x, e.y);
+    });
+
+  const panGesture = Gesture.Pan()
     .onBegin((e) => {
-      const hit = hitTest(e.x, e.y);
-      if (hit) {
-        setSelectedId(hit);
-        const item = placedItemsRef.current.find(p => p.id === hit);
-        panStartRef.current = { x: item.x, y: item.y };
-      } else {
-        panStartRef.current = null;
-        setSelectedId(null);
-      }
+      'worklet';
+      runOnJS(handlePanBegin)(e.x, e.y);
     })
     .onChange((e) => {
-      if (!panStartRef.current) return;
-      const id = selectedIdRef.current;
-      if (!id || !view.scale) return;
-      const dx = e.translationX / view.scale;
-      const dy = e.translationY / view.scale;
-      setPlacedItems(prev => prev.map(p =>
-        p.id === id ? { ...p, x: panStartRef.current.x + dx, y: panStartRef.current.y + dy } : p,
-      ));
-      setDirty(true);
+      'worklet';
+      if (activeId.value === null || !vScale) return;
+      liveX.value = startX.value + e.translationX / vScale;
+      liveY.value = startY.value + e.translationY / vScale;
+    })
+    .onFinalize(() => {
+      'worklet';
+      runOnJS(commitManipulation)();
     });
 
-  const pinchGesture = Gesture.Pinch().runOnJS(true)
+  const pinchGesture = Gesture.Pinch()
     .onBegin(() => {
-      const item = placedItemsRef.current.find(p => p.id === selectedIdRef.current);
-      pinchStartRef.current = item?.scale ?? 1;
+      'worklet';
+      runOnJS(beginManipulationSelected)();
     })
     .onChange((e) => {
-      if (pinchStartRef.current === null) return;
-      updateSelected({ scale: Math.max(0.1, pinchStartRef.current * e.scale) });
+      'worklet';
+      if (activeId.value === null) return;
+      liveScale.value = Math.max(0.1, startScale.value * e.scale);
+    })
+    .onFinalize(() => {
+      'worklet';
+      runOnJS(commitManipulation)();
     });
 
-  const rotationGesture = Gesture.Rotation().runOnJS(true)
+  const rotationGesture = Gesture.Rotation()
     .onBegin(() => {
-      const item = placedItemsRef.current.find(p => p.id === selectedIdRef.current);
-      rotStartRef.current = item?.rotation ?? 0;
+      'worklet';
+      runOnJS(beginManipulationSelected)();
     })
     .onChange((e) => {
-      if (rotStartRef.current === null) return;
-      updateSelected({ rotation: rotStartRef.current + e.rotation });
+      'worklet';
+      if (activeId.value === null) return;
+      liveRot.value = startRot.value + e.rotation;
+    })
+    .onFinalize(() => {
+      'worklet';
+      runOnJS(commitManipulation)();
     });
 
   const composedGesture = Gesture.Simultaneous(
@@ -424,59 +548,19 @@ export default function CanvasScreen({
                     ]}
                   >
                     <Rect x={0} y={0} width={LOGICAL_SIZE} height={LOGICAL_SIZE} color="white" />
-                    {placedItems.map(item => {
-                      const hw = item.width / 2;
-                      const hh = item.height / 2;
-                      const isSelected = item.id === selectedId;
-                      const pad = 3 / item.scale / (view.scale || 1);
-                      const strokeW = 1.5 / item.scale / (view.scale || 1);
-                      return (
-                        <Group
-                          key={item.id}
-                          transform={[
-                            { translateX: item.x },
-                            { translateY: item.y },
-                            { rotate: item.rotation },
-                            { scale: item.scale },
-                          ]}
-                        >
-                          {item.skImage ? (
-                            <SkiaImage
-                              image={item.skImage}
-                              x={-hw}
-                              y={-hh}
-                              width={item.width}
-                              height={item.height}
-                              fit="contain"
-                            />
-                          ) : (
-                            <Rect
-                              x={-hw}
-                              y={-hh}
-                              width={item.width}
-                              height={item.height}
-                              color={C.surface}
-                            />
-                          )}
-                          {isSelected && (() => {
-                            const b = item.skImage && item.tightBounds
-                              ? item.tightBounds
-                              : { minX: -hw, minY: -hh, maxX: hw, maxY: hh };
-                            return (
-                              <Rect
-                                x={b.minX - pad}
-                                y={b.minY - pad}
-                                width={b.maxX - b.minX + pad * 2}
-                                height={b.maxY - b.minY + pad * 2}
-                                color={C.ink}
-                                style="stroke"
-                                strokeWidth={strokeW}
-                              />
-                            );
-                          })()}
-                        </Group>
-                      );
-                    })}
+                    {placedItems.map(item => (
+                      <PlacedItem
+                        key={item.id}
+                        item={item}
+                        isSelected={item.id === selectedId}
+                        viewScale={view.scale}
+                        activeId={activeId}
+                        liveX={liveX}
+                        liveY={liveY}
+                        liveScale={liveScale}
+                        liveRot={liveRot}
+                      />
+                    ))}
                   </Group>
                 </Canvas>
               </GestureDetector>
