@@ -32,6 +32,7 @@ import { dayKey, relativeDay, dayKeyLabel } from '../shared/dates';
 import { fetchItemUsages } from '../shared/usagesApi';
 import { supabase } from '../lib/supabase';
 import { S } from '../shared/strings';
+import { itemUrl } from '../shared/links';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import CameraCaptureModal from './CameraCaptureModal';
 import BottomSheet from './BottomSheet';
@@ -298,7 +299,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       ? (profile?.username || session?.user?.id)
       : (item.profile?.username || item.user_id);
     if (!slug) return;
-    const url = `things://u/${slug}?item=${item.id}`;
+    const url = itemUrl(slug, item.id);
     const name = item.name?.trim();
     try {
       await Share.share({
@@ -548,10 +549,13 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                   </TouchableOpacity>
                   {menuVisible && (
                     <View style={styles.imageMenu}>
-                      <View style={[styles.imageMenuItem, styles.imageMenuItemDisabled]}>
-                        <Ionicons name="share-outline" size={18} color="#BBB" />
-                        <Text style={[styles.imageMenuItemText, styles.imageMenuItemDisabledText]}>{S.common.share}</Text>
-                      </View>
+                      <TouchableOpacity
+                        style={styles.imageMenuItem}
+                        onPress={() => { setMenuVisible(false); handleShare(); }}
+                      >
+                        <Ionicons name="share-outline" size={18} color={C.ink} />
+                        <Text style={styles.imageMenuItemText}>{S.common.share}</Text>
+                      </TouchableOpacity>
                       {onSave && !isRetired(item) && (
                         <TouchableOpacity
                           style={styles.imageMenuItem}
@@ -1096,12 +1100,6 @@ const styles = StyleSheet.create({
     fontSize: 16,
     width: 18,
     textAlign: 'center',
-  },
-  imageMenuItemDisabled: {
-    opacity: 1,
-  },
-  imageMenuItemDisabledText: {
-    color: '#BBB',
   },
   date: {
     fontSize: 13,

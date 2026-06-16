@@ -25,6 +25,7 @@ export const S = {
     delete: 'delete',
     edit: 'edit',
     share: 'share',
+    linkCopied: 'link copied',
     rename: 'rename',
     remove: 'remove',
     apply: 'apply',

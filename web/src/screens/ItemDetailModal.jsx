@@ -12,6 +12,7 @@ import LockIcon from '../components/LockIcon'
 import Avatar from '../components/Avatar'
 import { AppleIcon } from '../components/Icons'
 import { isFeaturedTag } from '../../../shared/featuredTag'
+import { itemUrl } from '../../../shared/links'
 
 export default function ItemDetailModal({ visible, item, onClose, onDelete, onSave, onRetire, onResurrect, allTags = [], items = [], sessionUserId, onUsageChange, onBlocked, liked = false, onToggleLike, onPrev, onNext, onTagPress, onYearPress, onCityPress }) {
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items])
@@ -40,6 +41,7 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const [retireReason, setRetireReason] = useState(null)
   const [retireEpitaph, setRetireEpitaph] = useState('')
   const [reporting, setReporting] = useState(false)
+  const [shareCopied, setShareCopied] = useState(false)
   const [likePulse, setLikePulse] = useState(false)
   const fileInputRef = useRef(null)
 
@@ -248,6 +250,24 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
     alert(S.moderation.reportThanksBody)
   }
 
+  async function handleShare() {
+    const slug = item.profile?.username || item.user_id
+    if (!slug) return
+    const url = itemUrl(slug, item.id)
+    const name = item.name?.trim()
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: name || S.appName, url })
+        return
+      } catch { return }
+    }
+    try {
+      await navigator.clipboard.writeText(url)
+      setShareCopied(true)
+      setTimeout(() => setShareCopied(false), 2000)
+    } catch {}
+  }
+
   async function handleBlock() {
     if (!window.confirm(`${S.moderation.blockConfirmTitle(ownerName)}\n${S.moderation.blockConfirmBody}`)) return
     try {
@@ -286,6 +306,11 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               <button onClick={onPrev} disabled={!onPrev} className="nav-btn">‹</button>
               <button onClick={onNext} disabled={!onNext} className="nav-btn">›</button>
             </div>
+          )}
+          {!editing && (
+            <button className="link-btn" onClick={handleShare}>
+              {shareCopied ? S.common.linkCopied : S.common.share}
+            </button>
           )}
           {onSave && !retired && (
             <button

@@ -125,7 +125,12 @@ These are reused by the routes above. Most are rendered as `<Modal>` overlays fr
 
 ### Deep linking
 
-The `scheme: "things"` in `app.json` plus Expo Router's automatic linking config means `things://u/alice` opens `/u/alice` natively. HTTPS universal links require additional platform-side setup (`apple-app-site-association`, `assetlinks.json`) — not yet configured.
+The `scheme: "things"` in `app.json` plus Expo Router's automatic linking config means `things://u/alice` opens `/u/alice` natively.
+
+HTTPS universal/app links are configured for the domain **`things.whimsylabs.xyz`** (the web app's host). Share links are canonical https URLs built from [`shared/links.js`](shared/links.js) (`SITE_URL`, `profileUrl`, `itemUrl`) — used by both the mobile share sheet (`ItemDetailModal`) and the web share button. They open the native app when installed and fall back to the web app otherwise.
+- iOS: `ios.associatedDomains` (`applinks:things.whimsylabs.xyz`) in `app.json` + [`web/public/.well-known/apple-app-site-association`](web/public/.well-known/apple-app-site-association). The `appID` placeholder `TEAMID.` must be replaced with the real Apple Team ID.
+- Android: `android.intentFilters` (host + `pathPrefix: /u`, `autoVerify`) in `app.json` + [`web/public/.well-known/assetlinks.json`](web/public/.well-known/assetlinks.json). The `sha256_cert_fingerprints` placeholder must be replaced with the release signing fingerprint (from EAS credentials).
+- The `.well-known` files ship via `web/public/` so the web host (Vercel/CF Pages) serves them. AASA must be served as `application/json` with no redirect.
 
 ### Key libraries
 
