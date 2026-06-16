@@ -24,7 +24,7 @@ import ProfileHeader from '../components/ProfileHeader'
 import FollowListModal from './FollowListModal'
 import ProfileSheet from './ProfileSheet'
 import ManageTagsSheet from './ManageTagsSheet'
-import { itemsCacheKey, tagsCacheKey } from '../../../shared/cacheKeys'
+import { itemsCacheKey, tagsCacheKey, profileCacheKey, countCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 
 export default function ProfilePage() {
@@ -61,7 +61,6 @@ export default function ProfilePage() {
   const [manageTagsVisible, setManageTagsVisible] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
   const [randomSeed, setRandomSeed] = useState(() => newRandomSeed())
-  const [graveyardOpen, setGraveyardOpen] = useState(false)
   const [reportingProfile, setReportingProfile] = useState(false)
   const [isBlocked, setIsBlocked] = useState(false)
   const [isFollowing, setIsFollowing] = useState(false)
@@ -122,6 +121,37 @@ export default function ProfilePage() {
       const slugIsUuid = UUID_RE.test(slug)
       const { data: { session } } = await supabase.auth.getSession()
 
+      // Fast path: if this is our own profile, paint the header + grid from cache
+      // before the network resolves the slug, so returning from a sub-page
+      // (graveyard/favorites) keeps the header in place instead of flashing white.
+      if (session) {
+        const cachedProfile = readCache(profileCacheKey(session.user.id))
+        const ownsSlug = (slugIsUuid && slug === session.user.id)
+          || (cachedProfile?.username && cachedProfile.username.toLowerCase() === slug.toLowerCase())
+        if (ownsSlug) {
+          if (cachedProfile) {
+            setProfileName(cachedProfile.display_name)
+            setUsername(cachedProfile.username)
+            setAvatarUrl(cachedProfile.avatar_url ?? null)
+            setAvatarThumbUrl(cachedProfile.avatar_thumb_url ?? null)
+            setHome(cachedProfile.home_location
+              ? { location: cachedProfile.home_location, lat: cachedProfile.home_lat, lng: cachedProfile.home_lng }
+              : null)
+          }
+          const cachedItems = readCache(itemsCacheKey(session.user.id))
+          const cachedTags = readCache(tagsCacheKey(session.user.id))
+          const cachedCount = readCache(countCacheKey(session.user.id))
+          setUserId(session.user.id)
+          setIsOwner(true)
+          setSessionUserId(session.user.id)
+          setIsLoggedIn(true)
+          if (cachedItems) setItems(cachedItems)
+          if (cachedTags) setAllTags(cachedTags)
+          if (cachedCount != null) setItemCount(cachedCount)
+          if (cachedItems) setLoading(false)
+        }
+      }
+
       let resolvedId = null
       let resolvedProfile = null
       const cols = 'user_id, display_name, username, home_location, home_lat, home_lng, avatar_url, avatar_thumb_url'
@@ -170,6 +200,9 @@ export default function ProfilePage() {
       let ownerSession = false
       let blocked = false
       const isOwnerView = session && session.user.id === resolvedId
+      // Cache your own profile so collection sub-pages (graveyard, favorites) can
+      // render the header from cache instead of flashing the user id while it loads.
+      if (isOwnerView && resolvedProfile) writeCache(profileCacheKey(resolvedId), resolvedProfile)
       if (isOwnerView) {
         const cachedItems = readCache(itemsCacheKey(resolvedId))
         const cachedTags = readCache(tagsCacheKey(resolvedId))
@@ -225,7 +258,11 @@ export default function ProfilePage() {
 
       const publicOnly = !ownerSession
       fetchItemCount(supabase, { userId: resolvedId, publicOnly })
-        .then(setItemCount)
+        .then(c => {
+          setItemCount(c)
+          // Cache your own count so sub-pages can show "· N things" without a flash.
+          if (ownerSession) writeCache(countCacheKey(resolvedId), c)
+        })
         .catch(e => console.error('fetchItemCount error:', e))
 
       try {
@@ -773,10 +810,17 @@ export default function ProfilePage() {
         </div>
       )}
 
-      {isOwner && retiredItems.length > 0 && !graveyardOpen && (
-        <button className="graveyard-entry" onClick={() => setGraveyardOpen(true)}>
-          {S.graveyard.emoji} {S.graveyard.entry} · {retiredItems.length}
-        </button>
+      {isOwner && (
+        <div className="collection-entries">
+          {retiredItems.length > 0 && (
+            <button className="graveyard-entry" onClick={() => navigate('/graveyard')}>
+              {S.graveyard.emoji} {S.graveyard.entry} · {retiredItems.length}
+            </button>
+          )}
+          <button className="graveyard-entry" onClick={() => navigate('/favorites')}>
+            ♥ {S.favorites.entry}
+          </button>
+        </div>
       )}
 
       {isBlocked ? (
@@ -784,34 +828,6 @@ export default function ProfilePage() {
           <p className="blocked-notice-title">{S.moderation.profileBlocked(profileName || (username ? `@${username}` : 'this user'))}</p>
           <p className="blocked-notice-hint">{S.moderation.profileBlockedHint}</p>
           <button className="link-btn link-btn-dark" onClick={handleUnblockProfile}>{S.moderation.unblock}</button>
-        </div>
-      ) : graveyardOpen ? (
-        <div className="graveyard-view">
-          <div className="graveyard-bar">
-            <button className="link-btn graveyard-back" onClick={() => setGraveyardOpen(false)}>‹</button>
-            <h2 className="graveyard-title">{S.graveyard.emoji} {S.graveyard.title}</h2>
-            <span className="graveyard-count">
-              {retiredItems.length === 0 ? S.graveyard.subtitle : S.graveyard.count(retiredItems.length)}
-            </span>
-          </div>
-          {retiredItems.length === 0 ? (
-            <div className="graveyard-empty">
-              <div className="graveyard-empty-emoji">{S.graveyard.emoji}</div>
-              <p>{S.graveyard.empty}</p>
-              <p className="graveyard-empty-hint">{S.graveyard.emptyHint}</p>
-            </div>
-          ) : (
-            <div className="grid">
-              {retiredItems.map(item => (
-                <div key={item.id} className="card" onClick={() => openItem(item)}>
-                  {item.image_url && <img src={thumbOf(item)} alt={item.name || ''} loading="lazy" />}
-                  {item.is_private && (
-                    <div className="card-private-badge"><LockIcon size={10} color="#fff" /></div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
         </div>
       ) : (
       <>
@@ -971,14 +987,12 @@ export default function ProfilePage() {
         onYearPress={year => updateParams({ year: String(year), yearMin: null, yearMax: null, city: null, tag: null, from: null, to: null, item: null })}
         onCityPress={city => updateParams({ city, year: null, yearMin: null, yearMax: null, tag: null, from: null, to: null, item: null })}
         onPrev={(() => {
-          const list = graveyardOpen ? retiredItems : filteredItems
-          const idx = list.findIndex(i => i.id === selectedItem?.id)
-          return idx > 0 ? () => openItem(list[idx - 1]) : null
+          const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
+          return idx > 0 ? () => openItem(filteredItems[idx - 1]) : null
         })()}
         onNext={(() => {
-          const list = graveyardOpen ? retiredItems : filteredItems
-          const idx = list.findIndex(i => i.id === selectedItem?.id)
-          return idx < list.length - 1 ? () => openItem(list[idx + 1]) : null
+          const idx = filteredItems.findIndex(i => i.id === selectedItem?.id)
+          return idx < filteredItems.length - 1 ? () => openItem(filteredItems[idx + 1]) : null
         })()}
       />
 

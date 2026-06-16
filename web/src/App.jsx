@@ -138,7 +138,6 @@ export default function App() {
                 <span className="notif-badge">{unreadNotifications > 99 ? '99+' : unreadNotifications}</span>
               )}
             </Link>
-            <Link to="/favorites" className="notif-bell" aria-label={S.a11y.favorites}>♥</Link>
             <Link to={`/u/${username ?? session.user.id}`} className="link-btn">{S.feed.myCollection}</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>{S.common.logOut}</button>
           </div>

@@ -1925,30 +1925,28 @@ input {
   100% { transform: scale(1); }
 }
 
-/* Favorite ("heart") button — shown on other people's things in the detail view. */
-.heart-btn {
-  align-self: flex-start;
+/* Favorite ("heart") — icon-only overlay in the top-right corner of another user's
+   thing in the detail view. */
+.heart-overlay {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 40px;
+  height: 40px;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 8px 16px;
-  border-radius: 20px;
+  justify-content: center;
+  border-radius: 50%;
   background: #fff;
-  border: 1px solid var(--red);
+  border: none;
   color: var(--red);
-  font-size: 14px;
-  font-weight: 500;
   cursor: pointer;
-  transition: transform 0.12s ease, background 0.15s ease;
-}
-
-.heart-btn-on {
-  background: var(--red);
-  color: #fff;
+  line-height: 1;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
 }
 
 .heart-glyph {
-  font-size: 16px;
+  font-size: 22px;
   line-height: 1;
 }
 
@@ -2678,6 +2676,18 @@ button.stats-bar-col {
 .owner-link-chevron {
   color: #999;
   font-size: 16px;
+}
+
+/* Collection entry buttons (graveyard, favorites) sit together in a row. */
+.collection-entries {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.collection-entries .graveyard-entry {
+  margin-bottom: 0;
 }
 
 /* Graveyard */

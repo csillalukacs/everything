@@ -148,8 +148,8 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
     } else {
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       heartScale.value = withSequence(
-        withTiming(1.3, { duration: 130 }),
-        withSpring(1, { damping: 5, stiffness: 200 }),
+        withTiming(1.25, { duration: 130 }),
+        withTiming(1, { duration: 130 }),
       );
       likeItem(item.id);
     }
@@ -169,7 +169,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       useTodayScale.value = withSequence(
         withTiming(1.12, { duration: 120 }),
-        withSpring(1, { damping: 6, stiffness: 180 }),
+        withTiming(1, { duration: 120 }),
       );
       await markUsedToday(liveItem);
     }
@@ -428,8 +428,23 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
       </TouchableOpacity>
     </View>
   ) : null;
-  const bottomBar = (photoStrip || infoCorner) ? (
+  // Heart overlays an empty corner of the image (non-owner items only); it doesn't
+  // need its own row. Sits bottom-left, before the photo strip.
+  const heartCorner = !isOwner ? (
+    <Animated.View style={heartStyle}>
+      <TouchableOpacity
+        style={styles.heartCorner}
+        onPress={handleToggleLike}
+        hitSlop={8}
+        accessibilityLabel={liked ? S.favorites.favorited : S.favorites.favorite}
+      >
+        <Ionicons name={liked ? 'heart' : 'heart-outline'} size={20} color={C.red} />
+      </TouchableOpacity>
+    </Animated.View>
+  ) : null;
+  const bottomBar = (photoStrip || infoCorner || heartCorner) ? (
     <View style={[styles.bottomBar, editing && styles.bottomBarEditing]} pointerEvents="box-none">
+      {heartCorner}
       {photoStrip}
       <View style={{ flex: 1 }} />
       {infoCorner}
@@ -640,24 +655,6 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
                     );
                   })}
                 </View>
-              )}
-              {!isOwner && (
-                <Animated.View style={[heartStyle, styles.heartWrap]}>
-                  <TouchableOpacity
-                    style={[styles.heartBtn, liked && styles.heartBtnOn]}
-                    onPress={handleToggleLike}
-                    activeOpacity={0.8}
-                  >
-                    <Ionicons
-                      name={liked ? 'heart' : 'heart-outline'}
-                      size={18}
-                      color={liked ? '#fff' : C.red}
-                    />
-                    <Text style={[styles.heartText, liked && styles.heartTextOn]}>
-                      {liked ? S.favorites.favorited : S.favorites.favorite}
-                    </Text>
-                  </TouchableOpacity>
-                </Animated.View>
               )}
               {isOwnerItem && (
                 <View style={styles.usageSection}>
@@ -1127,31 +1124,13 @@ const styles = StyleSheet.create({
     marginTop: 6,
     lineHeight: 20,
   },
-  heartWrap: {
-    alignSelf: 'flex-start',
-  },
-  heartBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 20,
+  heartCorner: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     backgroundColor: '#fff',
-    borderWidth: 1,
-    borderColor: C.red,
-  },
-  heartBtnOn: {
-    backgroundColor: C.red,
-    borderColor: C.red,
-  },
-  heartText: {
-    fontSize: 14,
-    fontWeight: '500',
-    color: C.red,
-  },
-  heartTextOn: {
-    color: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   usageSection: {
     gap: 10,

@@ -302,6 +302,16 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
               {displayedPhoto && (
                 <img src={displayedPhoto} alt={item.name || ''} className="detail-image" />
               )}
+              {!editing && !isOwnerItem && onToggleLike && (
+                <button
+                  type="button"
+                  className={`heart-overlay${likePulse ? ' heart-pulse' : ''}`}
+                  onClick={handleToggleLike}
+                  aria-label={liked ? S.favorites.favorited : S.favorites.favorite}
+                >
+                  <span className="heart-glyph">{liked ? '♥' : '♡'}</span>
+                </button>
+              )}
               {showThumbnails && (
                 <div className={`thumbnail-row thumbnail-row-overlay${editing ? ' thumbnail-row-overlay-editing' : ''}`}>
                   {allPhotos.map((entry, idx) => {
@@ -442,16 +452,6 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
                       )
                     })}
                   </div>
-                )}
-                {!isOwnerItem && onToggleLike && (
-                  <button
-                    type="button"
-                    className={`heart-btn${liked ? ' heart-btn-on' : ''}${likePulse ? ' heart-pulse' : ''}`}
-                    onClick={handleToggleLike}
-                  >
-                    <span className="heart-glyph">{liked ? '♥' : '♡'}</span>
-                    {liked ? S.favorites.favorited : S.favorites.favorite}
-                  </button>
                 )}
                 {retired && (
                   <div className="tombstone">
