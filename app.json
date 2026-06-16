@@ -14,7 +14,7 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.csillalukacs.things",
+      "bundleIdentifier": "xyz.whimsylabs.things",
       "associatedDomains": ["applinks:things.whimsylabs.xyz"],
       "infoPlist": {
         "NSCameraUsageDescription": "Used to take photos of your items.",
@@ -36,7 +36,7 @@
         "android.permission.READ_MEDIA_VIDEO",
         "android.permission.READ_MEDIA_AUDIO"
       ],
-      "package": "com.csillalukacs.things",
+      "package": "xyz.whimsylabs.things",
       "intentFilters": [
         {
           "action": "VIEW",
