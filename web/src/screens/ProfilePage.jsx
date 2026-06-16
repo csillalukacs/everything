@@ -24,7 +24,7 @@ import ProfileHeader from '../components/ProfileHeader'
 import FollowListModal from './FollowListModal'
 import ProfileSheet from './ProfileSheet'
 import ManageTagsSheet from './ManageTagsSheet'
-import { itemsCacheKey, tagsCacheKey, profileCacheKey, countCacheKey } from '../../../shared/cacheKeys'
+import { itemsCacheKey, tagsCacheKey, profileCacheKey, countCacheKey, likesCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 
 export default function ProfilePage() {
@@ -141,6 +141,7 @@ export default function ProfilePage() {
           const cachedItems = readCache(itemsCacheKey(session.user.id))
           const cachedTags = readCache(tagsCacheKey(session.user.id))
           const cachedCount = readCache(countCacheKey(session.user.id))
+          const cachedLikes = readCache(likesCacheKey(session.user.id))
           setUserId(session.user.id)
           setIsOwner(true)
           setSessionUserId(session.user.id)
@@ -148,6 +149,9 @@ export default function ProfilePage() {
           if (cachedItems) setItems(cachedItems)
           if (cachedTags) setAllTags(cachedTags)
           if (cachedCount != null) setItemCount(cachedCount)
+          // Seed favorites here too (same moment as items) so the favorites chip
+          // count appears in lock-step with the graveyard count.
+          if (cachedLikes) setLikedItemIds(new Set(cachedLikes))
           if (cachedItems) setLoading(false)
         }
       }
@@ -296,30 +300,33 @@ export default function ProfilePage() {
     supabase.auth.getSession().then(({ data: { session } }) => {
       if (!session) { setViewerId(null); setLikedItemIds(new Set()); return }
       setViewerId(session.user.id)
+      // Seed from cache so the favorites chip count shows instantly (like the
+      // graveyard count), then refresh + rewrite from the network.
+      const cached = readCache(likesCacheKey(session.user.id))
+      if (cached) setLikedItemIds(new Set(cached))
       fetchLikedItemIds(supabase, session.user.id)
-        .then(ids => setLikedItemIds(new Set(ids)))
+        .then(ids => { setLikedItemIds(new Set(ids)); writeCache(likesCacheKey(session.user.id), ids) })
         .catch(e => console.error('fetchLikedItemIds error:', e))
     })
   }, [slug])
 
-  async function handleToggleLike(itemId, next) {
+  function handleToggleLike(itemId, next) {
     if (!viewerId) return
-    setLikedItemIds(prev => {
-      const n = new Set(prev)
-      if (next) n.add(itemId); else n.delete(itemId)
-      return n
-    })
-    try {
-      if (next) await addLike(supabase, { userId: viewerId, itemId })
-      else await removeLike(supabase, { userId: viewerId, itemId })
-    } catch (e) {
-      console.error('toggle like error:', e)
-      setLikedItemIds(prev => {
-        const n = new Set(prev)
-        if (next) n.delete(itemId); else n.add(itemId)
-        return n
-      })
-    }
+    const optimistic = new Set(likedItemIds)
+    if (next) optimistic.add(itemId); else optimistic.delete(itemId)
+    setLikedItemIds(optimistic)
+    writeCache(likesCacheKey(viewerId), [...optimistic])
+    ;(async () => {
+      try {
+        if (next) await addLike(supabase, { userId: viewerId, itemId })
+        else await removeLike(supabase, { userId: viewerId, itemId })
+      } catch (e) {
+        console.error('toggle like error:', e)
+        const reverted = new Set(likedItemIds)
+        setLikedItemIds(reverted)
+        writeCache(likesCacheKey(viewerId), [...reverted])
+      }
+    })()
   }
 
   const featuredRedirectCheckedRef = useRef(false)
@@ -818,7 +825,7 @@ export default function ProfilePage() {
             </button>
           )}
           <button className="graveyard-entry" onClick={() => navigate('/favorites')}>
-            ♥ {S.favorites.entry}
+            ♥ {S.favorites.entry}{likedItemIds.size > 0 ? ` · ${likedItemIds.size}` : ''}
           </button>
         </div>
       )}
