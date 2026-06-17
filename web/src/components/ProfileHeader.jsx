@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import Avatar from './Avatar'
+import NotificationsBell from './NotificationsBell'
 import { S } from '../../../shared/strings'
 
 export default function ProfileHeader({
@@ -12,6 +13,7 @@ export default function ProfileHeader({
   home,
   itemCount,
   isOwner,
+  sessionUserId,
   isBlocked,
   isFollowing,
   onToggleFollow,
@@ -75,6 +77,7 @@ export default function ProfileHeader({
         </div>
       </div>
       <div className="header-links" style={{ marginTop: 8 }}>
+        {isOwner && sessionUserId && <NotificationsBell sessionUserId={sessionUserId} />}
         {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
         {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
         <Link to="/" className="link-btn">{S.a11y.feed}</Link>

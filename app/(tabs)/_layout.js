@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
-import { StyleSheet, TouchableOpacity, View } from 'react-native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../../lib/CollectionProvider';
 import { S } from '../../shared/strings';
@@ -10,6 +10,8 @@ const TAB_BAR_HEIGHT = 70;
 
 function CustomTabBar({ state, navigation }) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const { unreadNotifications } = useCollection();
   const currentRoute = state.routes[state.index]?.name;
 
   function go(name) {
@@ -40,6 +42,21 @@ function CustomTabBar({ state, navigation }) {
           size={24}
           color={currentRoute === 'today' ? C.ink : '#999'}
         />
+      </TouchableOpacity>
+
+      <TouchableOpacity
+        style={styles.tabBtn}
+        onPress={() => router.push('/notifications')}
+        accessibilityLabel={S.a11y.notifications}
+      >
+        <View>
+          <Ionicons name="notifications-outline" size={24} color="#999" />
+          {unreadNotifications > 0 && (
+            <View style={styles.badge}>
+              <Text style={styles.badgeText}>{unreadNotifications > 99 ? '99+' : unreadNotifications}</Text>
+            </View>
+          )}
+        </View>
       </TouchableOpacity>
 
       <TouchableOpacity
@@ -106,6 +123,23 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     paddingVertical: 8,
+  },
+  badge: {
+    position: 'absolute',
+    top: -4,
+    right: -6,
+    minWidth: 16,
+    height: 16,
+    borderRadius: 8,
+    paddingHorizontal: 4,
+    backgroundColor: C.red,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  badgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '700',
   },
   fab: {
     position: 'absolute',

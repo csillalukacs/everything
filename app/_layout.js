@@ -31,7 +31,7 @@ function RootStack() {
       <Stack.Screen name="add" options={transparentSheetOptions} />
       <Stack.Screen name="u/[slug]" />
       <Stack.Screen name="stats" />
-      <Stack.Screen name="notifications" />
+      <Stack.Screen name="notifications" options={{ animation: 'slide_from_bottom' }} />
       <Stack.Screen name="favorites" />
       <Stack.Screen name="canvas" />
     </Stack>

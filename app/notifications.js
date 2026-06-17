@@ -81,7 +81,7 @@ export default function Notifications() {
     <View style={styles.container}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
-          <Ionicons name="chevron-back" size={26} color={C.ink} />
+          <Ionicons name="chevron-down" size={26} color={C.ink} />
         </TouchableOpacity>
         <Text style={styles.title}>{S.notifications.title}</Text>
         <View style={styles.backBtn} />

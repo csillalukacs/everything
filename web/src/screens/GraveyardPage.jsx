@@ -120,6 +120,7 @@ export default function GraveyardPage() {
         home={home}
         itemCount={collectionCount}
         isOwner
+        sessionUserId={sessionUserId}
       />
 
       <div className="graveyard-bar">

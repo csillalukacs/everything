@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { fetchNotifications, markNotificationsRead } from '../../../shared/notifications'
+import { fetchNotifications, fetchUnreadNotificationCount, markNotificationsRead, subscribeToNotifications } from '../../../shared/notifications'
 import { fetchBlockedIds } from '../../../shared/moderation'
 import { thumbOf } from '../../../shared/items'
 import { relativeTime } from '../../../shared/dates'
@@ -10,13 +10,27 @@ import { notificationsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 import Avatar from './Avatar'
 
-export default function NotificationsBell({ sessionUserId, unreadCount, onMarkedRead }) {
+export default function NotificationsBell({ sessionUserId }) {
   const navigate = useNavigate()
   const wrapRef = useRef(null)
   const [open, setOpen] = useState(false)
   const [rows, setRows] = useState([])
   const [blockedIds, setBlockedIds] = useState(() => new Set())
   const [loading, setLoading] = useState(false)
+  const [unreadCount, setUnreadCount] = useState(0)
+
+  // Own the unread count so the bell can be dropped on any page. Realtime keeps it
+  // live (RLS scopes the stream to this recipient); opening the dropdown zeroes it.
+  useEffect(() => {
+    if (!sessionUserId) return
+    let cancelled = false
+    const refresh = () => fetchUnreadNotificationCount(supabase, sessionUserId)
+      .then(n => { if (!cancelled) setUnreadCount(n) })
+      .catch(e => console.error('fetchUnreadNotificationCount error:', e))
+    refresh()
+    const unsubscribe = subscribeToNotifications(supabase, sessionUserId, refresh)
+    return () => { cancelled = true; unsubscribe() }
+  }, [sessionUserId])
 
   useEffect(() => {
     if (!open) return
@@ -53,7 +67,7 @@ export default function NotificationsBell({ sessionUserId, unreadCount, onMarked
       .finally(() => setLoading(false))
     // Opening the dropdown clears the badge.
     markNotificationsRead(supabase, sessionUserId)
-      .then(() => onMarkedRead?.())
+      .then(() => setUnreadCount(0))
       .catch(e => console.error('markNotificationsRead error:', e))
   }
 

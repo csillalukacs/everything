@@ -5,7 +5,6 @@ import { fetchFeedEvents } from '../../shared/itemsApi'
 import { fetchBlockedIds, fetchBlockedByIds } from '../../shared/moderation'
 import { fetchFollowingIds } from '../../shared/follows'
 import { fetchLikedItemIds, addLike, removeLike } from '../../shared/likesApi'
-import { fetchUnreadNotificationCount, subscribeToNotifications } from '../../shared/notifications'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
@@ -27,7 +26,6 @@ export default function App() {
   const [blockedByIds, setBlockedByIds] = useState(() => new Set())
   const [followingIds, setFollowingIds] = useState(() => new Set())
   const [likedItemIds, setLikedItemIds] = useState(() => new Set())
-  const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [activeTab, setActiveTab] = useState('everyone')
 
   useEffect(() => {
@@ -43,7 +41,7 @@ export default function App() {
 
   useEffect(() => {
     if (!session) {
-      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setBlockedByIds(new Set()); setFollowingIds(new Set()); setLikedItemIds(new Set()); setUnreadNotifications(0)
+      setUsername(null); setFeedEvents([]); setBlockedIds(new Set()); setBlockedByIds(new Set()); setFollowingIds(new Set()); setLikedItemIds(new Set())
       return
     }
     supabase
@@ -65,20 +63,6 @@ export default function App() {
     fetchLikedItemIds(supabase, session.user.id)
       .then(ids => setLikedItemIds(new Set(ids)))
       .catch(e => console.error('fetchLikedItemIds error:', e))
-    fetchUnreadNotificationCount(supabase, session.user.id)
-      .then(n => setUnreadNotifications(n))
-      .catch(e => console.error('fetchUnreadNotificationCount error:', e))
-  }, [session])
-
-  // Realtime: bump the bell badge the moment a follow/like notification lands (or
-  // a read flips elsewhere). RLS scopes the stream to this recipient.
-  useEffect(() => {
-    if (!session) return
-    return subscribeToNotifications(supabase, session.user.id, () => {
-      fetchUnreadNotificationCount(supabase, session.user.id)
-        .then(n => setUnreadNotifications(n))
-        .catch(e => console.error('fetchUnreadNotificationCount error:', e))
-    })
   }, [session])
 
   useEffect(() => {
@@ -144,11 +128,7 @@ export default function App() {
         </div>
         <div className="header-right">
           <div className="header-links">
-            <NotificationsBell
-              sessionUserId={session.user.id}
-              unreadCount={unreadNotifications}
-              onMarkedRead={() => setUnreadNotifications(0)}
-            />
+            <NotificationsBell sessionUserId={session.user.id} />
             <Link to={`/u/${username ?? session.user.id}`} className="link-btn">{S.feed.myCollection}</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>{S.common.logOut}</button>
           </div>

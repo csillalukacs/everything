@@ -111,6 +111,7 @@ export default function FavoritesPage() {
         home={home}
         itemCount={collectionCount}
         isOwner
+        sessionUserId={viewerId}
       />
 
       <div className="graveyard-bar">

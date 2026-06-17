@@ -802,6 +802,7 @@ export default function ProfilePage() {
         home={home}
         itemCount={itemCount}
         isOwner={isOwner}
+        sessionUserId={sessionUserId}
         isBlocked={isBlocked}
         isFollowing={isFollowing}
         onToggleFollow={!isOwner && viewerId ? handleToggleFollow : undefined}
