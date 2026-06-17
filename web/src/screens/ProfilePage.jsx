@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
@@ -72,6 +72,20 @@ export default function ProfilePage() {
   const batchMode = selectedIds.size > 0
 
   const selectedItem = itemIdParam ? (items.find(i => i.id === itemIdParam) ?? null) : null
+
+  // Keep the page scroll position stable around the detail modal. Saving an edit
+  // reorders the grid (edited item jumps to the top under the default sort) and
+  // would otherwise leave the page scrolled to the top — both while the modal is
+  // still open and after it closes. Pin scroll to where it was when the modal
+  // opened, restoring on any items change while open and on close.
+  const savedScrollRef = useRef(0)
+  const prevItemParamRef = useRef(itemIdParam)
+  useLayoutEffect(() => {
+    const had = prevItemParamRef.current
+    prevItemParamRef.current = itemIdParam
+    if (!had && itemIdParam) savedScrollRef.current = window.scrollY
+    else if (itemIdParam || had) window.scrollTo(0, savedScrollRef.current)
+  }, [itemIdParam, items])
 
   // Retired (graveyard) items are excluded from the active collection; they live in
   // the owner-only graveyard view. selectedItem still resolves against the full list.
