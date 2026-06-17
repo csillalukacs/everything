@@ -13,6 +13,8 @@ export default function ProfileHeader({
   itemCount,
   isOwner,
   isBlocked,
+  isFollowing,
+  onToggleFollow,
   onOpenSheet,
 }) {
   const displayName = profileName ?? username ?? userId?.split('-')[0] ?? ''
@@ -51,6 +53,14 @@ export default function ProfileHeader({
                 </>
               )}
             </h1>
+            {onToggleFollow && !isBlocked && (
+              <button
+                className={`follow-btn${isFollowing ? ' follow-btn-following' : ''}`}
+                onClick={onToggleFollow}
+              >
+                {isFollowing ? S.social.following : S.social.follow}
+              </button>
+            )}
           </div>
           {username && <p className="profile-username-readonly">@{username}</p>}
           {home?.location && (

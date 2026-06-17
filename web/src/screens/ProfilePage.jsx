@@ -550,11 +550,14 @@ export default function ProfilePage() {
   }
 
   async function handleToggleFollow() {
+    // viewerId is the signed-in viewer (set for any session); sessionUserId is
+    // owner-only, so it would be null for the people who'd actually follow.
+    if (!viewerId) return
     const next = !isFollowing
     setIsFollowing(next)
     try {
-      if (next) await followUser(supabase, { followerId: sessionUserId, followedId: userId })
-      else await unfollowUser(supabase, { followerId: sessionUserId, followedId: userId })
+      if (next) await followUser(supabase, { followerId: viewerId, followedId: userId })
+      else await unfollowUser(supabase, { followerId: viewerId, followedId: userId })
     } catch (e) {
       console.error('toggle follow error:', e)
       setIsFollowing(!next)
@@ -800,6 +803,8 @@ export default function ProfilePage() {
         itemCount={itemCount}
         isOwner={isOwner}
         isBlocked={isBlocked}
+        isFollowing={isFollowing}
+        onToggleFollow={!isOwner && viewerId ? handleToggleFollow : undefined}
         onOpenSheet={isLoggedIn ? () => setProfileSheetOpen(true) : undefined}
       />
 
@@ -1044,7 +1049,7 @@ export default function ProfilePage() {
         isOwn={isOwner}
         isFollowing={isFollowing}
         isBlocked={isBlocked}
-        onToggleFollow={sessionUserId ? handleToggleFollow : undefined}
+        onToggleFollow={viewerId ? handleToggleFollow : undefined}
         onReport={() => { setProfileSheetOpen(false); setReportingProfile(true) }}
         onBlock={() => { setProfileSheetOpen(false); handleBlockProfile() }}
         onUnblock={() => { setProfileSheetOpen(false); handleUnblockProfile() }}

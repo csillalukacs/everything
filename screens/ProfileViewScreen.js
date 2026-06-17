@@ -282,6 +282,17 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
               <Text style={styles.itemCount}>{S.profile.objectCount(itemCount)}</Text>
             )}
           </View>
+          {!loading && !notFound && !isBlocked && !isOwnProfile && resolvedUserId && session?.user?.id && (
+            <TouchableOpacity
+              style={[styles.followBtn, isFollowing && styles.followBtnActive]}
+              onPress={handleToggleFollow}
+              activeOpacity={0.8}
+            >
+              <Text style={[styles.followBtnText, isFollowing && styles.followBtnTextActive]}>
+                {isFollowing ? S.social.following : S.social.follow}
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         {loading ? (
@@ -472,6 +483,26 @@ const styles = StyleSheet.create({
     color: '#999',
     marginTop: 6,
     letterSpacing: 0.5,
+  },
+  followBtn: {
+    marginTop: 2,
+    paddingVertical: 7,
+    paddingHorizontal: 20,
+    borderRadius: 20,
+    backgroundColor: C.ink,
+    borderWidth: 1.5,
+    borderColor: C.ink,
+  },
+  followBtnActive: {
+    backgroundColor: '#fff',
+  },
+  followBtnText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#fff',
+  },
+  followBtnTextActive: {
+    color: C.ink,
   },
   searchContainer: {
     flexDirection: 'row',

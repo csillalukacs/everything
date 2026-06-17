@@ -553,6 +553,29 @@ input {
   font-weight: 500;
 }
 
+/* Always-visible follow button in the profile header */
+.follow-btn {
+  align-self: center;
+  font-size: 16px;
+  font-weight: 500;
+  line-height: 1;
+  color: #fff;
+  background: var(--ink);
+  border: 1.5px solid var(--ink);
+  border-radius: 24px;
+  padding: 12px 24px;
+  cursor: pointer;
+}
+
+.follow-btn:hover {
+  opacity: 0.85;
+}
+
+.follow-btn-following {
+  color: var(--ink);
+  background: #fff;
+}
+
 /* Notifications: header bell + badge, dropdown popup, list rows */
 .notif-bell-wrap {
   position: relative;
