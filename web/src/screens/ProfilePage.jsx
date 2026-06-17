@@ -113,7 +113,7 @@ export default function ProfilePage() {
     return null
   }, [tagParam, allTags, items])
 
-  const defaultSortForContext = isFeaturedTag(activeTag) ? 'random' : 'newest'
+  const defaultSortForContext = isFeaturedTag(activeTag) ? 'random' : 'edited'
   const sortParam = explicitSortParam ?? defaultSortForContext
 
   useEffect(() => {

@@ -25,8 +25,6 @@ export const SORT_MODES = [
   'random',
 ];
 
-export const DEFAULT_SORT = 'newest';
-
 function cmpName(a, b) {
   const an = (a.name ?? '').toLowerCase();
   const bn = (b.name ?? '').toLowerCase();

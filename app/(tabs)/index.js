@@ -78,7 +78,7 @@ export default function Collection() {
   const [explicitSortMode, setExplicitSortMode] = useState(null);
   const [randomSeed, setRandomSeed] = useState(() => newRandomSeed());
 
-  const defaultSortForContext = isFeaturedTag(activeTag) ? 'random' : 'newest';
+  const defaultSortForContext = isFeaturedTag(activeTag) ? 'random' : 'edited';
   const sortMode = explicitSortMode ?? defaultSortForContext;
 
   function handleChangeSort(mode) {
