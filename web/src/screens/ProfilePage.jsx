@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { useParams, useSearchParams, Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchAllItems, fetchItemCount } from '../../../shared/itemsApi'
-import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired } from '../../../shared/items'
+import { cityOf, acquiredFields, thumbOf, imagePathsForItem, isRetired, sameTagSet } from '../../../shared/items'
 import { parseQuery, matchItem } from '../../../shared/searchQuery'
 import { sortItems, newRandomSeed } from '../../../shared/sortItems'
 import { submitReport, blockUser, unblockUser } from '../../../shared/moderation'
@@ -480,7 +480,8 @@ export default function ProfilePage() {
     if (error) return
     const resolved = await ensureTags(tagNames)
     if (!resolved) return
-    await setItemTags(data.id, resolved.map(t => t.id))
+    if (!sameTagSet(selectedItem?.tags ?? [], resolved))
+      await setItemTags(data.id, resolved.map(t => t.id))
     const updated = { ...data, tags: resolved }
     setItems(prev => prev.map(i => i.id === updated.id ? updated : i))
   }

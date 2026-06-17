@@ -50,6 +50,16 @@ export function acquiredFields(acquired) {
   };
 }
 
+// True when two tag lists reference the same set of tag ids, regardless of order.
+export function sameTagSet(a, b) {
+  const ids = list => new Set((list ?? []).map(t => t?.id).filter(Boolean));
+  const setA = ids(a);
+  const setB = ids(b);
+  if (setA.size !== setB.size) return false;
+  for (const id of setA) if (!setB.has(id)) return false;
+  return true;
+}
+
 export function locationSuggestionsFromItems(items) {
   const seen = new Map();
   for (const i of items ?? []) {
