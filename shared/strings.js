@@ -201,6 +201,8 @@ export const S = {
       { code: 'acquired:>2020', desc: 'comparisons: >, <, >=, <=' },
       { code: 'acquired:2020..2024', desc: 'range' },
       { code: 'added:>2026-01-01', desc: 'date added (YYYY, YYYY-MM, YYYY-MM-DD)' },
+      { code: 'used:today', desc: 'date last used (alias: lastused:)' },
+      { code: 'uses:>5', desc: 'usage count' },
       { code: 'city:Berlin', desc: 'city acquired' },
       { code: 'name:camera', desc: 'fields: name, desc, ocr' },
       { code: 'acquired:none', desc: 'things missing the field' },
