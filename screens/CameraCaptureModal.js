@@ -23,12 +23,16 @@ export default function CameraCaptureModal({ visible, onCapture, onCancel }) {
   useEffect(() => {
     if (!visible) return;
     (async () => {
-      const { status } = await MediaLibrary.requestPermissionsAsync();
-      if (status !== 'granted') return;
-      const { assets } = await MediaLibrary.getAssetsAsync({ first: 1, sortBy: MediaLibrary.SortBy.creationTime });
-      if (assets.length > 0) {
-        const info = await MediaLibrary.getAssetInfoAsync(assets[0]);
-        setLastPhoto(info.localUri ?? assets[0].uri);
+      try {
+        const { status } = await MediaLibrary.requestPermissionsAsync();
+        if (status !== 'granted') return;
+        const { assets } = await MediaLibrary.getAssetsAsync({ first: 1, sortBy: MediaLibrary.SortBy.creationTime });
+        if (assets.length > 0) {
+          const info = await MediaLibrary.getAssetInfoAsync(assets[0]);
+          setLastPhoto(info.localUri ?? assets[0].uri);
+        }
+      } catch {
+        // last-photo preview is non-essential; ignore (e.g. missing ACCESS_MEDIA_LOCATION on Android)
       }
     })();
   }, [visible]);
