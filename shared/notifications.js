@@ -36,7 +36,25 @@ export async function fetchNotifications(client, userId, { limit = 50 } = {}) {
   if (pErr) throw pErr;
 
   const byId = new Map((profiles ?? []).map(p => [p.user_id, p]));
-  return rows.map(r => ({ ...r, actor: byId.get(r.actor_id) ?? { user_id: r.actor_id } }));
+
+  // Like notifications carry an item (one of the recipient's own things); fetch its
+  // thumbnail so the row can show what was favorited.
+  const itemIds = [...new Set(rows.filter(r => r.item_id).map(r => r.item_id))];
+  let itemById = new Map();
+  if (itemIds.length) {
+    const { data: items, error: iErr } = await client
+      .from('items')
+      .select('id, name, image_url, thumb_url')
+      .in('id', itemIds);
+    if (iErr) throw iErr;
+    itemById = new Map((items ?? []).map(i => [i.id, i]));
+  }
+
+  return rows.map(r => ({
+    ...r,
+    actor: byId.get(r.actor_id) ?? { user_id: r.actor_id },
+    item: r.item_id ? itemById.get(r.item_id) ?? null : null,
+  }));
 }
 
 // Subscribe to realtime changes on this user's notifications (see

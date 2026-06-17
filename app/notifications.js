@@ -3,11 +3,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { useCollection } from '../lib/CollectionProvider';
 import { fetchNotifications, subscribeToNotifications } from '../shared/notifications';
 import { notificationsCacheKey } from '../shared/cacheKeys';
+import { thumbOf } from '../shared/items';
 import { relativeTime } from '../shared/dates';
 import { S } from '../shared/strings';
 import { C } from '../shared/theme';
@@ -97,6 +99,7 @@ export default function Notifications() {
           visible.map(n => {
             const name = n.actor.display_name || n.actor.username || 'someone';
             const time = relativeTime(n.created_at);
+            const thumb = n.item ? thumbOf(n.item) : null;
             return (
               <TouchableOpacity
                 key={n.id}
@@ -104,12 +107,22 @@ export default function Notifications() {
                 activeOpacity={0.7}
                 onPress={() => handlePress(n)}
               >
-                <Avatar profile={n.actor} size={40} />
+                <TouchableOpacity onPress={() => openActor(n.actor)} hitSlop={6}>
+                  <Avatar profile={n.actor} size={40} />
+                </TouchableOpacity>
                 <Text style={styles.rowText}>
-                  <Text style={styles.name}>{name}</Text>
+                  <Text style={styles.name} onPress={() => openActor(n.actor)}>{name}</Text>
                   <Text style={styles.action}> {n.type === 'like' ? S.notifications.liked : S.notifications.followed}</Text>
                   {time && <Text style={styles.time}> · {time}</Text>}
                 </Text>
+                {thumb && (
+                  <Image
+                    source={{ uri: thumb }}
+                    style={styles.thumb}
+                    contentFit="cover"
+                    cachePolicy="memory-disk"
+                  />
+                )}
               </TouchableOpacity>
             );
           })
@@ -164,6 +177,12 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#777',
     lineHeight: 19,
+  },
+  thumb: {
+    width: 44,
+    height: 44,
+    borderRadius: 6,
+    backgroundColor: C.surface,
   },
   name: {
     fontWeight: '600',

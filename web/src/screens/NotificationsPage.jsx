@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchNotifications, markNotificationsRead, subscribeToNotifications } from '../../../shared/notifications'
 import { fetchBlockedIds } from '../../../shared/moderation'
+import { thumbOf } from '../../../shared/items'
 import { relativeTime } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
 import { notificationsCacheKey } from '../../../shared/cacheKeys'
@@ -83,23 +84,31 @@ export default function NotificationsPage() {
           {visible.map(n => {
             const name = n.actor.display_name || n.actor.username || 'someone'
             const time = relativeTime(n.created_at)
-            // A 'like' opens your own thing; a 'follow' opens the actor's profile.
-            const to = n.type === 'like' && n.item_id
+            const thumb = n.item ? thumbOf(n.item) : null
+            const profileTo = `/u/${n.actor.username || n.actor.user_id}`
+            // The actor's name always opens their profile; tapping anywhere else on a
+            // 'like' opens your own thing, while a 'follow' just opens the profile.
+            const rowTo = n.type === 'like' && n.item_id
               ? `/u/${sessionUserId}?item=${n.item_id}`
-              : `/u/${n.actor.username || n.actor.user_id}`
+              : profileTo
             return (
-              <Link
+              <div
                 key={n.id}
-                to={to}
                 className={`notif-row${n.read_at ? '' : ' notif-row-unread'}`}
+                // Let the inner profile links handle their own clicks; everything
+                // else on the row opens the item (or the profile, for a follow).
+                onClick={e => { if (!e.target.closest('a')) navigate(rowTo) }}
               >
-                <Avatar profile={n.actor} size={40} />
+                <Link to={profileTo}>
+                  <Avatar profile={n.actor} size={40} />
+                </Link>
                 <p className="notif-text">
-                  <span className="notif-name">{name}</span>
+                  <Link to={profileTo} className="notif-name">{name}</Link>
                   <span className="notif-action"> {n.type === 'like' ? S.notifications.liked : S.notifications.followed}</span>
                   {time && <span className="notif-time"> · {time}</span>}
                 </p>
-              </Link>
+                {thumb && <img src={thumb} alt="" className="notif-thumb" />}
+              </div>
             )
           })}
         </div>
