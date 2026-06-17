@@ -228,6 +228,43 @@ input {
   padding: 48px 40px 120px;
 }
 
+/* ---- Get-the-app banner ---- */
+
+.app-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 10px 16px;
+  background: var(--ink);
+  color: var(--bg);
+  font-size: 14px;
+  letter-spacing: 0.5px;
+}
+
+.app-banner-text {
+  color: var(--bg);
+}
+
+.app-banner-cta {
+  color: var(--bg);
+  font-weight: 600;
+  text-decoration: underline;
+  white-space: nowrap;
+}
+
+.app-banner-close {
+  margin-left: 8px;
+  color: var(--bg);
+  font-size: 14px;
+  line-height: 1;
+  opacity: 0.7;
+}
+
+.app-banner-close:hover {
+  opacity: 1;
+}
+
 /* ---- Header ---- */
 
 .header {

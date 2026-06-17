@@ -255,6 +255,14 @@ export const S = {
     friendsEmpty: 'follow people to see their things here',
   },
 
+  // Web-only "get the app" promo banner + header link
+  webApp: {
+    bannerText: 'things is even better in the app',
+    bannerCta: 'get the iOS app',
+    getApp: 'get the app',
+    dismiss: 'dismiss',
+  },
+
   // Following (profile actions + follower/following lists)
   social: {
     follow: 'follow',

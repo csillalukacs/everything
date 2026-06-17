@@ -8,6 +8,7 @@ import { fetchLikedItemIds, addLike, removeLike } from '../../shared/likesApi'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
+import { APP_TESTFLIGHT_URL } from '../../shared/links'
 import { feedCacheKey } from '../../shared/cacheKeys'
 import { readCache, writeCache } from './lib/cache'
 import AuthScreen from './screens/AuthScreen'
@@ -128,6 +129,12 @@ export default function App() {
         </div>
         <div className="header-right">
           <div className="header-links">
+            <a
+              className="link-btn"
+              href={APP_TESTFLIGHT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+            >{S.webApp.getApp}</a>
             <NotificationsBell sessionUserId={session.user.id} />
             <Link to={`/u/${username ?? session.user.id}`} className="link-btn">{S.feed.myCollection}</Link>
             <button className="link-btn" onClick={() => supabase.auth.signOut()}>{S.common.logOut}</button>

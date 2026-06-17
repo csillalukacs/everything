@@ -8,6 +8,10 @@
 
 export const SITE_URL = 'https://things.whimsylabs.xyz';
 
+// TestFlight beta invite for the iOS app, surfaced by the web "get the app"
+// banner + header link. Replace with the real public TestFlight URL.
+export const APP_TESTFLIGHT_URL = 'https://testflight.apple.com/join/RRrEReSj';
+
 export const profileUrl = (slug) => `${SITE_URL}/u/${slug}`;
 
 export const itemUrl = (slug, itemId) => `${profileUrl(slug)}?item=${itemId}`;

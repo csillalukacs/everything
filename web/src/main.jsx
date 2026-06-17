@@ -4,6 +4,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Analytics } from '@vercel/analytics/react'
 import './App.css'
 import App from './App.jsx'
+import GetAppBanner from './components/GetAppBanner.jsx'
 import ProfilePage from './screens/ProfilePage.jsx'
 import StatsPage from './screens/StatsPage.jsx'
 import SettingsPage from './screens/SettingsPage.jsx'
@@ -15,6 +16,7 @@ import TermsPage from './screens/TermsPage.jsx'
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>
+      <GetAppBanner />
       <Routes>
         <Route path="/" element={<App />} />
         <Route path="/u/:slug" element={<ProfilePage />} />
