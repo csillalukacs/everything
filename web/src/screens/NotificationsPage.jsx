@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
-import { fetchNotifications, markNotificationsRead } from '../../../shared/notifications'
+import { fetchNotifications, markNotificationsRead, subscribeToNotifications } from '../../../shared/notifications'
 import { fetchBlockedIds } from '../../../shared/moderation'
 import { relativeTime } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
@@ -39,6 +39,23 @@ export default function NotificationsPage() {
         .catch(e => console.error('markNotificationsRead error:', e))
     })
   }, [navigate])
+
+  // Realtime: a notification arriving while this screen is open should appear in
+  // the list, not just bump the badge. Re-fetch on each event and re-mark read so
+  // the badge stays clear while you're looking at it.
+  useEffect(() => {
+    if (!sessionUserId) return
+    return subscribeToNotifications(supabase, sessionUserId, () => {
+      fetchNotifications(supabase, sessionUserId)
+        .then(data => {
+          setRows(data)
+          writeCache(notificationsCacheKey(sessionUserId), data)
+        })
+        .catch(e => console.error('fetchNotifications error:', e))
+      markNotificationsRead(supabase, sessionUserId)
+        .catch(e => console.error('markNotificationsRead error:', e))
+    })
+  }, [sessionUserId])
 
   const visible = rows.filter(n => !blockedIds.has(n.actor_id))
 

@@ -6,7 +6,7 @@ import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { useCollection } from '../lib/CollectionProvider';
-import { fetchNotifications } from '../shared/notifications';
+import { fetchNotifications, subscribeToNotifications } from '../shared/notifications';
 import { notificationsCacheKey } from '../shared/cacheKeys';
 import { relativeTime } from '../shared/dates';
 import { S } from '../shared/strings';
@@ -20,6 +20,20 @@ export default function Notifications() {
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  const load = useCallback(async () => {
+    if (!session) return;
+    const key = notificationsCacheKey(session.user.id);
+    try {
+      const data = await fetchNotifications(supabase, session.user.id);
+      setRows(data);
+      AsyncStorage.setItem(key, JSON.stringify(data));
+    } catch (e) {
+      console.error('fetchNotifications error:', e);
+    } finally {
+      setLoading(false);
+    }
+  }, [session]);
+
   useEffect(() => {
     if (!session) return;
     let cancelled = false;
@@ -29,17 +43,22 @@ export default function Notifications() {
       if (cancelled || !raw) return;
       try { setRows(JSON.parse(raw)); setLoading(false); } catch { /* ignore */ }
     });
-    fetchNotifications(supabase, session.user.id)
-      .then(data => {
-        if (cancelled) return;
-        setRows(data);
-        AsyncStorage.setItem(key, JSON.stringify(data));
-      })
-      .catch(e => console.error('fetchNotifications error:', e))
-      .finally(() => { if (!cancelled) setLoading(false); });
+    load();
     // Opening the screen clears the badge.
     readNotifications();
     return () => { cancelled = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session]);
+
+  // Realtime: a notification arriving while this screen is open should appear in
+  // the list, not just bump the badge. Re-fetch on each event and re-mark read so
+  // the badge stays clear while you're looking at it.
+  useEffect(() => {
+    if (!session) return;
+    return subscribeToNotifications(supabase, session.user.id, () => {
+      load();
+      readNotifications();
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
