@@ -5,7 +5,7 @@ import { fetchFeedEvents } from '../../shared/itemsApi'
 import { fetchBlockedIds, fetchBlockedByIds } from '../../shared/moderation'
 import { fetchFollowingIds } from '../../shared/follows'
 import { fetchLikedItemIds, addLike, removeLike } from '../../shared/likesApi'
-import { fetchUnreadNotificationCount } from '../../shared/notifications'
+import { fetchUnreadNotificationCount, subscribeToNotifications } from '../../shared/notifications'
 import { thumbOf } from '../../shared/items'
 import { relativeTime } from '../../shared/dates'
 import { S } from '../../shared/strings'
@@ -68,6 +68,17 @@ export default function App() {
     fetchUnreadNotificationCount(supabase, session.user.id)
       .then(n => setUnreadNotifications(n))
       .catch(e => console.error('fetchUnreadNotificationCount error:', e))
+  }, [session])
+
+  // Realtime: bump the bell badge the moment a follow/like notification lands (or
+  // a read flips elsewhere). RLS scopes the stream to this recipient.
+  useEffect(() => {
+    if (!session) return
+    return subscribeToNotifications(supabase, session.user.id, () => {
+      fetchUnreadNotificationCount(supabase, session.user.id)
+        .then(n => setUnreadNotifications(n))
+        .catch(e => console.error('fetchUnreadNotificationCount error:', e))
+    })
   }, [session])
 
   useEffect(() => {

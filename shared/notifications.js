@@ -39,6 +39,25 @@ export async function fetchNotifications(client, userId, { limit = 50 } = {}) {
   return rows.map(r => ({ ...r, actor: byId.get(r.actor_id) ?? { user_id: r.actor_id } }));
 }
 
+// Subscribe to realtime changes on this user's notifications (see
+// sql/realtime_notifications.sql). The DB triggers write rows as SECURITY DEFINER;
+// RLS (notifications_select_own) scopes the stream to the recipient, so this single
+// channel covers both follow and like notifications. `onChange` fires on any change
+// (insert = new notification, update = read_at flip) — callers re-fetch the unread
+// count rather than trusting the payload. Returns an unsubscribe function.
+export function subscribeToNotifications(client, userId, onChange) {
+  if (!userId) return () => {};
+  const channel = client
+    .channel(`notifications:${userId}`)
+    .on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'notifications', filter: `recipient_id=eq.${userId}` },
+      onChange,
+    )
+    .subscribe();
+  return () => { client.removeChannel(channel); };
+}
+
 // Mark every unread notification read (called when the screen opens). Clears the badge.
 export async function markNotificationsRead(client, userId) {
   if (!userId) return;
