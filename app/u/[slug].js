@@ -8,7 +8,7 @@ import { UUID_RE } from '../../shared/identifiers';
 import { C } from '../../shared/theme';
 
 export default function ProfileSlugRoute() {
-  const { slug, item } = useLocalSearchParams();
+  const { slug, item, tag } = useLocalSearchParams();
   const router = useRouter();
   const { session } = useCollection();
   const [resolving, setResolving] = useState(true);
@@ -32,7 +32,11 @@ export default function ProfileSlugRoute() {
       }
       if (cancelled) return;
       if (resolvedId === session.user.id) {
-        router.replace(item ? `/?item=${item}` : '/');
+        const qs = new URLSearchParams();
+        if (item) qs.set('item', item);
+        if (tag) qs.set('tag', tag);
+        const query = qs.toString();
+        router.replace(query ? `/?${query}` : '/');
       } else {
         setShouldShow(true);
         setResolving(false);
@@ -49,5 +53,5 @@ export default function ProfileSlugRoute() {
     );
   }
 
-  return <ProfileViewScreen visible slug={slug} initialItemId={item} onClose={() => router.back()} />;
+  return <ProfileViewScreen visible slug={slug} initialItemId={item} initialTag={tag} onClose={() => router.back()} />;
 }

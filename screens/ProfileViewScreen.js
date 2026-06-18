@@ -27,7 +27,7 @@ import ItemGrid from './ItemGrid';
 import AppleIcon from './AppleIcon';
 import { C } from '../shared/theme';
 
-export default function ProfileViewScreen({ visible, slug, initialItemId, onClose }) {
+export default function ProfileViewScreen({ visible, slug, initialItemId, initialTag, onClose }) {
   const router = useRouter();
   const { session, blockedIds, blockContent, unblockContent, reportContent, followingIds, followContent, unfollowContent } = useCollection();
   const [profileSheetVisible, setProfileSheetVisible] = useState(false);
@@ -46,11 +46,26 @@ export default function ProfileViewScreen({ visible, slug, initialItemId, onClos
   const [refreshing, setRefreshing] = useState(false);
   const [openedInitial, setOpenedInitial] = useState(false);
   const featuredFallbackCheckedRef = useRef(false);
+  const initialTagAppliedRef = useRef(false);
 
   useEffect(() => {
     setOpenedInitial(false);
     featuredFallbackCheckedRef.current = false;
-  }, [slug, initialItemId]);
+    initialTagAppliedRef.current = false;
+  }, [slug, initialItemId, initialTag]);
+
+  useEffect(() => {
+    if (loading || !initialTag || initialTagAppliedRef.current || items.length === 0) return;
+    initialTagAppliedRef.current = true;
+    const wanted = String(initialTag).toLowerCase();
+    const found = items
+      .flatMap(i => i.tags ?? [])
+      .find(t => !t.is_private && t.name.toLowerCase() === wanted);
+    if (found) {
+      featuredFallbackCheckedRef.current = true;
+      setActiveTag(found);
+    }
+  }, [loading, items, initialTag]);
 
   useEffect(() => {
     if (loading || featuredFallbackCheckedRef.current) return;
