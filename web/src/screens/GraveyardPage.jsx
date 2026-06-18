@@ -120,6 +120,8 @@ export default function GraveyardPage() {
         home={home}
         itemCount={collectionCount}
         isOwner
+        isLoggedIn
+        onLogOut={async () => { await supabase.auth.signOut(); navigate('/') }}
         sessionUserId={sessionUserId}
       />
 

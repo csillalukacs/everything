@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
 import { fetchBlockedIds, fetchBlockedByIds } from '../../shared/moderation'
@@ -28,6 +28,18 @@ export default function App() {
   const [followingIds, setFollowingIds] = useState(() => new Set())
   const [likedItemIds, setLikedItemIds] = useState(() => new Set())
   const [activeTab, setActiveTab] = useState('everyone')
+  const navigate = useNavigate()
+
+  // A logged-out visitor who hit "log in" from a profile had their destination
+  // stashed in localStorage by AuthScreen; once signed in, send them back.
+  useEffect(() => {
+    if (!session) return
+    const redirect = localStorage.getItem('postLoginRedirect')
+    if (redirect) {
+      localStorage.removeItem('postLoginRedirect')
+      navigate(redirect, { replace: true })
+    }
+  }, [session])
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {

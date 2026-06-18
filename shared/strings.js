@@ -34,6 +34,7 @@ export const S = {
     go: 'go',
     manage: 'manage',
     logOut: 'log out',
+    logIn: 'log in',
     retake: 'retake',
     newPhoto: 'new photo',
     removingBackground: 'removing background...',
