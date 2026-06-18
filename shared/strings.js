@@ -177,6 +177,7 @@ export const S = {
 
   // Collection screen
   collection: {
+    emptyOwn: 'nothing yet — add your first thing',
     noYear: 'no year',
     noCity: 'no city',
     untagged: 'untagged',

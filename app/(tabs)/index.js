@@ -321,6 +321,7 @@ export default function Collection() {
         refreshing={refreshing}
         onRefresh={onRefresh}
         loading={itemsLoading}
+        emptyText={items.length === 0 ? S.collection.emptyOwn : S.common.noMatches}
         paddingBottom={tabBarOffset + 24}
       />
 

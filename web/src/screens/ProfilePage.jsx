@@ -962,6 +962,14 @@ export default function ProfilePage() {
         })}
       </div>
 
+      {sortedItems.length === 0 && (
+        <div className="graveyard-empty">
+          <p>{isOwner
+            ? (items.length === 0 ? S.collection.emptyOwn : S.common.noMatches)
+            : S.profileView.nothingPublic}</p>
+        </div>
+      )}
+
       {isOwner && (
         batchMode ? (() => {
           const allVisibleSelected = filteredItems.length > 0 && filteredItems.every(i => selectedIds.has(i.id))
