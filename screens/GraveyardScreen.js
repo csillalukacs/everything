@@ -30,7 +30,11 @@ export default function GraveyardScreen() {
   async function handleResurrect() {
     const item = selectedItem;
     setSelectedItem(null);
-    if (item) await resurrectItem(item);
+    if (item) {
+      await resurrectItem(item);
+      // Send the user back to their collection with the resurrected item open.
+      router.replace(`/?item=${item.id}`);
+    }
   }
 
   async function handleDelete() {

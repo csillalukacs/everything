@@ -22,6 +22,11 @@ export default function GraveyardPage() {
   const [selectedId, setSelectedId] = useState(null)
 
   useEffect(() => {
+    // Resurrecting navigates away while this fetch may still be in flight; without
+    // this guard a late result would clobber the cache we just wrote (with the
+    // un-retired item) back to its retired state, flashing stale data on the
+    // collection page we land on.
+    let cancelled = false
     supabase.auth.getSession().then(async ({ data: { session } }) => {
       if (!session) { navigate('/'); return }
       setSessionUserId(session.user.id)
@@ -38,6 +43,7 @@ export default function GraveyardPage() {
           supabase.from('profiles').select(PROFILE_COLS).eq('user_id', session.user.id).maybeSingle(),
           fetchAllItems(supabase, { userId: session.user.id }),
         ])
+        if (cancelled) return
         if (profRes.data) {
           setProfile(profRes.data)
           writeCache(profileCacheKey(session.user.id), profRes.data)
@@ -50,9 +56,10 @@ export default function GraveyardPage() {
       } catch (e) {
         console.error('GraveyardPage load error:', e)
       } finally {
-        setLoading(false)
+        if (!cancelled) setLoading(false)
       }
     })
+    return () => { cancelled = true }
   }, [navigate])
 
   const retiredItems = useMemo(
@@ -79,18 +86,14 @@ export default function GraveyardPage() {
     const patch = { retired_at: null, retire_reason: null, epitaph: null }
     const { error } = await supabase.from('items').update(patch).eq('id', target.id)
     if (!error) {
-      setItems(prev => {
-        const next = prev.map(i => i.id === target.id ? { ...i, ...patch } : i)
-        if (sessionUserId) writeCache(itemsCacheKey(sessionUserId), next)
-        return next
-      })
-      // The item rejoins the active collection — keep the cached count in sync.
-      setCollectionCount(c => {
-        if (c == null) return c
-        const next = c + 1
-        if (sessionUserId) writeCache(countCacheKey(sessionUserId), next)
-        return next
-      })
+      const next = items.map(i => i.id === target.id ? { ...i, ...patch } : i)
+      if (sessionUserId) {
+        writeCache(itemsCacheKey(sessionUserId), next)
+        // The item rejoins the active collection — keep the cached count in sync.
+        if (collectionCount != null) writeCache(countCacheKey(sessionUserId), collectionCount + 1)
+      }
+      // Send the user to their collection with the resurrected item open.
+      navigate(`/u/${profile?.username || sessionUserId}?item=${target.id}`)
     }
   }
 
