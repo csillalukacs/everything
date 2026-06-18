@@ -1,8 +1,17 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { ActivityIndicator, Dimensions, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { runOnJS } from 'react-native-worklets';
 import { Image } from 'expo-image';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
@@ -15,12 +24,48 @@ import { S } from '../shared/strings';
 import { C } from '../shared/theme';
 import Avatar from '../screens/Avatar';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 export default function Notifications() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { session, blockedIds, readNotifications } = useCollection();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  // Swipe-down-to-dismiss. We translate the whole screen, but only when the
+  // ScrollView is already at the top and the drag is downward — otherwise the
+  // gesture stays out of the way and the list scrolls normally.
+  const scrollRef = useRef(null);
+  const scrollY = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
+  const close = useCallback(() => router.back(), [router]);
+
+  const dismissGesture = Gesture.Pan()
+    .simultaneousWithExternalGesture(scrollRef)
+    .onUpdate((e) => {
+      if (e.translationY > 0 && scrollY.value <= 0) {
+        translateY.value = e.translationY;
+      }
+    })
+    .onEnd((e) => {
+      if (e.translationY > 120 && scrollY.value <= 0) {
+        translateY.value = withTiming(SCREEN_HEIGHT, { duration: 220 }, (finished) => {
+          if (finished) runOnJS(close)();
+        });
+      } else {
+        translateY.value = withSpring(0);
+      }
+    });
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   const load = useCallback(async () => {
     if (!session) return;
@@ -78,7 +123,9 @@ export default function Notifications() {
   }, [router, openActor]);
 
   return (
-    <View style={styles.container}>
+    <GestureHandlerRootView style={styles.root}>
+    <GestureDetector gesture={dismissGesture}>
+    <Animated.View style={[styles.container, animStyle]}>
       <View style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn} hitSlop={8}>
           <Ionicons name="chevron-down" size={26} color={C.ink} />
@@ -87,7 +134,10 @@ export default function Notifications() {
         <View style={styles.backBtn} />
       </View>
 
-      <ScrollView
+      <Animated.ScrollView
+        ref={scrollRef}
+        onScroll={scrollHandler}
+        scrollEventThrottle={16}
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingBottom: insets.bottom + 24 }}
       >
@@ -127,12 +177,17 @@ export default function Notifications() {
             );
           })
         )}
-      </ScrollView>
-    </View>
+      </Animated.ScrollView>
+    </Animated.View>
+    </GestureDetector>
+    </GestureHandlerRootView>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: C.bg,

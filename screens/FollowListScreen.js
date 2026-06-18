@@ -1,6 +1,15 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useEffect, useState } from 'react';
-import { ActivityIndicator, FlatList, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Dimensions, Modal, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import Animated, {
+  useSharedValue,
+  useAnimatedStyle,
+  useAnimatedScrollHandler,
+  withSpring,
+  withTiming,
+} from 'react-native-reanimated';
+import { runOnJS } from 'react-native-worklets';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { fetchFollowList } from '../shared/follows';
@@ -8,11 +17,50 @@ import { S } from '../shared/strings';
 import { C } from '../shared/theme';
 import Avatar from './Avatar';
 
+const SCREEN_HEIGHT = Dimensions.get('window').height;
+
 // Followers / following list as a slide-up modal. `mode` is 'followers' | 'following'.
 export default function FollowListScreen({ visible, userId, mode, onClose, onOpenProfile }) {
   const insets = useSafeAreaInsets();
   const [loading, setLoading] = useState(true);
   const [profiles, setProfiles] = useState([]);
+
+  // Swipe-down-to-dismiss. We translate the whole sheet, but only when the list
+  // is already at the top and the drag is downward — otherwise the gesture stays
+  // out of the way and the list scrolls normally.
+  const scrollRef = useRef(null);
+  const scrollY = useSharedValue(0);
+  const translateY = useSharedValue(0);
+
+  // Reset position whenever the sheet (re)opens.
+  useEffect(() => {
+    if (visible) translateY.value = 0;
+  }, [visible]);
+
+  const scrollHandler = useAnimatedScrollHandler((e) => {
+    scrollY.value = e.contentOffset.y;
+  });
+
+  const dismissGesture = Gesture.Pan()
+    .simultaneousWithExternalGesture(scrollRef)
+    .onUpdate((e) => {
+      if (e.translationY > 0 && scrollY.value <= 0) {
+        translateY.value = e.translationY;
+      }
+    })
+    .onEnd((e) => {
+      if (e.translationY > 120 && scrollY.value <= 0) {
+        translateY.value = withTiming(SCREEN_HEIGHT, { duration: 220 }, (finished) => {
+          if (finished) runOnJS(onClose)();
+        });
+      } else {
+        translateY.value = withSpring(0);
+      }
+    });
+
+  const animStyle = useAnimatedStyle(() => ({
+    transform: [{ translateY: translateY.value }],
+  }));
 
   useEffect(() => {
     if (!visible || !userId || !mode) return;
@@ -30,10 +78,12 @@ export default function FollowListScreen({ visible, userId, mode, onClose, onOpe
 
   return (
     <Modal visible={visible} animationType="slide" onRequestClose={onClose}>
-      <View style={[styles.container, { paddingTop: insets.top + 12 }]}>
+      <GestureHandlerRootView style={styles.root}>
+      <GestureDetector gesture={dismissGesture}>
+      <Animated.View style={[styles.container, { paddingTop: insets.top + 12 }, animStyle]}>
         <View style={styles.header}>
           <TouchableOpacity onPress={onClose} hitSlop={8} style={styles.back}>
-            <Ionicons name="chevron-back" size={26} color={C.ink} />
+            <Ionicons name="chevron-down" size={26} color={C.ink} />
           </TouchableOpacity>
           <Text style={styles.title}>{title}</Text>
         </View>
@@ -42,7 +92,10 @@ export default function FollowListScreen({ visible, userId, mode, onClose, onOpe
         ) : profiles.length === 0 ? (
           <View style={styles.centered}><Text style={styles.empty}>{empty}</Text></View>
         ) : (
-          <FlatList
+          <Animated.FlatList
+            ref={scrollRef}
+            onScroll={scrollHandler}
+            scrollEventThrottle={16}
             data={profiles}
             keyExtractor={p => p.user_id}
             contentContainerStyle={styles.list}
@@ -64,12 +117,17 @@ export default function FollowListScreen({ visible, userId, mode, onClose, onOpe
             }}
           />
         )}
-      </View>
+      </Animated.View>
+      </GestureDetector>
+      </GestureHandlerRootView>
     </Modal>
   );
 }
 
 const styles = StyleSheet.create({
+  root: {
+    flex: 1,
+  },
   container: {
     flex: 1,
     backgroundColor: C.bg,
