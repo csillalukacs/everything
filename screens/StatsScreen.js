@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, Modal, Platform, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
+import Constants from 'expo-constants';
 import { useCollection } from '../lib/CollectionProvider';
 import { supabase } from '../lib/supabase';
 import {
@@ -20,7 +21,7 @@ import {
   formatWeekLabel,
   formatMonthLabel,
 } from '../shared/dates';
-import { thumbOf, isRetired } from '../shared/items';
+import { thumbOf, isRetired, cityOf } from '../shared/items';
 import { S } from '../shared/strings';
 import { buildTagDistribution, computeYearStats, buildMapGroups } from '../shared/stats';
 import { Bar, PieChart, StatCard } from './StatsComponents';
@@ -39,6 +40,14 @@ try {
 } catch {
   // react-native-maps native module not registered — map section will be hidden.
 }
+
+// On Android the default provider is Google Maps, whose native MapView crashes at
+// onCreate ("API key not found") unless a Maps SDK for Android key is baked into the
+// manifest. iOS uses Apple Maps and needs no key. So only mount the map on Android
+// when a key is configured (see app.config.js); otherwise hide the section.
+const MAPS_SUPPORTED =
+  Platform.OS !== 'android' ||
+  !!Constants.expoConfig?.android?.config?.googleMaps?.apiKey;
 
 export default function StatsScreen() {
   const router = useRouter();
@@ -94,6 +103,20 @@ export default function StatsScreen() {
   const tagDistribution = useMemo(() => buildTagDistribution(items), [items]);
   const yearStats = useMemo(() => computeYearStats(items), [items]);
   const mapGroups = useMemo(() => buildMapGroups(items), [items]);
+
+  const topCities = useMemo(() => {
+    const counts = new Map();
+    for (const i of items) {
+      const c = cityOf(i.acquired_location);
+      if (!c) continue;
+      counts.set(c, (counts.get(c) ?? 0) + 1);
+    }
+    return [...counts.entries()]
+      .map(([name, count]) => ({ name, count }))
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 12);
+  }, [items]);
+  const topCitiesMax = topCities.length > 0 ? Math.max(...topCities.map(c => c.count)) : 0;
 
   const totalLocatedItems = useMemo(
     () => mapGroups.reduce((sum, g) => sum + g.count, 0),
@@ -214,7 +237,23 @@ export default function StatsScreen() {
               </Section>
             )}
 
-            {MapView && mapGroups.length > 0 && mapRegion && (
+            {topCities.length > 0 && (
+              <Section title={S.stats.topCities}>
+                <View style={styles.chart}>
+                  {topCities.map(c => (
+                    <TouchableOpacity
+                      key={c.name}
+                      style={styles.cityBar}
+                      onPress={() => router.push({ pathname: '/', params: { city: c.name } })}
+                    >
+                      <Bar count={c.count} max={topCitiesMax} label={c.name} />
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </Section>
+            )}
+
+            {MAPS_SUPPORTED && MapView && mapGroups.length > 0 && mapRegion && (
               <Section title={S.stats.acquiredAroundWorld}>
                 <View style={styles.mapWrap}>
                   <MapView
@@ -378,6 +417,10 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: C.surface,
     gap: 3,
+  },
+  cityBar: {
+    flex: 1,
+    minWidth: 0,
   },
   pieWrap: {
     alignItems: 'center',

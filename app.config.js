@@ -12,5 +12,19 @@ module.exports = ({ config }) => {
   if (APPLE_SIGN_IN && !plugins.includes('expo-apple-authentication')) {
     plugins.push('expo-apple-authentication');
   }
-  return { ...config, plugins };
+
+  // Google Maps SDK for Android key. react-native-maps' MapView crashes on Android
+  // at onCreate without it; the StatsScreen map is gated on this key being present
+  // (see screens/StatsScreen.js). Supply via the GOOGLE_MAPS_ANDROID_KEY env var
+  // (EAS secret / .env). iOS uses Apple Maps and needs no key.
+  const android = { ...(config.android || {}) };
+  const mapsKey = process.env.GOOGLE_MAPS_ANDROID_KEY;
+  if (mapsKey) {
+    android.config = {
+      ...(android.config || {}),
+      googleMaps: { ...(android.config?.googleMaps || {}), apiKey: mapsKey },
+    };
+  }
+
+  return { ...config, plugins, android };
 };
