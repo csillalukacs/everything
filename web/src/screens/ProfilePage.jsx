@@ -135,6 +135,21 @@ export default function ProfilePage() {
       const slugIsUuid = UUID_RE.test(slug)
       const { data: { session } } = await supabase.auth.getSession()
 
+      // Reset per-profile state so navigating between profiles (e.g. via the
+      // following list) doesn't leave the previous profile's data on the new one:
+      // the owner UI (settings/stats/bell links, favorites/graveyard entries) and
+      // the grid itself. Everything is re-derived below once the slug resolves;
+      // the owner fast-path re-seeds the grid from cache in this same run, so
+      // returning to our own profile still doesn't flash.
+      setIsOwner(false)
+      setSessionUserId(null)
+      setIsBlocked(false)
+      setIsFollowing(false)
+      setItems([])
+      setAllTags([])
+      setItemCount(null)
+      setLoading(true)
+
       // Fast path: if this is our own profile, paint the header + grid from cache
       // before the network resolves the slug, so returning from a sub-page
       // (graveyard/favorites) keeps the header in place instead of flashing white.
