@@ -14,6 +14,7 @@ export default function ProfileHeader({
   itemCount,
   isOwner,
   isLoggedIn,
+  viewerId,
   onLogOut,
   sessionUserId,
   isBlocked,
@@ -82,6 +83,9 @@ export default function ProfileHeader({
         {isOwner && sessionUserId && <NotificationsBell sessionUserId={sessionUserId} />}
         {isOwner && <Link to="/settings" className="link-btn">{S.profile.settings}</Link>}
         {isOwner && <Link to="/stats" className="link-btn">{S.stats.title}</Link>}
+        {isLoggedIn && !isOwner && viewerId && (
+          <Link to={`/u/${viewerId}`} className="link-btn">{S.feed.myCollection}</Link>
+        )}
         <Link
           to={isLoggedIn ? '/' : `/?redirect=${encodeURIComponent(`/u/${slug}`)}`}
           className="link-btn"

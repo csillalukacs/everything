@@ -818,6 +818,7 @@ export default function ProfilePage() {
         itemCount={itemCount}
         isOwner={isOwner}
         isLoggedIn={isLoggedIn}
+        viewerId={viewerId}
         onLogOut={async () => { await supabase.auth.signOut(); navigate('/') }}
         sessionUserId={sessionUserId}
         isBlocked={isBlocked}
