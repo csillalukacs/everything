@@ -1314,6 +1314,73 @@ input {
   }
 }
 
+/* ---- Mobile layout ---- */
+
+@media (max-width: 600px) {
+  .app {
+    padding: 28px 16px 100px;
+  }
+
+  /* Keep the get-the-app banner from running off the right edge: let the text
+     take the remaining width (and wrap) so the CTA and close stay visible. */
+  .app-banner {
+    gap: 10px;
+    padding: 10px 12px;
+    font-size: 13px;
+    justify-content: flex-start;
+  }
+
+  .app-banner-text {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .app-banner-close {
+    margin-left: 0;
+  }
+
+  /* Stack the header so the right-hand nav links drop below the title/avatar
+     instead of being pushed off the right edge. */
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+
+  .header-right {
+    align-items: flex-start;
+    margin-top: 0;
+    width: 100%;
+  }
+
+  /* Let nav links wrap onto a second line rather than overflow. */
+  .header-links {
+    flex-wrap: wrap;
+  }
+
+  .title {
+    font-size: 30px;
+    letter-spacing: 1px;
+  }
+
+  .profile-name {
+    font-size: 30px;
+  }
+
+  .profile-name-row {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .follow-btn {
+    padding: 8px 18px;
+    font-size: 14px;
+  }
+}
+
 /* ---- Cards ---- */
 
 .card {
