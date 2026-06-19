@@ -11,6 +11,7 @@ import { notificationsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 import Avatar from '../components/Avatar'
 import PhotoStack from '../components/PhotoStack'
+import GroupItemsModal from '../components/GroupItemsModal'
 
 export default function NotificationsPage() {
   const navigate = useNavigate()
@@ -18,6 +19,7 @@ export default function NotificationsPage() {
   const [blockedIds, setBlockedIds] = useState(() => new Set())
   const [sessionUserId, setSessionUserId] = useState(null)
   const [loading, setLoading] = useState(true)
+  const [moreGroup, setMoreGroup] = useState(null)
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -107,7 +109,17 @@ export default function NotificationsPage() {
                     <span className="notif-action"> {S.notifications.likedThings(count)}</span>
                     {time && <span className="notif-time"> · {time}</span>}
                   </p>
-                  {thumbs.length > 0 && <PhotoStack thumbs={thumbs} size={44} />}
+                  {thumbs.length > 0 && (
+                    <PhotoStack
+                      thumbs={thumbs}
+                      total={count}
+                      size={44}
+                      onPress={() => setMoreGroup({
+                        title: S.notifications.likedThings(count),
+                        items: group.entries.map(n => n.item).filter(Boolean),
+                      })}
+                    />
+                  )}
                 </div>
               )
             }
@@ -142,6 +154,14 @@ export default function NotificationsPage() {
           })}
         </div>
       )}
+
+      <GroupItemsModal
+        open={!!moreGroup}
+        onClose={() => setMoreGroup(null)}
+        title={moreGroup?.title}
+        items={moreGroup?.items ?? []}
+        onItemPress={item => { setMoreGroup(null); navigate(`/u/${sessionUserId}?item=${item.id}`) }}
+      />
     </div>
   )
 }

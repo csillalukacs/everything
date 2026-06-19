@@ -224,12 +224,17 @@ input {
   flex-shrink: 0;
 }
 
+.photo-stack-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
 .photo-stack-cell {
   position: absolute;
   top: 0;
   object-fit: cover;
-  background: var(--surface);
-  border: 2px solid var(--bg);
   box-sizing: border-box;
 }
 
@@ -240,6 +245,35 @@ input {
   font-size: 16px;
   font-weight: 600;
   color: #777;
+  background: var(--surface);
+}
+
+/* Full-list modal behind a "+N" chip (see GroupItemsModal.jsx) */
+.group-items-modal {
+  max-width: 420px;
+}
+
+.group-items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(90px, 1fr));
+  gap: 8px;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+.group-items-tile-btn {
+  padding: 0;
+  border: none;
+  background: none;
+  cursor: pointer;
+}
+
+.group-items-tile {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  border-radius: 8px;
+  object-fit: cover;
 }
 
 @keyframes spin {

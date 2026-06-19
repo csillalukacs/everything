@@ -11,6 +11,7 @@ import { notificationsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 import Avatar from './Avatar'
 import PhotoStack from './PhotoStack'
+import GroupItemsModal from './GroupItemsModal'
 
 export default function NotificationsBell({ sessionUserId }) {
   const navigate = useNavigate()
@@ -20,6 +21,7 @@ export default function NotificationsBell({ sessionUserId }) {
   const [blockedIds, setBlockedIds] = useState(() => new Set())
   const [loading, setLoading] = useState(false)
   const [unreadCount, setUnreadCount] = useState(0)
+  const [moreGroup, setMoreGroup] = useState(null)
 
   // Own the unread count so the bell can be dropped on any page. Realtime keeps it
   // live (RLS scopes the stream to this recipient); opening the dropdown zeroes it.
@@ -128,7 +130,17 @@ export default function NotificationsBell({ sessionUserId }) {
                         <span className="notif-action"> {S.notifications.likedThings(count)}</span>
                         {time && <span className="notif-time"> · {time}</span>}
                       </p>
-                      {thumbs.length > 0 && <PhotoStack thumbs={thumbs} size={44} />}
+                      {thumbs.length > 0 && (
+                        <PhotoStack
+                          thumbs={thumbs}
+                          total={count}
+                          size={44}
+                          onPress={() => { setOpen(false); setMoreGroup({
+                            title: S.notifications.likedThings(count),
+                            items: group.entries.map(n => n.item).filter(Boolean),
+                          }) }}
+                        />
+                      )}
                     </div>
                   )
                 }
@@ -164,6 +176,14 @@ export default function NotificationsBell({ sessionUserId }) {
           )}
         </div>
       )}
+
+      <GroupItemsModal
+        open={!!moreGroup}
+        onClose={() => setMoreGroup(null)}
+        title={moreGroup?.title}
+        items={moreGroup?.items ?? []}
+        onItemPress={item => { setMoreGroup(null); navigate(`/u/${sessionUserId}?item=${item.id}`) }}
+      />
     </div>
   )
 }

@@ -17,6 +17,7 @@ import ItemDetailModal from './screens/ItemDetailModal'
 import Avatar from './components/Avatar'
 import NotificationsBell from './components/NotificationsBell'
 import PhotoStack from './components/PhotoStack'
+import GroupItemsModal from './components/GroupItemsModal'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -25,6 +26,7 @@ export default function App() {
   const [feedEvents, setFeedEvents] = useState([])
   const [feedLoading, setFeedLoading] = useState(true)
   const [selectedItem, setSelectedItem] = useState(null)
+  const [moreGroup, setMoreGroup] = useState(null)
   const [blockedIds, setBlockedIds] = useState(() => new Set())
   const [blockedByIds, setBlockedByIds] = useState(() => new Set())
   const [followingIds, setFollowingIds] = useState(() => new Set())
@@ -215,7 +217,13 @@ export default function App() {
                       {time && <span className="feed-poster-time"> · {time}</span>}
                     </p>
                   </div>
-                  {thumbs.length > 0 && <PhotoStack thumbs={thumbs} />}
+                  {thumbs.length > 0 && (
+                    <PhotoStack
+                      thumbs={thumbs}
+                      total={count}
+                      onPress={() => setMoreGroup({ title: action, items: group.entries.map(e => e.item) })}
+                    />
+                  )}
                 </article>
               )
             }
@@ -263,6 +271,14 @@ export default function App() {
           })}
         </div>
       )}
+
+      <GroupItemsModal
+        open={!!moreGroup}
+        onClose={() => setMoreGroup(null)}
+        title={moreGroup?.title}
+        items={moreGroup?.items ?? []}
+        onItemPress={item => { setMoreGroup(null); setSelectedItem(item) }}
+      />
 
       <ItemDetailModal
         visible={!!selectedItem}

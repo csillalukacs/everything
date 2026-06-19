@@ -15,6 +15,7 @@ import ItemDetailModal from '../../screens/ItemDetailModal';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
 import Avatar from '../../screens/Avatar';
 import PhotoStack from '../../screens/PhotoStack';
+import GroupItemsSheet from '../../screens/GroupItemsSheet';
 import { C } from '../../shared/theme';
 
 const TAB_BAR_HEIGHT = 70;
@@ -27,6 +28,7 @@ export default function Feed() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
+  const [moreGroup, setMoreGroup] = useState(null);
   const [openProfileVisible, setOpenProfileVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('everyone');
 
@@ -153,7 +155,11 @@ export default function Feed() {
                         {time && <Text style={styles.posterTime}> · {time}</Text>}
                       </Text>
                     </View>
-                    <PhotoStack thumbs={group.entries.map(e => thumbOf(e.item)).filter(Boolean)} />
+                    <PhotoStack
+                      thumbs={group.entries.map(e => thumbOf(e.item)).filter(Boolean)}
+                      total={group.entries.length}
+                      onPress={() => setMoreGroup({ title: action, items: group.entries.map(e => e.item) })}
+                    />
                   </TouchableOpacity>
                 );
               }
@@ -208,6 +214,14 @@ export default function Feed() {
         onClose={() => setSelectedItem(null)}
         onSave={isOwnItem ? handleUpdate : undefined}
         onDelete={isOwnItem ? handleDelete : undefined}
+      />
+
+      <GroupItemsSheet
+        visible={!!moreGroup}
+        onClose={() => setMoreGroup(null)}
+        title={moreGroup?.title}
+        items={moreGroup?.items ?? []}
+        onItemPress={item => setSelectedItem(item)}
       />
 
       <OpenProfileSheet

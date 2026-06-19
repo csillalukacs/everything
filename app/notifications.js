@@ -25,6 +25,7 @@ import { S } from '../shared/strings';
 import { C } from '../shared/theme';
 import Avatar from '../screens/Avatar';
 import PhotoStack from '../screens/PhotoStack';
+import GroupItemsSheet from '../screens/GroupItemsSheet';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -34,6 +35,7 @@ export default function Notifications() {
   const { session, blockedIds, readNotifications } = useCollection();
   const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [moreGroup, setMoreGroup] = useState(null);
 
   // Swipe-down-to-dismiss. We translate the whole screen, but only when the
   // ScrollView is already at the top and the drag is downward — otherwise the
@@ -172,7 +174,17 @@ export default function Notifications() {
                     <Text style={styles.action}> {S.notifications.likedThings(count)}</Text>
                     {time && <Text style={styles.time}> · {time}</Text>}
                   </Text>
-                  {thumbs.length > 0 && <PhotoStack thumbs={thumbs} size={44} />}
+                  {thumbs.length > 0 && (
+                    <PhotoStack
+                      thumbs={thumbs}
+                      total={count}
+                      size={44}
+                      onPress={() => setMoreGroup({
+                        title: S.notifications.likedThings(count),
+                        items: group.entries.map(n => n.item).filter(Boolean),
+                      })}
+                    />
+                  )}
                 </TouchableOpacity>
               );
             }
@@ -207,6 +219,14 @@ export default function Notifications() {
           })
         )}
       </Animated.ScrollView>
+
+      <GroupItemsSheet
+        visible={!!moreGroup}
+        onClose={() => setMoreGroup(null)}
+        title={moreGroup?.title}
+        items={moreGroup?.items ?? []}
+        onItemPress={item => router.push(`/?item=${item.id}`)}
+      />
     </Animated.View>
     </GestureDetector>
     </GestureHandlerRootView>
