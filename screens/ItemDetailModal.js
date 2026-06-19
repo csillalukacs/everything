@@ -397,13 +397,14 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
   if (!item) return null;
 
   const allPhotos = editing
-    ? [{ url: editPhoto, added_at: editImageAddedAt }, ...editPreviousImages]
+    ? [{ url: editPhoto, thumb_url: editPhotoThumb, added_at: editImageAddedAt }, ...editPreviousImages]
     : [
-        { url: item.image_url, added_at: item.image_added_at ?? item.created_at },
+        { url: item.image_url, thumb_url: item.thumb_url, added_at: item.image_added_at ?? item.created_at },
         ...(item.previous_images ?? []),
       ];
   const safeDisplayedIdx = Math.min(displayedIdx, allPhotos.length - 1);
   const displayPhoto = allPhotos[safeDisplayedIdx]?.url;
+  const displayThumb = allPhotos[safeDisplayedIdx]?.thumb_url;
   const displayedDate = allPhotos[safeDisplayedIdx]?.added_at;
   const isOwner = session?.user?.id && session.user.id === item.user_id;
 
@@ -475,7 +476,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           >
             <View style={styles.imageContainer}>
               {displayPhoto
-                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" recyclingKey={displayPhoto} />
+                ? <Image source={{ uri: displayPhoto }} placeholder={displayThumb ? { uri: displayThumb } : undefined} placeholderContentFit="cover" style={styles.image} cachePolicy="memory-disk" contentFit="cover" recyclingKey={displayPhoto} />
                 : <View style={styles.imagePlaceholder} />
               }
               {removingBg ? (
@@ -536,7 +537,7 @@ export default function ItemDetailModal({ item, visible, onClose, onDelete, onSa
           <Animated.View style={[{ flex: 1 }, swipeStyle]}>
             <View style={styles.imageContainer}>
               {displayPhoto
-                ? <Image source={{ uri: displayPhoto }} style={styles.image} cachePolicy="memory-disk" contentFit="cover" recyclingKey={displayPhoto} />
+                ? <Image source={{ uri: displayPhoto }} placeholder={displayThumb ? { uri: displayThumb } : undefined} placeholderContentFit="cover" style={styles.image} cachePolicy="memory-disk" contentFit="cover" recyclingKey={displayPhoto} />
                 : <View style={styles.imagePlaceholder} />
               }
               <TouchableOpacity style={styles.imageBack} onPress={onClose} hitSlop={8}>

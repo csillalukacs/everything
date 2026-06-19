@@ -283,14 +283,15 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
   const itemTags = item.tags ?? []
   const retired = isRetired(item)
   const allPhotos = editing
-    ? [{ url: editPreview, added_at: editImageAddedAt }, ...editPreviousImages]
+    ? [{ url: editPreview, thumb_url: editPhotoThumb, added_at: editImageAddedAt }, ...editPreviousImages]
     : [
-        { url: item.image_url, added_at: item.image_added_at ?? item.created_at },
+        { url: item.image_url, thumb_url: item.thumb_url, added_at: item.image_added_at ?? item.created_at },
         ...(item.previous_images ?? []),
       ]
   const safeDisplayedIdx = Math.min(displayedIdx, allPhotos.length - 1)
   const displayedEntry = allPhotos[safeDisplayedIdx] ?? {}
   const displayedPhoto = displayedEntry.url
+  const displayedThumb = displayedEntry.thumb_url
   const displayedDate = displayedEntry.added_at
   const showThumbnails = allPhotos.filter(p => p?.url).length > 1
 
@@ -323,7 +324,10 @@ export default function ItemDetailModal({ visible, item, onClose, onDelete, onSa
 
         <div className="detail-layout">
           <div className="detail-image-col">
-            <div className="detail-image-wrap">
+            <div
+              className="detail-image-wrap"
+              style={displayedThumb ? { backgroundImage: `url(${displayedThumb})`, backgroundSize: 'cover', backgroundPosition: 'center' } : undefined}
+            >
               {displayedPhoto && (
                 <img src={displayedPhoto} alt={item.name || ''} className="detail-image" />
               )}
