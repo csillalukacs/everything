@@ -63,7 +63,10 @@ export async function fetchPublicFeed(client, { limit = 50, blockedIds = [] } = 
 // Returns events shaped { type: 'add' | 'usage', key, at, used_on?, item }.
 // authorIds: when provided, restrict the feed to these users (the "friends" tab).
 // An empty array yields an empty feed (you follow no one). null = everyone.
-export async function fetchFeedEvents(client, { limit = 50, blockedIds = [], authorIds = null } = {}) {
+// before: a created_at ISO cursor for keyset pagination — only events strictly
+// older than it are returned. Pass the `at` of the last event of the previous
+// page to load the next page (infinite scroll).
+export async function fetchFeedEvents(client, { limit = 50, blockedIds = [], authorIds = null, before = null } = {}) {
   const blocked = new Set(blockedIds);
   if (authorIds && authorIds.length === 0) return [];
 
@@ -81,6 +84,10 @@ export async function fetchFeedEvents(client, { limit = 50, blockedIds = [], aut
   if (authorIds) {
     addsQuery = addsQuery.in('user_id', authorIds);
     usagesQuery = usagesQuery.in('item.user_id', authorIds);
+  }
+  if (before) {
+    addsQuery = addsQuery.lt('created_at', before);
+    usagesQuery = usagesQuery.lt('created_at', before);
   }
 
   const [addsRes, usagesRes] = await Promise.all([

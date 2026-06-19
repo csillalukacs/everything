@@ -19,6 +19,10 @@ import GroupItemsSheet from '../../screens/GroupItemsSheet';
 import { C } from '../../shared/theme';
 
 const TAB_BAR_HEIGHT = 70;
+// Raw event page size. Feed rows are grouped (groupConsecutive collapses a user's
+// same-day adds/usages into one row), so the visible row count is often far lower
+// than this — keep it generous so each page yields a worthwhile number of rows.
+const FEED_PAGE_SIZE = 100;
 
 export default function Feed() {
   const router = useRouter();
@@ -26,6 +30,8 @@ export default function Feed() {
   const { session, updateItem, deleteItem, blockedIds, blockedByIds, followingIds } = useCollection();
   const [feedEvents, setFeedEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [loadingMore, setLoadingMore] = useState(false);
+  const [hasMore, setHasMore] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [selectedItem, setSelectedItem] = useState(null);
   const [moreGroup, setMoreGroup] = useState(null);
@@ -40,7 +46,9 @@ export default function Feed() {
   );
 
   const feedOptions = useCallback(
-    () => (activeTab === 'friends' ? { limit: 50, authorIds: [...followingIds] } : { limit: 50 }),
+    () => (activeTab === 'friends'
+      ? { limit: FEED_PAGE_SIZE, authorIds: [...followingIds] }
+      : { limit: FEED_PAGE_SIZE }),
     [activeTab, followingIds],
   );
 
@@ -62,7 +70,11 @@ export default function Feed() {
     let cancelled = false;
     setLoading(true);
     fetchFeedEvents(supabase, feedOptions())
-      .then(rows => { if (!cancelled) setFeedEvents(rows); })
+      .then(rows => {
+        if (cancelled) return;
+        setFeedEvents(rows);
+        setHasMore(rows.length >= FEED_PAGE_SIZE);
+      })
       .catch(e => console.error('fetchFeedEvents error:', e))
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
@@ -73,12 +85,32 @@ export default function Feed() {
     try {
       const rows = await fetchFeedEvents(supabase, feedOptions());
       setFeedEvents(rows);
+      setHasMore(rows.length >= FEED_PAGE_SIZE);
     } catch (e) {
       console.error('fetchFeedEvents error:', e);
     } finally {
       setRefreshing(false);
     }
   }, [feedOptions]);
+
+  const loadMore = useCallback(async () => {
+    if (loadingMore || refreshing || loading || !hasMore) return;
+    const cursor = feedEvents[feedEvents.length - 1]?.at;
+    if (!cursor) return;
+    setLoadingMore(true);
+    try {
+      const rows = await fetchFeedEvents(supabase, { ...feedOptions(), before: cursor });
+      setFeedEvents(prev => {
+        const seen = new Set(prev.map(e => e.key));
+        return [...prev, ...rows.filter(e => !seen.has(e.key))];
+      });
+      setHasMore(rows.length >= FEED_PAGE_SIZE);
+    } catch (e) {
+      console.error('fetchFeedEvents error:', e);
+    } finally {
+      setLoadingMore(false);
+    }
+  }, [loadingMore, refreshing, loading, hasMore, feedEvents, feedOptions]);
 
   const tabBarOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12);
 
@@ -110,6 +142,12 @@ export default function Feed() {
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: tabBarOffset + 24 }}
+        scrollEventThrottle={16}
+        onScroll={({ nativeEvent }) => {
+          const { layoutMeasurement, contentOffset, contentSize } = nativeEvent;
+          const distanceToBottom = contentSize.height - contentOffset.y - layoutMeasurement.height;
+          if (distanceToBottom < 600) loadMore();
+        }}
         refreshControl={
           <RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#999" />
         }
@@ -206,6 +244,11 @@ export default function Feed() {
             })}
           </View>
         )}
+        {loadingMore && (
+          <View style={styles.footerLoader}>
+            <ActivityIndicator color="#999" />
+          </View>
+        )}
       </ScrollView>
 
       <ItemDetailModal
@@ -294,6 +337,10 @@ const styles = StyleSheet.create({
   },
   feedList: {
     gap: 20,
+  },
+  footerLoader: {
+    paddingVertical: 24,
+    alignItems: 'center',
   },
   feedRow: {
     flexDirection: 'row',

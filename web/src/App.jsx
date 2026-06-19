@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
@@ -19,12 +19,21 @@ import NotificationsBell from './components/NotificationsBell'
 import PhotoStack from './components/PhotoStack'
 import GroupItemsModal from './components/GroupItemsModal'
 
+// Raw event page size. Feed rows are grouped (groupConsecutive collapses a user's
+// same-day adds/usages into one row), so the visible row count is often far lower
+// than this — keep it generous so each page yields a worthwhile number of rows.
+const FEED_PAGE_SIZE = 100
+
 export default function App() {
   const [session, setSession] = useState(null)
   const [loading, setLoading] = useState(true)
   const [username, setUsername] = useState(null)
   const [feedEvents, setFeedEvents] = useState([])
   const [feedLoading, setFeedLoading] = useState(true)
+  const [feedLoadingMore, setFeedLoadingMore] = useState(false)
+  const [hasMoreFeed, setHasMoreFeed] = useState(true)
+  const sentinelRef = useRef(null)
+  const loadMoreRef = useRef(() => {})
   const [selectedItem, setSelectedItem] = useState(null)
   const [moreGroup, setMoreGroup] = useState(null)
   const [blockedIds, setBlockedIds] = useState(() => new Set())
@@ -93,17 +102,65 @@ export default function App() {
     } else {
       setFeedLoading(true)
     }
-    const opts = everyone ? { limit: 50 } : { limit: 50, authorIds: [...followingIds] }
+    const opts = everyone ? { limit: FEED_PAGE_SIZE } : { limit: FEED_PAGE_SIZE, authorIds: [...followingIds] }
     fetchFeedEvents(supabase, opts)
       .then(rows => {
         if (cancelled) return
         setFeedEvents(rows)
+        setHasMoreFeed(rows.length >= FEED_PAGE_SIZE)
         if (everyone) writeCache(feedCacheKey(session.user.id), rows)
       })
       .catch(e => console.error('fetchFeedEvents error:', e))
       .finally(() => { if (!cancelled) setFeedLoading(false) })
     return () => { cancelled = true }
   }, [session, activeTab, followingIds])
+
+  // Keyset-paginate the feed as the sentinel scrolls into view. loadMore is kept
+  // in a ref so the IntersectionObserver (created once) always calls the latest
+  // closure without re-observing on every state change.
+  loadMoreRef.current = async () => {
+    if (feedLoadingMore || feedLoading || !hasMoreFeed) return
+    const cursor = feedEvents[feedEvents.length - 1]?.at
+    if (!cursor) return
+    setFeedLoadingMore(true)
+    try {
+      const everyone = activeTab === 'everyone'
+      const opts = everyone
+        ? { limit: FEED_PAGE_SIZE, before: cursor }
+        : { limit: FEED_PAGE_SIZE, before: cursor, authorIds: [...followingIds] }
+      const rows = await fetchFeedEvents(supabase, opts)
+      setFeedEvents(prev => {
+        const seen = new Set(prev.map(e => e.key))
+        return [...prev, ...rows.filter(e => !seen.has(e.key))]
+      })
+      setHasMoreFeed(rows.length >= FEED_PAGE_SIZE)
+    } catch (e) {
+      console.error('fetchFeedEvents error:', e)
+    } finally {
+      setFeedLoadingMore(false)
+    }
+  }
+
+  useEffect(() => {
+    const el = sentinelRef.current
+    if (!el) return
+    const obs = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) loadMoreRef.current() },
+      { rootMargin: '600px' },
+    )
+    obs.observe(el)
+    return () => obs.disconnect()
+  }, [session])
+
+  // The observer only fires when the sentinel *crosses* into view. After a page
+  // loads while the sentinel is still near the bottom (no crossing happens), this
+  // re-checks and keeps pulling pages until the sentinel is pushed off-screen.
+  useEffect(() => {
+    if (feedLoading || feedLoadingMore || !hasMoreFeed) return
+    const el = sentinelRef.current
+    if (!el) return
+    if (el.getBoundingClientRect().top <= window.innerHeight + 600) loadMoreRef.current()
+  }, [feedEvents, feedLoading, feedLoadingMore, hasMoreFeed])
 
   if (loading) return (
     <div className="centered"><div className="spinner" /></div>
@@ -269,6 +326,13 @@ export default function App() {
               </article>
             )
           })}
+        </div>
+      )}
+
+      <div ref={sentinelRef} aria-hidden="true" />
+      {feedLoadingMore && (
+        <div className="centered" style={{ height: 'auto', padding: '24px 0' }}>
+          <div className="spinner" />
         </div>
       )}
 
