@@ -1,0 +1,6 @@
+# Real credentials/config — never commit
+.env
+# Per-run screenshots + reports
+runs/
+# Python bytecode
+__pycache__/
