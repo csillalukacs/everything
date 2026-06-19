@@ -2,11 +2,12 @@ import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { supabase } from './lib/supabase'
 import { fetchFeedEvents } from '../../shared/itemsApi'
+import { groupConsecutive } from '../../shared/grouping'
 import { fetchBlockedIds, fetchBlockedByIds } from '../../shared/moderation'
 import { fetchFollowingIds } from '../../shared/follows'
 import { fetchLikedItemIds, addLike, removeLike } from '../../shared/likesApi'
 import { thumbOf } from '../../shared/items'
-import { relativeTime } from '../../shared/dates'
+import { relativeTime, dayKey } from '../../shared/dates'
 import { S } from '../../shared/strings'
 import { APP_TESTFLIGHT_URL } from '../../shared/links'
 import { feedCacheKey } from '../../shared/cacheKeys'
@@ -15,6 +16,7 @@ import AuthScreen from './screens/AuthScreen'
 import ItemDetailModal from './screens/ItemDetailModal'
 import Avatar from './components/Avatar'
 import NotificationsBell from './components/NotificationsBell'
+import PhotoStack from './components/PhotoStack'
 
 export default function App() {
   const [session, setSession] = useState(null)
@@ -176,15 +178,53 @@ export default function App() {
         </div>
       ) : (
         <div className="feed-list">
-          {visibleEvents.map(event => {
-            const item = event.item
+          {groupConsecutive(visibleEvents, e => e.item.user_id, e => e.type, e => dayKey(new Date(e.at))).map(group => {
+            const item = group.entries[0].item
             const slug = item.profile?.username || item.user_id
             const name = item.profile?.display_name || item.profile?.username || 'someone'
-            const time = relativeTime(event.at)
+            const time = relativeTime(group.entries[0].at)
+
+            if (group.entries.length > 1) {
+              const count = group.entries.length
+              const action = group.kind === 'usage' ? S.feed.usedThings(count) : S.feed.addedThings(count)
+              const thumbs = group.entries.map(e => thumbOf(e.item)).filter(Boolean)
+              return (
+                <article
+                  key={group.key}
+                  className="feed-row"
+                  onClick={() => navigate(`/u/${slug}`)}
+                  role="button"
+                  tabIndex={0}
+                  onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate(`/u/${slug}`) } }}
+                >
+                  <Link
+                    to={`/u/${slug}`}
+                    className="feed-poster-avatar"
+                    onClick={e => e.stopPropagation()}
+                  >
+                    <Avatar profile={{ ...(item.profile ?? {}), user_id: item.user_id }} size={36} />
+                  </Link>
+                  <div className="feed-row-text">
+                    <p className="feed-poster-line">
+                      <Link
+                        to={`/u/${slug}`}
+                        className="feed-poster-name"
+                        onClick={e => e.stopPropagation()}
+                      >{name}</Link>
+                      <span className="feed-poster-action"> {action}</span>
+                      {time && <span className="feed-poster-time"> · {time}</span>}
+                    </p>
+                  </div>
+                  {thumbs.length > 0 && <PhotoStack thumbs={thumbs} />}
+                </article>
+              )
+            }
+
+            const event = group.entries[0]
             const action = event.type === 'usage' ? S.feed.usedItem : S.feed.addedNewItem
             return (
               <article
-                key={event.key}
+                key={group.key}
                 className="feed-row"
                 onClick={() => setSelectedItem(item)}
                 role="button"

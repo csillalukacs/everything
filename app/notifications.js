@@ -17,12 +17,14 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../lib/supabase';
 import { useCollection } from '../lib/CollectionProvider';
 import { fetchNotifications, subscribeToNotifications } from '../shared/notifications';
+import { groupConsecutive } from '../shared/grouping';
 import { notificationsCacheKey } from '../shared/cacheKeys';
 import { thumbOf } from '../shared/items';
-import { relativeTime } from '../shared/dates';
+import { relativeTime, dayKey } from '../shared/dates';
 import { S } from '../shared/strings';
 import { C } from '../shared/theme';
 import Avatar from '../screens/Avatar';
+import PhotoStack from '../screens/PhotoStack';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 
@@ -146,13 +148,40 @@ export default function Notifications() {
         ) : visible.length === 0 ? (
           <View style={styles.empty}><Text style={styles.emptyText}>{S.notifications.empty}</Text></View>
         ) : (
-          visible.map(n => {
-            const name = n.actor.display_name || n.actor.username || 'someone';
-            const time = relativeTime(n.created_at);
+          groupConsecutive(visible, n => n.actor_id, n => (n.type === 'like' ? 'like' : null), n => dayKey(new Date(n.created_at))).map(group => {
+            const first = group.entries[0];
+            const name = first.actor.display_name || first.actor.username || 'someone';
+            const time = relativeTime(first.created_at);
+            const unread = group.entries.some(n => !n.read_at);
+
+            if (group.entries.length > 1) {
+              const count = group.entries.length;
+              const thumbs = group.entries.map(n => n.item && thumbOf(n.item)).filter(Boolean);
+              return (
+                <TouchableOpacity
+                  key={group.key}
+                  style={[styles.row, unread && styles.rowUnread]}
+                  activeOpacity={0.7}
+                  onPress={() => openActor(first.actor)}
+                >
+                  <TouchableOpacity onPress={() => openActor(first.actor)} hitSlop={6}>
+                    <Avatar profile={first.actor} size={40} />
+                  </TouchableOpacity>
+                  <Text style={styles.rowText}>
+                    <Text style={styles.name} onPress={() => openActor(first.actor)}>{name}</Text>
+                    <Text style={styles.action}> {S.notifications.likedThings(count)}</Text>
+                    {time && <Text style={styles.time}> · {time}</Text>}
+                  </Text>
+                  {thumbs.length > 0 && <PhotoStack thumbs={thumbs} size={44} />}
+                </TouchableOpacity>
+              );
+            }
+
+            const n = first;
             const thumb = n.item ? thumbOf(n.item) : null;
             return (
               <TouchableOpacity
-                key={n.id}
+                key={group.key}
                 style={[styles.row, !n.read_at && styles.rowUnread]}
                 activeOpacity={0.7}
                 onPress={() => handlePress(n)}

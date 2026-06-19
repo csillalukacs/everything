@@ -6,13 +6,15 @@ import { ActivityIndicator, Platform, RefreshControl, ScrollView, StyleSheet, Te
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { supabase } from '../../lib/supabase';
 import { fetchFeedEvents } from '../../shared/itemsApi';
+import { groupConsecutive } from '../../shared/grouping';
 import { thumbOf } from '../../shared/items';
-import { relativeTime } from '../../shared/dates';
+import { relativeTime, dayKey } from '../../shared/dates';
 import { S } from '../../shared/strings';
 import { useCollection } from '../../lib/CollectionProvider';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import OpenProfileSheet from '../../screens/OpenProfileSheet';
 import Avatar from '../../screens/Avatar';
+import PhotoStack from '../../screens/PhotoStack';
 import { C } from '../../shared/theme';
 
 const TAB_BAR_HEIGHT = 70;
@@ -122,14 +124,45 @@ export default function Feed() {
           </View>
         ) : (
           <View style={styles.feedList}>
-            {visibleEvents.map(event => {
-              const item = event.item;
+            {groupConsecutive(visibleEvents, e => e.item.user_id, e => e.type, e => dayKey(new Date(e.at))).map(group => {
+              const item = group.entries[0].item;
               const name = item.profile?.display_name || item.profile?.username || 'someone';
-              const time = relativeTime(event.at);
+              const time = relativeTime(group.entries[0].at);
+
+              if (group.entries.length > 1) {
+                const count = group.entries.length;
+                const action = group.kind === 'usage' ? S.feed.usedThings(count) : S.feed.addedThings(count);
+                return (
+                  <TouchableOpacity
+                    key={group.key}
+                    style={styles.feedRow}
+                    activeOpacity={0.7}
+                    onPress={() => openProfile(item)}
+                  >
+                    <TouchableOpacity onPress={() => openProfile(item)} hitSlop={6}>
+                      <Avatar profile={{ ...(item.profile ?? {}), user_id: item.user_id }} size={36} />
+                    </TouchableOpacity>
+                    <View style={styles.feedRowText}>
+                      <Text style={styles.posterRow}>
+                        <Text
+                          style={styles.posterName}
+                          onPress={() => openProfile(item)}
+                          suppressHighlighting
+                        >{name}</Text>
+                        <Text style={styles.posterAction}> {action}</Text>
+                        {time && <Text style={styles.posterTime}> · {time}</Text>}
+                      </Text>
+                    </View>
+                    <PhotoStack thumbs={group.entries.map(e => thumbOf(e.item)).filter(Boolean)} />
+                  </TouchableOpacity>
+                );
+              }
+
+              const event = group.entries[0];
               const action = event.type === 'usage' ? S.feed.usedItem : S.feed.addedNewItem;
               return (
                 <TouchableOpacity
-                  key={event.key}
+                  key={group.key}
                   style={styles.feedRow}
                   activeOpacity={0.7}
                   onPress={() => setSelectedItem(item)}

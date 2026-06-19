@@ -2,13 +2,15 @@ import { useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { supabase } from '../lib/supabase'
 import { fetchNotifications, fetchUnreadNotificationCount, markNotificationsRead, subscribeToNotifications } from '../../../shared/notifications'
+import { groupConsecutive } from '../../../shared/grouping'
 import { fetchBlockedIds } from '../../../shared/moderation'
 import { thumbOf } from '../../../shared/items'
-import { relativeTime } from '../../../shared/dates'
+import { relativeTime, dayKey } from '../../../shared/dates'
 import { S } from '../../../shared/strings'
 import { notificationsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
 import Avatar from './Avatar'
+import PhotoStack from './PhotoStack'
 
 export default function NotificationsBell({ sessionUserId }) {
   const navigate = useNavigate()
@@ -101,11 +103,39 @@ export default function NotificationsBell({ sessionUserId }) {
             </div>
           ) : (
             <div className="notif-list">
-              {visible.map(n => {
-                const name = n.actor.display_name || n.actor.username || 'someone'
+              {groupConsecutive(visible, n => n.actor_id, n => (n.type === 'like' ? 'like' : null), n => dayKey(new Date(n.created_at))).map(group => {
+                const first = group.entries[0]
+                const name = first.actor.display_name || first.actor.username || 'someone'
+                const profileTo = `/u/${first.actor.username || first.actor.user_id}`
+                const goProfileGroup = () => { setOpen(false); navigate(profileTo) }
+
+                if (group.entries.length > 1) {
+                  const count = group.entries.length
+                  const time = relativeTime(first.created_at)
+                  const unread = group.entries.some(n => !n.read_at)
+                  const thumbs = group.entries.map(n => n.item && thumbOf(n.item)).filter(Boolean)
+                  return (
+                    <div
+                      key={group.key}
+                      className={`notif-row${unread ? ' notif-row-unread' : ''}`}
+                      onClick={e => { if (!e.target.closest('button')) goProfileGroup() }}
+                    >
+                      <button type="button" className="notif-avatar-btn" onClick={goProfileGroup}>
+                        <Avatar profile={first.actor} size={40} />
+                      </button>
+                      <p className="notif-text">
+                        <button type="button" className="notif-name" onClick={goProfileGroup}>{name}</button>
+                        <span className="notif-action"> {S.notifications.likedThings(count)}</span>
+                        {time && <span className="notif-time"> · {time}</span>}
+                      </p>
+                      {thumbs.length > 0 && <PhotoStack thumbs={thumbs} size={44} />}
+                    </div>
+                  )
+                }
+
+                const n = first
                 const time = relativeTime(n.created_at)
                 const thumb = n.item ? thumbOf(n.item) : null
-                const profileTo = `/u/${n.actor.username || n.actor.user_id}`
                 // The actor's name/avatar open their profile; tapping anywhere else on
                 // a 'like' opens your own thing, while a 'follow' just opens the profile.
                 const rowTo = n.type === 'like' && n.item_id
@@ -114,7 +144,7 @@ export default function NotificationsBell({ sessionUserId }) {
                 const goProfile = () => { setOpen(false); navigate(profileTo) }
                 return (
                   <div
-                    key={n.id}
+                    key={group.key}
                     className={`notif-row${n.read_at ? '' : ' notif-row-unread'}`}
                     onClick={e => { if (!e.target.closest('button')) { setOpen(false); navigate(rowTo) } }}
                   >

@@ -252,6 +252,9 @@ export const S = {
     loading: 'loading…',
     addedNewItem: 'added a new thing',
     usedItem: 'used',
+    // Collapsed feed rows: a run of the same person's back-to-back events.
+    addedThings: (n) => `added ${n} ${plural(n, 'thing')}`,
+    usedThings: (n) => `used ${n} ${plural(n, 'thing')}`,
     tabEveryone: 'everyone',
     tabFriends: 'friends',
     friendsEmpty: 'follow people to see their things here',
@@ -283,6 +286,8 @@ export const S = {
     empty: 'no notifications yet',
     followed: 'followed you',
     liked: 'favorited your thing',
+    // Collapsed notification row: one person favoriting several of your things in a row.
+    likedThings: (n) => `favorited ${n} of your ${plural(n, 'thing')}`,
   },
 
   // Favorites ("hearts") — favorite other people's things, view them in a grid.
