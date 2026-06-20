@@ -41,15 +41,18 @@ ideal for detection. (In a release build the same error would be a hard crash.)
   items (no crash on an empty 3×3), notifications empty, Stats empty state (no
   divide-by-zero). *Android 7/7, iOS 7/7.* (Found a real bug: the new-user collection had
   no empty state — fixed; see `zlocal/ANDROID_TEST_FINDINGS.md` #3.)
-- **`destructive`** — add/delete lifecycle on **test2** (Android only): baseline count →
-  add (camera → system photo picker → background removal → save → R2 upload) → count +1 →
-  delete → confirm → back to baseline. Self-cleaning. *Android 5/5.*
+- **`destructive`** — add/delete lifecycle on **test2**: baseline count → add → count +1 →
+  delete → back to baseline. Self-cleaning. The add step captures a photo: Android picks
+  the most-recent shot from the system photo library; iOS shoots the simulator camera (a
+  usable test frame) via the shutter, since the iOS photo picker runs out of process and
+  isn't scriptable. *Android 5/5, iOS 5/5.*
 - **`multiuser`** — cross-user follow on a single device via account switching + deep links
   (test2 → test1): deep-link to test1's profile → follow → friends feed non-empty →
   **privacy** (public-only count test2 sees < test1's own total → private item hidden) →
-  switch to test1 → "followed you" notification → unfollow cleanup. *Android 9/9.*
+  switch to test1 → "followed you" notification → unfollow cleanup. *Android 9/9, iOS 9/9.*
 - **`seed`** — one-time setup (excluded from `all`): signs in as test1 and adds one
   **private** item via the UI, so the multiuser privacy check has something to hide.
+  *Android + iOS.*
 - **`all`** — runs smoke + empty + destructive + multiuser (not seed).
 
 The suites switch accounts as needed and dismiss the OS "save password" / OAuth-consent
@@ -86,8 +89,9 @@ xcrun simctl boot "iPhone 16"; open -a Simulator          # iOS simulator
 ```
 
 ## Known limitations
-- **destructive** and **multiuser** are validated on **Android only** — the code is
-  platform-agnostic but iOS's photo picker geometry differs (not yet wired up).
+- All suites (smoke, empty, destructive, multiuser, seed) pass on **both** Android and iOS.
+  The iOS add flow captures from the simulator camera rather than the system photo picker
+  (which runs out of process and isn't scriptable) — see `open_add_and_capture`.
 - **Google / Apple sign-in** isn't exercised (needs a real provider browser flow); email only.
 - **Map tiles** aren't asserted (only that Stats doesn't crash and the city sections render).
 - Not CI-ready as-is: needs a live emulator/simulator + Metro (no headless/device-farm setup).

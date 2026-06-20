@@ -452,14 +452,11 @@ class Runner:
         return self.summary()
 
     # ---- destructive lifecycle suite (add -> delete, self-cleaning) ----
-    # Android only for now: the add flow drives the camera screen -> system photo
-    # picker, whose geometry is platform-specific. iOS add is a separate build.
+    # Android adds from the system photo library; iOS captures from the simulator
+    # camera (see open_add_and_capture). Both end on the same item form.
     def run_destructive(self, account=ACTIVE_ACCOUNT):
         d = self.dev
         print(f"\n=== destructive: {d.name} (account {account}) ===")
-        if d.name != "android":
-            self.record("destructive suite", True, "skipped (Android-only for now)")
-            return self.summary()
         d.clear_logs()
         d.launch()
         time.sleep(11)
@@ -475,8 +472,8 @@ class Runner:
         n0 = n0 or 0
         self.shot("before_add")
 
-        # CREATE: + -> camera -> library -> pick -> bg removal -> name -> save
-        added = self.add_item_from_library(f"smoke-{int(time.time())}")
+        # CREATE: + -> capture (camera/library) -> bg removal -> name -> save
+        self.add_item(f"smoke-{int(time.time())}")
         time.sleep(2)
         self.tap_tab_profile()
         time.sleep(2)
@@ -502,9 +499,6 @@ class Runner:
     def run_seed(self, account=TEST_EMAIL):
         d = self.dev
         print(f"\n=== seed: {d.name} (private item on {account}) ===")
-        if d.name != "android":
-            self.record("seed suite", True, "skipped (Android-only)")
-            return self.summary()
         d.clear_logs()
         d.launch()
         time.sleep(11)
@@ -515,7 +509,7 @@ class Runner:
         self.tap_tab_profile()
         time.sleep(2)
         n0 = self.count_things() or 0
-        ok = self.add_item_from_library(f"private-smoke-{int(time.time())}", private=True)
+        ok = self.add_item(f"private-smoke-{int(time.time())}", private=True)
         time.sleep(2)
         self.tap_tab_profile()
         time.sleep(2)
@@ -545,6 +539,9 @@ class Runner:
         if d.find_exact("follow"):
             d.tap_exact("follow")
             time.sleep(3)
+            if d.find_exact("follow"):  # retry once if the first tap didn't land
+                d.tap_exact("follow")
+                time.sleep(3)
         self.shot("after_follow")
         self.record("follow registered (button toggled)", d.find_exact("follow") is None)
 
@@ -560,6 +557,14 @@ class Runner:
                     not d.has_text("follow people to see their things here"))
 
         # B: should have received a "followed you" notification.
+        # Cold-start *before* switching: the deep-link flow above leaves A on B's
+        # profile route, which also has a search bar, so account detection would
+        # mistake it for the owner's own collection and the switch would silently
+        # no-op. A fresh launch returns to the tabbed root first.
+        d.launch()
+        time.sleep(11)
+        self.dismiss_dev_menu()
+        self.dismiss_system_dialogs()
         self.ensure_account(target)
         self.tap_tab_profile()
         time.sleep(2)
@@ -612,12 +617,42 @@ class Runner:
                 return int(m.group(1))
         return None
 
-    def add_item_from_library(self, name, private=False):
+    def open_add_and_capture(self):
+        """Open the add flow and produce a photo so the item form appears.
+
+        Android picks the most-recent shot from the system photo library (the
+        emulator ships a usable sample image). iOS instead captures from the
+        simulator camera via the shutter: the iOS photo picker (PHPicker) runs
+        out of process and isn't reliably scriptable, whereas the camera screen's
+        own controls are, and the simulator camera yields a usable test frame."""
+        if self.dev.name == "ios":
+            if not self.dev.tap_label("add thing"):
+                self.tap_ratio(0.88, 0.83)   # + FAB fallback
+            time.sleep(3)
+            # First run shows the photo-library + camera permission dialogs (and the
+            # in-app "allow camera" gate). Grant whatever is up until none remain;
+            # on later runs permission is already granted and these are no-ops.
+            for _ in range(6):
+                if self.dev.tap_label("Allow Full Access"):
+                    pass
+                elif self.dev.tap_exact("Allow"):
+                    pass
+                elif self.dev.tap_label("allow camera"):
+                    pass
+                else:
+                    break
+                time.sleep(2)
+            self.tap_ratio(0.49, 0.90)   # shutter (captures the simulator camera frame)
+            time.sleep(2)
+            return
         self.tap_ratio(0.88, 0.85)   # + FAB (bottom-right)
         time.sleep(3)
         self.tap_ratio(0.16, 0.91)   # library thumbnail (bottom-left of camera screen)
         time.sleep(3)
         self.tap_ratio(0.17, 0.59)   # first photo in the system picker grid
+
+    def add_item(self, name, private=False):
+        self.open_add_and_capture()
         # The save button is always in the form; the real gate is background removal.
         # Wait for it to finish ("removing background..." clears / "retake" appears) —
         # interacting earlier behaves erratically.
@@ -631,7 +666,11 @@ class Runner:
             self.record("add: background removal finished", False, "form never settled")
             return False
         if private:
-            self.tap_ratio(0.88, 0.13)   # privacy lock toggle (top-right of the photo)
+            # Privacy lock toggle, top-right corner of the photo. The hit target is
+            # small and sits over the photo's retake overlay, so the centre has to be
+            # precise (a near miss triggers retake). iOS inset differs from Android.
+            lock_rx, lock_ry = (0.87, 0.15) if self.dev.name == "ios" else (0.88, 0.13)
+            self.tap_ratio(lock_rx, lock_ry)
             time.sleep(1)
             self.shot("add_private_toggled")
         f = self.dev.find("name")
@@ -664,11 +703,16 @@ class Runner:
         time.sleep(3)
 
     def dismiss(self):
-        """Pop a pushed/modal screen (notifications, stats) back to the tabbed UI."""
+        """Pop a pushed/modal screen (settings, notifications, stats) back to the
+        tabbed UI."""
         if self.dev.name == "android":
             self.dev.back()
         else:
-            self.dev.tap(35, 100)  # top-left close chevron (points)
+            # The settings sheet closes via a top-right "done"; notifications/stats
+            # via a top-left close chevron (no label). Try the button, then the
+            # chevron. Leaving settings open here corrupts a later account switch.
+            if not self.dev.tap_exact("done"):
+                self.dev.tap(35, 100)  # top-left close chevron (points)
         time.sleep(2)
 
     # ---- navigation helpers (label-first, with tab fallbacks) ----
