@@ -20,7 +20,7 @@ import PhotoStack from './components/PhotoStack'
 import GroupItemsModal from './components/GroupItemsModal'
 
 // Raw event page size. Feed rows are grouped (groupConsecutive collapses a user's
-// same-day adds/usages into one row), so the visible row count is often far lower
+// same-day adds into one row), so the visible row count is often far lower
 // than this — keep it generous so each page yields a worthwhile number of rows.
 const FEED_PAGE_SIZE = 100
 
@@ -245,7 +245,7 @@ export default function App() {
 
             if (group.entries.length > 1) {
               const count = group.entries.length
-              const action = group.kind === 'usage' ? S.feed.usedThings(count) : S.feed.addedThings(count)
+              const action = S.feed.addedThings(count)
               const thumbs = group.entries.map(e => thumbOf(e.item)).filter(Boolean)
               return (
                 <article
@@ -285,8 +285,7 @@ export default function App() {
               )
             }
 
-            const event = group.entries[0]
-            const action = event.type === 'usage' ? S.feed.usedItem : S.feed.addedNewItem
+            const action = S.feed.addedNewItem
             return (
               <article
                 key={group.key}
@@ -314,7 +313,7 @@ export default function App() {
                     {time && <span className="feed-poster-time"> · {time}</span>}
                   </p>
                   {item.name && <h2 className="feed-item-name">{item.name}</h2>}
-                  {event.type !== 'usage' && item.description && (
+                  {item.description && (
                     <p className="feed-item-description">{item.description}</p>
                   )}
                 </div>

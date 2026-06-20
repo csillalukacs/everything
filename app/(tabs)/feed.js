@@ -20,7 +20,7 @@ import { C } from '../../shared/theme';
 
 const TAB_BAR_HEIGHT = 70;
 // Raw event page size. Feed rows are grouped (groupConsecutive collapses a user's
-// same-day adds/usages into one row), so the visible row count is often far lower
+// same-day adds into one row), so the visible row count is often far lower
 // than this — keep it generous so each page yields a worthwhile number of rows.
 const FEED_PAGE_SIZE = 100;
 
@@ -171,7 +171,7 @@ export default function Feed() {
 
               if (group.entries.length > 1) {
                 const count = group.entries.length;
-                const action = group.kind === 'usage' ? S.feed.usedThings(count) : S.feed.addedThings(count);
+                const action = S.feed.addedThings(count);
                 return (
                   <TouchableOpacity
                     key={group.key}
@@ -202,8 +202,7 @@ export default function Feed() {
                 );
               }
 
-              const event = group.entries[0];
-              const action = event.type === 'usage' ? S.feed.usedItem : S.feed.addedNewItem;
+              const action = S.feed.addedNewItem;
               return (
                 <TouchableOpacity
                   key={group.key}
@@ -225,7 +224,7 @@ export default function Feed() {
                       {time && <Text style={styles.posterTime}> · {time}</Text>}
                     </Text>
                     {item.name && <Text style={styles.itemName} numberOfLines={1}>{item.name}</Text>}
-                    {event.type !== 'usage' && item.description && (
+                    {item.description && (
                       <Text style={styles.itemDescription} numberOfLines={2}>{item.description}</Text>
                     )}
                   </View>

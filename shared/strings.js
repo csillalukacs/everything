@@ -251,10 +251,8 @@ export const S = {
     feedEmpty: 'nothing here yet',
     loading: 'loading…',
     addedNewItem: 'added a new thing',
-    usedItem: 'used',
-    // Collapsed feed rows: a run of the same person's back-to-back events.
+    // Collapsed feed rows: a run of the same person's back-to-back adds.
     addedThings: (n) => `added ${n} ${plural(n, 'thing')}`,
-    usedThings: (n) => `used ${n} ${plural(n, 'thing')}`,
     tabEveryone: 'everyone',
     tabFriends: 'friends',
     friendsEmpty: 'follow people to see their things here',

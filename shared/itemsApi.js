@@ -67,9 +67,9 @@ export async function fetchPublicFeed(client, { limit = 50, blockedIds = [] } = 
   }));
 }
 
-// Unified cross-user feed: item-add events merged with "used today" usage events,
-// each carrying its item + the poster's profile, sorted newest-first by insert time.
-// Returns events shaped { type: 'add' | 'usage', key, at, used_on?, item }.
+// Cross-user feed of item-add events, each carrying its item + the poster's
+// profile, sorted newest-first by insert time.
+// Returns events shaped { type: 'add', key, at, item }.
 // authorIds: when provided, restrict the feed to these users (the "friends" tab).
 // An empty array yields an empty feed (you follow no one). null = everyone.
 // before: a created_at ISO cursor for keyset pagination — only events strictly
@@ -84,39 +84,17 @@ export async function fetchFeedEvents(client, { limit = 50, blockedIds = [], aut
     .select(FEED_COLUMNS)
     .eq('is_private', false)
     .is('retired_at', null);
-  let usagesQuery = client
-    .from('item_usages')
-    .select(`id, used_on, created_at, item:items!inner(${FEED_COLUMNS})`)
-    .eq('on_feed', true)
-    .eq('item.is_private', false)
-    .is('item.retired_at', null);
-  if (authorIds) {
-    addsQuery = addsQuery.in('user_id', authorIds);
-    usagesQuery = usagesQuery.in('item.user_id', authorIds);
-  }
-  if (before) {
-    addsQuery = addsQuery.lt('created_at', before);
-    usagesQuery = usagesQuery.lt('created_at', before);
-  }
+  if (authorIds) addsQuery = addsQuery.in('user_id', authorIds);
+  if (before) addsQuery = addsQuery.lt('created_at', before);
 
-  const [addsRes, usagesRes] = await Promise.all([
-    addsQuery.order('created_at', { ascending: false }).limit(limit),
-    usagesQuery.order('created_at', { ascending: false }).limit(limit),
-  ]);
-  if (addsRes.error) throw addsRes.error;
-  if (usagesRes.error) throw usagesRes.error;
+  const { data, error } = await addsQuery
+    .order('created_at', { ascending: false })
+    .limit(limit);
+  if (error) throw error;
 
-  const addEvents = (addsRes.data ?? []).map(item => ({
-    type: 'add', key: `add-${item.id}`, at: item.created_at, item,
-  }));
-  const usageEvents = (usagesRes.data ?? [])
-    .filter(u => u.item)
-    .map(u => ({ type: 'usage', key: `use-${u.id}`, at: u.created_at, used_on: u.used_on, item: u.item }));
-
-  const events = [...addEvents, ...usageEvents]
-    .filter(e => !blocked.has(e.item.user_id))
-    .sort((a, b) => new Date(b.at) - new Date(a.at))
-    .slice(0, limit);
+  const events = (data ?? [])
+    .filter(item => !blocked.has(item.user_id))
+    .map(item => ({ type: 'add', key: `add-${item.id}`, at: item.created_at, item }));
   if (!events.length) return [];
 
   const userIds = [...new Set(events.map(e => e.item.user_id))];
