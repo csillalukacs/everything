@@ -1,5 +1,14 @@
 const PAGE_SIZE = 1000;
 
+// Columns the feed actually consumes (row display + ItemDetailModal). Deliberately
+// excludes ocr_text: it's the largest column (full recognized text per image) and
+// the feed/detail views never read it — pulling it for up to ~200 rows per load was
+// the bulk of the feed payload. The detail modal regenerates OCR on save anyway.
+const FEED_COLUMNS =
+  'id, user_id, name, description, image_url, thumb_url, previous_images, image_added_at, ' +
+  'is_private, acquired_year, acquired_location, acquired_lat, acquired_lng, ' +
+  'usage_count, last_used_on, created_at, updated_at, retired_at, tags(id, name, is_private)';
+
 export async function fetchAllItems(client, { userId, publicOnly = false, columns = '*, tags(id, name, is_private)' } = {}) {
   // Keyset pagination on (created_at desc, id desc) — see the matching indexes in
   // sql/add_items_collection_indexes.sql. Faster than OFFSET (which scans and
@@ -34,7 +43,7 @@ export async function fetchAllItems(client, { userId, publicOnly = false, column
 export async function fetchPublicFeed(client, { limit = 50, blockedIds = [] } = {}) {
   const { data: rawItems, error } = await client
     .from('items')
-    .select('*, tags(id, name, is_private)')
+    .select(FEED_COLUMNS)
     .eq('is_private', false)
     .is('retired_at', null)
     .order('created_at', { ascending: false })
@@ -72,12 +81,12 @@ export async function fetchFeedEvents(client, { limit = 50, blockedIds = [], aut
 
   let addsQuery = client
     .from('items')
-    .select('*, tags(id, name, is_private)')
+    .select(FEED_COLUMNS)
     .eq('is_private', false)
     .is('retired_at', null);
   let usagesQuery = client
     .from('item_usages')
-    .select('id, used_on, created_at, item:items!inner(*, tags(id, name, is_private))')
+    .select(`id, used_on, created_at, item:items!inner(${FEED_COLUMNS})`)
     .eq('on_feed', true)
     .eq('item.is_private', false)
     .is('item.retired_at', null);
