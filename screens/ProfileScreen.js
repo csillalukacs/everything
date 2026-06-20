@@ -324,13 +324,6 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
 
             <View style={styles.section}>
               <View style={styles.labelRow}>
-                <Text style={styles.label}>{S.profile.collection}</Text>
-              </View>
-              <Text style={styles.countValue}>{S.profile.objectCount(itemCount)}</Text>
-            </View>
-
-            <View style={styles.section}>
-              <View style={styles.labelRow}>
                 <Text style={styles.label}>{S.profile.account}</Text>
               </View>
               <Text style={styles.email}>{session?.user.email}</Text>
