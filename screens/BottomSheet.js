@@ -11,12 +11,13 @@ import {
   View,
 } from 'react-native';
 import { Gesture, GestureDetector, GestureHandlerRootView } from 'react-native-gesture-handler';
+import { C } from '../shared/theme';
 
 const SCREEN_HEIGHT = Dimensions.get('window').height;
 const ANIM_DURATION = 220;
 const SWIPE_CLOSE_THRESHOLD = 100;
 
-export default function BottomSheet({ visible, onClose, onClosed, keyboardAvoiding, swipeToClose, sheetStyle, children }) {
+export default function BottomSheet({ visible, onClose, onClosed, keyboardAvoiding, swipeToClose = true, sheetStyle, children }) {
   const [mounted, setMounted] = useState(visible);
   const backdrop = useRef(new Animated.Value(0)).current;
   const translate = useRef(new Animated.Value(SCREEN_HEIGHT)).current;
@@ -68,11 +69,17 @@ export default function BottomSheet({ visible, onClose, onClosed, keyboardAvoidi
     }
   }, [visible]);
 
+  // Break the grabber band out to the sheet's own edges regardless of its padding,
+  // so the whole top strip (and corners) is a reliable drag target on every sheet.
+  const flat = StyleSheet.flatten(sheetStyle) || {};
+  const padTop = flat.paddingTop ?? flat.padding ?? 0;
+  const padX = flat.paddingHorizontal ?? flat.padding ?? 0;
+
   const sheet = (
     <Animated.View style={[sheetStyle, { transform: [{ translateY: translate }] }]}>
       {swipeToClose && (
         <GestureDetector gesture={dragGesture}>
-          <View style={styles.grabberArea}>
+          <View style={[styles.grabberArea, { marginTop: -padTop, marginHorizontal: -padX }]}>
             <View style={styles.grabber} />
           </View>
         </GestureDetector>
@@ -115,18 +122,16 @@ const styles = StyleSheet.create({
   },
   // Full-width band reaching the sheet's top edge so the whole top strip (and the
   // rounded corners) is a reliable drag target, not just the little grabber line.
-  // Negative margins cancel the host sheet's typical 24px padding.
+  // marginTop / marginHorizontal are applied inline to cancel the host sheet's padding.
   grabberArea: {
     alignItems: 'center',
-    paddingTop: 18,
-    paddingBottom: 16,
-    marginTop: -24,
-    marginHorizontal: -24,
+    paddingTop: 14,
+    paddingBottom: 14,
   },
   grabber: {
-    width: 40,
-    height: 5,
-    borderRadius: 3,
-    backgroundColor: '#D0D0D0',
+    width: 36,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: C.line,
   },
 });
