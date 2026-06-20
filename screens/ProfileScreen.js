@@ -191,7 +191,7 @@ export default function ProfileScreen({ visible, onClose, session, itemCount }) 
   }
 
   return (
-    <BottomSheet visible={visible} onClose={onClose} sheetStyle={styles.sheet}>
+    <BottomSheet visible={visible} onClose={onClose} swipeToClose sheetStyle={styles.sheet}>
       <View style={styles.header}>
         <Text style={styles.title}>{S.profile.title}</Text>
         <TouchableOpacity onPress={onClose}>
