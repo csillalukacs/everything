@@ -381,7 +381,6 @@ const styles = StyleSheet.create({
     height: 72,
     borderRadius: 12,
     overflow: 'hidden',
-    backgroundColor: C.surface,
   },
   thumbImage: {
     width: '100%',
