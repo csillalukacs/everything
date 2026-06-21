@@ -47,6 +47,13 @@ export const S = {
     saveFailedMessage: 'check your connection and try again',
   },
 
+  // Undo snackbar shown briefly after a delete; tapping commits the undo.
+  undo: {
+    deleted: 'thing deleted',
+    deletedN: (n) => `${n} ${plural(n, 'thing')} deleted`,
+    action: 'undo',
+  },
+
   // Auth
   auth: {
     continueWithGoogle: 'continue with google',

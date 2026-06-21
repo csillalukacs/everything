@@ -9,6 +9,8 @@ import ProfileHeader from '../components/ProfileHeader'
 import LockIcon from '../components/LockIcon'
 import { profileCacheKey, countCacheKey, itemsCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
+import { useUndoableDelete } from '../lib/useUndoableDelete'
+import UndoSnackbar from '../components/UndoSnackbar'
 
 const PROFILE_COLS = 'display_name, username, avatar_url, avatar_thumb_url, home_location, home_lat, home_lng'
 
@@ -20,6 +22,7 @@ export default function GraveyardPage() {
   const [items, setItems] = useState([])
   const [loading, setLoading] = useState(true)
   const [selectedId, setSelectedId] = useState(null)
+  const { pending: pendingDelete, schedule: scheduleDelete, undo: undoDelete } = useUndoableDelete()
 
   useEffect(() => {
     // Resurrecting navigates away while this fetch may still be in flight; without
@@ -100,15 +103,28 @@ export default function GraveyardPage() {
   async function handleDelete() {
     const target = selectedItem
     setSelectedId(null)
-    const { error } = await supabase.from('items').delete().eq('id', target.id)
-    if (!error) {
-      setItems(prev => {
-        const next = prev.filter(i => i.id !== target.id)
-        if (sessionUserId) writeCache(itemsCacheKey(sessionUserId), next)
-        return next
-      })
-      deleteStorageForItems([target])
-    }
+    setItems(prev => {
+      const next = prev.filter(i => i.id !== target.id)
+      if (sessionUserId) writeCache(itemsCacheKey(sessionUserId), next)
+      return next
+    })
+    scheduleDelete({
+      count: 1,
+      commit: async () => {
+        await supabase.from('item_tags').delete().eq('item_id', target.id)
+        const { error } = await supabase.from('items').delete().eq('id', target.id)
+        if (error) { console.error('commitDelete error:', error); return }
+        deleteStorageForItems([target])
+      },
+      restore: () => {
+        setItems(prev => {
+          if (prev.some(i => i.id === target.id)) return prev
+          const next = [target, ...prev]
+          if (sessionUserId) writeCache(itemsCacheKey(sessionUserId), next)
+          return next
+        })
+      },
+    })
   }
 
   return (
@@ -169,6 +185,8 @@ export default function GraveyardPage() {
         onPrev={idx > 0 ? () => setSelectedId(retiredItems[idx - 1].id) : null}
         onNext={idx >= 0 && idx < retiredItems.length - 1 ? () => setSelectedId(retiredItems[idx + 1].id) : null}
       />
+
+      <UndoSnackbar pending={pendingDelete} onUndo={undoDelete} />
     </div>
   )
 }

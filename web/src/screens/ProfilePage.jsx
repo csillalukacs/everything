@@ -26,6 +26,8 @@ import ProfileSheet from './ProfileSheet'
 import ManageTagsSheet from './ManageTagsSheet'
 import { itemsCacheKey, tagsCacheKey, profileCacheKey, countCacheKey, likesCacheKey } from '../../../shared/cacheKeys'
 import { readCache, writeCache } from '../lib/cache'
+import { useUndoableDelete } from '../lib/useUndoableDelete'
+import UndoSnackbar from '../components/UndoSnackbar'
 
 export default function ProfilePage() {
   const { slug } = useParams()
@@ -45,6 +47,7 @@ export default function ProfilePage() {
   const [notFound, setNotFound] = useState(false)
   const [items, setItems] = useState([])
   const [itemCount, setItemCount] = useState(null)
+  const { pending: pendingDelete, schedule: scheduleDelete, undo: undoDelete } = useUndoableDelete()
   const [allTags, setAllTags] = useState([])
   const [profileName, setProfileName] = useState(null)
   const [username, setUsername] = useState(null)
@@ -525,12 +528,24 @@ export default function ProfilePage() {
   async function handleDelete() {
     const itemToDelete = selectedItem
     closeItem()
-    const { error } = await supabase.from('items').delete().eq('id', itemToDelete.id)
-    if (!error) {
-      setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
-      setItemCount(c => (c == null ? null : Math.max(0, c - 1)))
-      deleteStorageForItems([itemToDelete])
-    }
+    setItems(prev => prev.filter(i => i.id !== itemToDelete.id))
+    setItemCount(c => (c == null ? null : Math.max(0, c - 1)))
+    scheduleDelete({
+      count: 1,
+      commit: () => commitDelete([itemToDelete]),
+      restore: () => {
+        setItems(prev => prev.some(i => i.id === itemToDelete.id) ? prev : [itemToDelete, ...prev])
+        setItemCount(c => (c == null ? null : c + 1))
+      },
+    })
+  }
+
+  async function commitDelete(targets) {
+    const ids = targets.map(i => i.id)
+    await supabase.from('item_tags').delete().in('item_id', ids)
+    const { error } = await supabase.from('items').delete().in('id', ids)
+    if (error) { console.error('commitDelete error:', error); return }
+    deleteStorageForItems(targets)
   }
 
   async function handleRetire(reason, epitaph) {
@@ -674,16 +689,20 @@ export default function ProfilePage() {
   }
 
   async function handleBatchDelete() {
-    const ids = [...selectedIds]
-    const targets = items.filter(i => ids.includes(i.id))
+    const ids = new Set(selectedIds)
+    const targets = items.filter(i => ids.has(i.id))
     setSelectedIds(new Set())
-    await supabase.from('item_tags').delete().in('item_id', ids)
-    const { error } = await supabase.from('items').delete().in('id', ids)
-    if (!error) {
-      setItems(prev => prev.filter(i => !ids.includes(i.id)))
-      setItemCount(c => (c == null ? null : Math.max(0, c - ids.length)))
-      if (targets.length > 0) deleteStorageForItems(targets)
-    }
+    if (targets.length === 0) return
+    setItems(prev => prev.filter(i => !ids.has(i.id)))
+    setItemCount(c => (c == null ? null : Math.max(0, c - targets.length)))
+    scheduleDelete({
+      count: targets.length,
+      commit: () => commitDelete(targets),
+      restore: () => {
+        setItems(prev => [...targets.filter(t => !prev.some(p => p.id === t.id)), ...prev])
+        setItemCount(c => (c == null ? null : c + targets.length))
+      },
+    })
   }
 
   async function handleBatchTogglePrivacy() {
@@ -1104,6 +1123,8 @@ export default function ProfilePage() {
         mode={followListMode}
         onClose={() => setFollowListMode(null)}
       />
+
+      <UndoSnackbar pending={pendingDelete} onUndo={undoDelete} />
     </div>
   )
 }

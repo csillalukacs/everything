@@ -1391,6 +1391,17 @@ input {
   position: relative;
   aspect-ratio: 1;
   transition: transform 0.1s, box-shadow 0.1s;
+  animation: card-in 0.22s ease both;
+}
+
+@keyframes card-in {
+  from { opacity: 0; transform: scale(0.96); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .card { animation: none; }
+  .fab:active { transform: none; }
 }
 
 .card:hover {
@@ -1464,11 +1475,15 @@ input {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 12px rgba(0,0,0,0.2);
-  transition: background 0.1s;
+  transition: background 0.1s, transform 0.12s ease;
 }
 
 .fab:hover {
   background: #444;
+}
+
+.fab:active {
+  transform: scale(0.88);
 }
 
 /* ---- Batch bar ---- */
@@ -3129,4 +3144,44 @@ button.stats-bar-col {
   display: flex;
   justify-content: flex-end;
   gap: 16px;
+}
+
+/* Undo snackbar — shown briefly after a delete, fixed near the bottom. */
+.undo-snackbar {
+  position: fixed;
+  left: 50%;
+  bottom: 28px;
+  transform: translateX(-50%);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  max-width: calc(100vw - 32px);
+  background: var(--ink);
+  color: var(--bg);
+  border-radius: 12px;
+  padding: 14px 18px;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  animation: undo-snackbar-in 0.18s ease-out;
+}
+
+@keyframes undo-snackbar-in {
+  from { opacity: 0; transform: translate(-50%, 12px); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+.undo-snackbar-label {
+  font-size: 15px;
+  letter-spacing: 0.3px;
+}
+
+.undo-snackbar-action {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--yellow);
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
 }
