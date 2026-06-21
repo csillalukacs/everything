@@ -2,9 +2,11 @@ import { Ionicons } from '@expo/vector-icons';
 import { memo, useCallback, useMemo } from 'react';
 import { ActivityIndicator, Dimensions, FlatList, RefreshControl, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Image } from 'expo-image';
+import Animated, { FadeIn } from 'react-native-reanimated';
 import { Canvas, Rect, RadialGradient, vec } from '@shopify/react-native-skia';
 import { thumbOf } from '../shared/items';
 import { usageRecencyTier, USAGE_TINTS } from '../shared/dates';
+import { haptics } from '../lib/haptics';
 import { C } from '../shared/theme';
 
 const SCREEN_WIDTH = Dimensions.get('window').width;
@@ -18,10 +20,11 @@ function cardSize(numColumns) {
 const Card = memo(function Card({ item, size, isSelected, batchMode, onPress, onLongPress }) {
   const tint = USAGE_TINTS[usageRecencyTier(item.last_used_on)];
   return (
+    <Animated.View entering={FadeIn.duration(220)} style={{ width: size }}>
     <TouchableOpacity
-      style={[styles.card, { width: size }, isSelected && styles.cardSelected]}
-      onPress={() => onPress(item)}
-      onLongPress={onLongPress ? () => onLongPress(item) : undefined}
+      style={[styles.card, isSelected && styles.cardSelected]}
+      onPress={() => { if (batchMode) haptics.select(); onPress(item); }}
+      onLongPress={onLongPress ? () => { haptics.tap(); onLongPress(item); } : undefined}
       delayLongPress={400}
     >
       {item.image_url && (
@@ -51,6 +54,7 @@ const Card = memo(function Card({ item, size, isSelected, batchMode, onPress, on
         </View>
       )}
     </TouchableOpacity>
+    </Animated.View>
   );
 });
 
@@ -157,6 +161,7 @@ const styles = StyleSheet.create({
     alignItems: 'flex-start',
   },
   card: {
+    width: '100%',
     backgroundColor: 'transparent',
     borderRadius: 12,
     overflow: 'hidden',

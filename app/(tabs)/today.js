@@ -18,6 +18,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useCollection } from '../../lib/CollectionProvider';
+import { haptics } from '../../lib/haptics';
 import ItemDetailModal from '../../screens/ItemDetailModal';
 import { thumbOf, isRetired } from '../../shared/items';
 import { dayKey } from '../../shared/dates';
@@ -54,6 +55,7 @@ function DailyCard({ item, revealed, shouldShine, onReveal, onOpen }) {
       return;
     }
     onReveal();
+    haptics.light();
     Animated.timing(flip, {
       toValue: 1,
       duration: FLIP_DURATION,

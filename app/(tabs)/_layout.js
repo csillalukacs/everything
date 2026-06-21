@@ -1,8 +1,10 @@
 import { Ionicons } from '@expo/vector-icons';
 import { Tabs, useRouter } from 'expo-router';
 import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import Animated, { useAnimatedStyle, useSharedValue, withSpring } from 'react-native-reanimated';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useCollection } from '../../lib/CollectionProvider';
+import { haptics } from '../../lib/haptics';
 import { S } from '../../shared/strings';
 import { C } from '../../shared/theme';
 
@@ -15,7 +17,10 @@ function CustomTabBar({ state, navigation }) {
   const currentRoute = state.routes[state.index]?.name;
 
   function go(name) {
-    if (currentRoute !== name) navigation.navigate(name);
+    if (currentRoute !== name) {
+      haptics.select();
+      navigation.navigate(name);
+    }
   }
 
   return (
@@ -78,17 +83,23 @@ function FloatingAddButton() {
   const router = useRouter();
   const insets = useSafeAreaInsets();
   const { batchModeActive } = useCollection();
+  const scale = useSharedValue(1);
+  const animStyle = useAnimatedStyle(() => ({ transform: [{ scale: scale.value }] }));
   if (batchModeActive) return null;
   const bottomOffset = TAB_BAR_HEIGHT + Math.max(insets.bottom, 12) + 12;
   return (
-    <TouchableOpacity
-      style={[styles.fab, { bottom: bottomOffset }]}
-      onPress={() => router.push('/add')}
-      accessibilityLabel={S.a11y.addItem}
-      activeOpacity={0.85}
-    >
-      <Ionicons name="add" size={30} color="#fff" />
-    </TouchableOpacity>
+    <Animated.View style={[styles.fab, { bottom: bottomOffset }, animStyle]}>
+      <TouchableOpacity
+        style={styles.fabTouch}
+        onPressIn={() => { scale.value = withSpring(0.88, { damping: 12, stiffness: 320 }); }}
+        onPressOut={() => { scale.value = withSpring(1, { damping: 10, stiffness: 260 }); }}
+        onPress={() => { haptics.tap(); router.push('/add'); }}
+        accessibilityLabel={S.a11y.addItem}
+        activeOpacity={1}
+      >
+        <Ionicons name="add" size={30} color="#fff" />
+      </TouchableOpacity>
+    </Animated.View>
   );
 }
 
@@ -148,12 +159,16 @@ const styles = StyleSheet.create({
     height: 56,
     borderRadius: 28,
     backgroundColor: C.ink,
-    alignItems: 'center',
-    justifyContent: 'center',
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 6,
     elevation: 6,
+  },
+  fabTouch: {
+    flex: 1,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
 });
