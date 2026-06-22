@@ -1,8 +1,10 @@
-import { Stack } from 'expo-router';
+import { Stack, useRouter } from 'expo-router';
+import { useEffect } from 'react';
 import { ActivityIndicator, View } from 'react-native';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 import { CollectionProvider, useCollection } from '../lib/CollectionProvider';
+import { useShareIntent } from '../lib/shareIntent';
 import AuthScreen from '../screens/AuthScreen';
 import DeleteSnackbar from '../screens/DeleteSnackbar';
 import { C } from '../shared/theme';
@@ -15,6 +17,19 @@ const transparentSheetOptions = {
 
 function RootStack() {
   const { session, authLoading } = useCollection();
+  const router = useRouter();
+  const { hasShareIntent, shareIntent, resetShareIntent } = useShareIntent();
+
+  // A photo shared into the app from elsewhere: jump straight into /add seeded
+  // with the shared image. No-op on builds without share intent (see
+  // lib/shareIntent). Wait for a session so we don't push behind the auth gate.
+  useEffect(() => {
+    if (!session || !hasShareIntent) return;
+    const file = shareIntent?.files?.[0];
+    if (!file?.path) return;
+    router.push({ pathname: '/add', params: { sharedUri: file.path } });
+    resetShareIntent();
+  }, [session, hasShareIntent, shareIntent, resetShareIntent, router]);
 
   if (authLoading) {
     return (

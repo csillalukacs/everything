@@ -1,5 +1,5 @@
 import { Ionicons } from '@expo/vector-icons';
-import { useMemo, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { removeBackground } from '@jacobjmc/react-native-background-remover';
 import {
   ActivityIndicator,
@@ -26,7 +26,7 @@ import LocationPicker from './LocationPicker';
 import TagInput from './TagInput';
 import { C } from '../shared/theme';
 
-export default function AddItemModal({ visible, onClose, onSave, allTags = [] }) {
+export default function AddItemModal({ visible, onClose, onSave, allTags = [], initialPhoto = null }) {
   const { items, uploadLocalPhoto } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [photo, setPhoto] = useState(null);
@@ -41,6 +41,7 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
   const ocrPromiseRef = useRef(null);
   const uploadPromiseRef = useRef(null);
   const scrollRef = useRef(null);
+  const consumedInitial = useRef(false);
 
   async function processCapturedUri(uri) {
     setPhoto(uri);
@@ -63,6 +64,14 @@ export default function AddItemModal({ visible, onClose, onSave, allTags = [] })
       uploadPromiseRef.current = uploadLocalPhoto(finalUri);
     }
   }
+
+  // A photo shared in from another app (share intent): run it through the same
+  // background-removal/OCR pipeline as a camera capture, once.
+  useEffect(() => {
+    if (!initialPhoto || consumedInitial.current) return;
+    consumedInitial.current = true;
+    processCapturedUri(initialPhoto);
+  }, [initialPhoto]);
 
   function handleRetake() {
     setPhoto(null);
