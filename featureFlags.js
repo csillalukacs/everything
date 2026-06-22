@@ -26,7 +26,7 @@ const IS_DISTRIBUTION = process.env.EXPO_PUBLIC_THINGS_DISTRIBUTION === '1';
 
 // iOS App Group shared by the main app and the share extension. Must match the
 // App Group registered on the paid Apple Developer account.
-const SHARE_INTENT_APP_GROUP = 'group.xyz.whimsylabs.things';
+const SHARE_INTENT_APP_GROUP = 'group.xyz.whimsylabs.things.appgroup';
 
 module.exports = {
   IS_DISTRIBUTION,
