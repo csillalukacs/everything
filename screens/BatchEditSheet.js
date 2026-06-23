@@ -17,10 +17,10 @@ import { S } from '../shared/strings';
 import LocationPicker from './LocationPicker';
 import BottomSheet from './BottomSheet';
 import AppleIcon from './AppleIcon';
-import { FEATURED_TAG_NAME } from '../shared/featuredTag';
+import { FEATURED_TAG_NAME, isFeaturedTag } from '../shared/featuredTag';
 import { C } from '../shared/theme';
 
-export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], selectedCount, loading = false }) {
+export default function BatchEditSheet({ visible, onClose, onApply, allTags = [], activeTag = null, selectedCount, loading = false }) {
   const { items } = useCollection();
   const locationSuggestions = useMemo(() => locationSuggestionsFromItems(items), [items]);
   const [pendingTags, setPendingTags] = useState([]);
@@ -28,6 +28,8 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
   const [newTagInput, setNewTagInput] = useState('');
   const [year, setYear] = useState('');
   const [acquired, setAcquired] = useState(null);
+  const [removeActiveTag, setRemoveActiveTag] = useState(false);
+  const removableTag = activeTag && activeTag.id !== '__untagged__' && activeTag.name ? activeTag : null;
 
   function toggleTag(tag) {
     setPendingTags(prev => prev.includes(tag) ? prev.filter(t => t !== tag) : [...prev, tag]);
@@ -48,6 +50,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
     setNewTagInput('');
     setYear('');
     setAcquired(null);
+    setRemoveActiveTag(false);
   }
 
   function buildAcquiredPatch() {
@@ -66,7 +69,8 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
   }
 
   function handleApply() {
-    onApply({ addTags: pendingTags, acquiredPatch: buildAcquiredPatch() });
+    const removeTagId = removeActiveTag && removableTag ? removableTag.id : null;
+    onApply({ addTags: pendingTags, acquiredPatch: buildAcquiredPatch(), removeTagId });
     reset();
   }
 
@@ -83,7 +87,7 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
     return a.localeCompare(b);
   });
 
-  const hasChanges = pendingTags.length > 0 || year.trim().length > 0 || !!acquired;
+  const hasChanges = pendingTags.length > 0 || year.trim().length > 0 || !!acquired || (removeActiveTag && !!removableTag);
 
   const sheetContent = (
     <>
@@ -138,6 +142,21 @@ export default function BatchEditSheet({ visible, onClose, onApply, allTags = []
           )}
         </ScrollView>
       </View>
+
+      {removableTag && (
+        <View>
+          <Text style={styles.sectionLabel}>{S.batchEdit.removeTag}</Text>
+          <View style={styles.removeTagRow}>
+            <TouchableOpacity
+              style={[styles.chip, removeActiveTag && styles.chipActive]}
+              onPress={() => setRemoveActiveTag(v => !v)}
+            >
+              {isFeaturedTag(removableTag) && <AppleIcon size={14} />}
+              <Text style={[styles.chipText, removeActiveTag && styles.chipTextActive]}>{removableTag.name}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       <View>
         <Text style={styles.sectionLabel}>{S.batchEdit.setLocation}</Text>
@@ -234,6 +253,10 @@ const styles = StyleSheet.create({
     gap: 8,
     paddingVertical: 4,
     alignItems: 'center',
+  },
+  removeTagRow: {
+    flexDirection: 'row',
+    paddingVertical: 4,
   },
   chip: {
     flexDirection: 'row',

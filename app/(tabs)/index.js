@@ -174,12 +174,12 @@ export default function Collection() {
     if (item) await retireItem(item, { reason, epitaph });
   }
 
-  async function handleBatchEdit({ addTags, acquiredPatch }) {
-    if (addTags.length === 0 && !acquiredPatch) { setBatchEditVisible(false); return; }
+  async function handleBatchEdit({ addTags, acquiredPatch, removeTagId }) {
+    if (addTags.length === 0 && !acquiredPatch && !removeTagId) { setBatchEditVisible(false); return; }
     const ids = [...selectedIds];
     setBatchEditVisible(false);
     setSelectedIds(new Set());
-    await batchEditItems(ids, { addTags, acquiredPatch });
+    await batchEditItems(ids, { addTags, acquiredPatch, removeTagId });
   }
 
   async function handleBatchDelete() {
@@ -356,6 +356,7 @@ export default function Collection() {
         onClose={() => setBatchEditVisible(false)}
         onApply={handleBatchEdit}
         allTags={tags}
+        activeTag={activeTag}
         selectedCount={selectedIds.size}
       />
 
